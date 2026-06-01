@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #071827;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 3px solid #9feaff;
+  outline-offset: 3px;
+}
+
+.markdown-preview {
+  color: #17252b;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+  color: #071827;
+  font-weight: 850;
+  line-height: 1.16;
+}
+
+.markdown-preview h1 {
+  font-size: 2.35rem;
+}
+
+.markdown-preview h2 {
+  font-size: 1.75rem;
+  margin-top: 2rem;
+}
+
+.markdown-preview h3 {
+  font-size: 1.35rem;
+  margin-top: 1.5rem;
+}
+
+.markdown-preview a {
+  color: #00677a;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.markdown-preview code {
+  border-radius: 0.35rem;
+  background: #e7fbff;
+  padding: 0.1rem 0.35rem;
+}
+
+.markdown-preview pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: #071827;
+  padding: 1rem;
+  color: #f8fbff;
+}
+
+.markdown-preview pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-preview blockquote {
+  border-left: 4px solid #8cffd7;
+  margin-left: 0;
+  padding-left: 1rem;
+  color: #42545b;
+}
+
+.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid #b9dce5;
+  padding: 0.5rem;
+}
