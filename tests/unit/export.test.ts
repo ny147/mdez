@@ -74,6 +74,40 @@ describe("export helpers", () => {
     ]);
   });
 
+  it("reserves suffixed folder segments when natural sibling slugs collide", () => {
+    const siblingFolders: Folder[] = [
+      folders[0],
+      { ...folders[1], id: "f2", name: "Launch", parentId: "f1", order: 0 },
+      { ...folders[1], id: "f3", name: "Launch!", parentId: "f1", order: 1 },
+      { ...folders[1], id: "f4", name: "Launch 2", parentId: "f1", order: 2 }
+    ];
+    const siblingDocuments: Document[] = [
+      { ...documents[1], id: "d2", folderId: "f2", title: "Checklist", body: "first" },
+      { ...documents[1], id: "d3", folderId: "f3", title: "Checklist", body: "second" },
+      { ...documents[1], id: "d4", folderId: "f4", title: "Checklist", body: "third" }
+    ];
+
+    expect(buildFolderExportEntries(siblingFolders, siblingDocuments, "f1")).toEqual([
+      { path: "projects/launch/checklist.md", body: "first" },
+      { path: "projects/launch-2/checklist.md", body: "second" },
+      { path: "projects/launch-2-2/checklist.md", body: "third" }
+    ]);
+  });
+
+  it("uses document ids as the final export order tie-breaker", () => {
+    const tiedDocuments: Document[] = [
+      { ...documents[0], id: "d3", title: "Plan", body: "third", order: 0 },
+      { ...documents[0], id: "d1", title: "Plan", body: "first", order: 0 },
+      { ...documents[0], id: "d2", title: "Plan", body: "second", order: 0 }
+    ];
+
+    expect(buildFolderExportEntries([folders[0]], tiedDocuments, "f1")).toEqual([
+      { path: "projects/plan.md", body: "first" },
+      { path: "projects/plan-2.md", body: "second" },
+      { path: "projects/plan-3.md", body: "third" }
+    ]);
+  });
+
   it("throws a clear error when an export path has a parent cycle", () => {
     const cyclicFolders: Folder[] = [{ ...folders[0], parentId: "f1" }];
     const cyclicDocuments: Document[] = [{ ...documents[0], folderId: "f1" }];
@@ -84,6 +118,10 @@ describe("export helpers", () => {
   it("throws a clear error when the export root folder is missing", () => {
     expect(() => buildFolderExportEntries(folders, documents, "missing")).toThrow("Folder not found for export.");
     expect(() => buildExportManifest(folders, documents, "missing")).toThrow("Folder not found for export.");
+  });
+
+  it("rejects missing export root folders when creating a ZIP", async () => {
+    await expect(createFolderZipBlob(folders, documents, "missing")).rejects.toThrow("Folder not found for export.");
   });
 
   it("omits document bodies from the manifest", () => {

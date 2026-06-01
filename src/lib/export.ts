@@ -35,14 +35,29 @@ function validateExportRoot(folders: Folder[], folderId: string) {
 }
 
 function folderSegment(folders: Folder[], folder: Folder) {
-  const baseSegment = slugifyTitle(folder.name);
-  const matchingSiblings = folders
+  const usedSegments = new Set<string>();
+  const siblings = folders
     .filter((sibling) => sibling.parentId === folder.parentId)
-    .sort(byOrderThenNameThenId)
-    .filter((sibling) => slugifyTitle(sibling.name) === baseSegment);
-  const segmentIndex = matchingSiblings.findIndex((sibling) => sibling.id === folder.id);
+    .sort(byOrderThenNameThenId);
 
-  return segmentIndex > 0 ? `${baseSegment}-${segmentIndex + 1}` : baseSegment;
+  for (const sibling of siblings) {
+    const baseSegment = slugifyTitle(sibling.name);
+    let segment = baseSegment;
+    let suffix = 2;
+
+    while (usedSegments.has(segment)) {
+      segment = `${baseSegment}-${suffix}`;
+      suffix += 1;
+    }
+
+    if (sibling.id === folder.id) {
+      return segment;
+    }
+
+    usedSegments.add(segment);
+  }
+
+  return slugifyTitle(folder.name);
 }
 
 function folderPath(folders: Folder[], folderId: string) {
@@ -84,7 +99,7 @@ export function buildFolderExportEntries(folders: Folder[], documents: Document[
   return folderIds.flatMap((currentFolderId) =>
     documents
       .filter((document) => document.folderId === currentFolderId)
-      .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))
+      .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
       .map((document) => {
         const basePath = folderPath(folders, document.folderId as string);
         const baseName = slugifyTitle(document.title);
