@@ -10,7 +10,7 @@ export function MdezWorkspace() {
           <h1 className="mt-3 text-6xl font-black text-bubble drop-shadow-[0_4px_0_rgba(255,255,255,0.95)] md:text-8xl">
             Mdez
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-7 text-cream/78">
+          <p className="mt-6 max-w-xl text-base leading-7 text-cream/80">
             Local markdown, cozy folders, lively reading.
           </p>
         </div>
