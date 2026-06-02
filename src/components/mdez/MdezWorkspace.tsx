@@ -71,6 +71,13 @@ export function MdezWorkspace() {
   const showReader = viewMode === "split" || viewMode === "preview";
   const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
 
+  function handleSelectFolder(folderId: string | null) {
+    const firstDocument = folderId === null ? documents[0] : documents.find((document) => document.folderId === folderId);
+
+    setSelectedFolderId(folderId);
+    setSelectedDocumentId(firstDocument?.id ?? null);
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-abyss text-cream">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(159,234,255,0.24),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(200,168,255,0.18),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(255,128,204,0.16),transparent_30%)]" />
@@ -121,7 +128,7 @@ export function MdezWorkspace() {
                 <div className="max-h-[48vh] overflow-auto p-3 lg:max-h-none">
                   <button
                     type="button"
-                    onClick={() => setSelectedFolderId(null)}
+                    onClick={() => handleSelectFolder(null)}
                     aria-pressed={selectedFolderId === null}
                     className={`mb-2 w-full rounded-2xl px-3 py-2 text-left text-sm font-bold transition ${
                       selectedFolderId === null ? "bg-ice text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
@@ -134,7 +141,7 @@ export function MdezWorkspace() {
                     <button
                       key={folder.id}
                       type="button"
-                      onClick={() => setSelectedFolderId(folder.id)}
+                      onClick={() => handleSelectFolder(folder.id)}
                       aria-pressed={selectedFolderId === folder.id}
                       className={`mb-2 w-full rounded-2xl px-3 py-2 text-left text-sm font-bold transition ${
                         selectedFolderId === folder.id ? "bg-ice text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
@@ -154,8 +161,8 @@ export function MdezWorkspace() {
                         key={document.id}
                         type="button"
                         onClick={() => {
+                          handleSelectFolder(document.folderId);
                           setSelectedDocumentId(document.id);
-                          setSelectedFolderId(document.folderId);
                           setMobileTab("edit");
                         }}
                         aria-pressed={selectedDocumentId === document.id}
