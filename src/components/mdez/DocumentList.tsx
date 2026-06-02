@@ -58,7 +58,6 @@ export function DocumentList({
               <button
                 type="button"
                 onClick={() => onSelectDocument(document.id)}
-                onDoubleClick={() => renameDocument(document)}
                 aria-pressed={selectedDocumentId === document.id}
                 className={`w-full rounded-xl px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-ice ${
                   selectedDocumentId === document.id ? "bg-bubble text-abyss" : "text-cream/85 hover:bg-white/10 hover:text-cream"
