@@ -69,6 +69,7 @@ export function MdezWorkspace() {
 
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
+  const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-abyss text-cream">
@@ -97,7 +98,7 @@ export function MdezWorkspace() {
               </div>
 
               {error ? (
-                <p className="rounded-3xl border-2 border-bubble/70 bg-bubble/15 p-3 text-sm font-semibold leading-6 text-cream" role="status">
+                <p className="rounded-3xl border-2 border-bubble/70 bg-bubble/15 p-3 text-sm font-semibold leading-6 text-cream" role="alert">
                   {error}
                 </p>
               ) : null}
@@ -172,7 +173,11 @@ export function MdezWorkspace() {
             </div>
           </aside>
 
-          <section className="min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker">
+          <section
+            className={`min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker ${
+              mobileTab === "files" ? "hidden lg:block" : "block"
+            }`}
+          >
             <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:min-h-0 lg:h-full">
               <div className="flex flex-col gap-3 border-b-2 border-white/40 pb-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
@@ -191,11 +196,11 @@ export function MdezWorkspace() {
                 </div>
               </div>
 
-              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
+              <div className={`grid min-h-0 flex-1 gap-4 ${contentGridColumns}`}>
                 <article
                   className={`min-h-[24rem] rounded-3xl border-2 border-white/60 bg-abyss/55 p-4 ${
-                    showEditor && mobileTab !== "read" ? "block" : "hidden lg:block"
-                  } ${showEditor ? "" : "lg:hidden"}`}
+                    mobileTab === "edit" ? "block" : "hidden"
+                  } ${showEditor ? "lg:block" : "lg:hidden"}`}
                 >
                   <div className="flex h-full flex-col">
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-mint">Editor</p>
@@ -211,8 +216,8 @@ export function MdezWorkspace() {
 
                 <article
                   className={`min-h-[24rem] rounded-3xl border-2 border-white/60 bg-cream p-4 text-abyss ${
-                    showReader && mobileTab !== "edit" ? "block" : "hidden lg:block"
-                  } ${showReader ? "" : "lg:hidden"}`}
+                    mobileTab === "read" ? "block" : "hidden"
+                  } ${showReader ? "lg:block" : "lg:hidden"}`}
                 >
                   <div className="flex h-full flex-col">
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-bubble">Reader</p>

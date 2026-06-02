@@ -12,7 +12,7 @@ type SegmentedControlProps<T extends string> = {
 
 export function SegmentedControl<T extends string>({ label, value, options, onChange }: SegmentedControlProps<T>) {
   return (
-    <div aria-label={label} className="inline-flex rounded-full border-2 border-white/70 bg-white/10 p-1">
+    <div role="group" aria-label={label} className="inline-flex rounded-full border-2 border-white/70 bg-white/10 p-1">
       {options.map((option) => (
         <button
           key={option.value}
