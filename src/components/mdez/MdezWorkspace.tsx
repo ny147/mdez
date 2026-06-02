@@ -29,6 +29,24 @@ const mobileOptions: { value: MobileTab; label: string }[] = [
   { value: "read", label: "Read" }
 ];
 
+function byOrderThenTitle(a: Document, b: Document) {
+  return a.order - b.order || a.title.localeCompare(b.title);
+}
+
+function getAncestorFolderIds(folders: Folder[], folderId: string | null) {
+  const ancestors: string[] = [];
+  let currentFolder = folders.find((folder) => folder.id === folderId) ?? null;
+  const visited = new Set<string>();
+
+  while (currentFolder?.parentId && !visited.has(currentFolder.parentId)) {
+    ancestors.push(currentFolder.parentId);
+    visited.add(currentFolder.parentId);
+    currentFolder = folders.find((folder) => folder.id === currentFolder?.parentId) ?? null;
+  }
+
+  return ancestors;
+}
+
 export function MdezWorkspace() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -51,10 +69,13 @@ export function MdezWorkspace() {
           return;
         }
 
+        const firstDocument = content.documents[0] ?? null;
+
         setFolders(content.folders);
         setDocuments(content.documents);
-        setSelectedDocumentId(content.documents[0]?.id ?? null);
-        setSelectedFolderId(content.documents[0]?.folderId ?? null);
+        setSelectedDocumentId(firstDocument?.id ?? null);
+        setSelectedFolderId(firstDocument?.folderId ?? null);
+        setExpandedFolderIds(new Set(getAncestorFolderIds(content.folders, firstDocument?.folderId ?? null)));
         setIsReady(true);
       })
       .catch(() => {
@@ -81,15 +102,32 @@ export function MdezWorkspace() {
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
   const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
-  const importStatus = isImportOpen ? "Import dialog connects in Task 11." : null;
+  const importStatus = isImportOpen ? "Markdown import connects in Task 9." : null;
+
+  function expandFolderAncestors(folderId: string | null, sourceFolders = folders, includeFolder = false) {
+    setExpandedFolderIds((current) => {
+      const next = new Set(current);
+
+      for (const ancestorId of getAncestorFolderIds(sourceFolders, folderId)) {
+        next.add(ancestorId);
+      }
+
+      if (includeFolder && folderId !== null) {
+        next.add(folderId);
+      }
+
+      return next;
+    });
+  }
 
   function handleSelectFolder(folderId: string | null) {
     const firstDocument = documents
       .filter((document) => document.folderId === folderId)
-      .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))[0];
+      .sort(byOrderThenTitle)[0];
 
     setSelectedFolderId(folderId);
     setSelectedDocumentId(firstDocument?.id ?? null);
+    expandFolderAncestors(folderId);
   }
 
   function handleSelectDocument(documentId: string) {
@@ -101,6 +139,7 @@ export function MdezWorkspace() {
 
     setSelectedFolderId(document.folderId);
     setSelectedDocumentId(document.id);
+    expandFolderAncestors(document.folderId);
     setMobileTab("edit");
   }
 
@@ -142,6 +181,10 @@ export function MdezWorkspace() {
       setError(null);
       setExpandedFolderIds((current) => {
         const next = new Set(current);
+
+        for (const ancestorId of getAncestorFolderIds(folders, parentId)) {
+          next.add(ancestorId);
+        }
 
         if (parentId !== null) {
           next.add(parentId);
@@ -185,8 +228,13 @@ export function MdezWorkspace() {
         next.delete(folderId);
         return next;
       });
-      setSelectedFolderId(null);
-      await refreshContent(null);
+
+      if (selectedFolderId === folderId) {
+        setSelectedFolderId(null);
+        await refreshContent(null);
+      } else {
+        await refreshContent();
+      }
     } catch {
       setError("Could not delete folder.");
     }
@@ -213,7 +261,7 @@ export function MdezWorkspace() {
     try {
       await renameDocument(documentId, title);
       setError(null);
-      await refreshContent(documentId);
+      await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
     } catch {
       setError("Could not rename document.");
     }
@@ -225,6 +273,7 @@ export function MdezWorkspace() {
       setError(null);
       setSelectedFolderId(folderId);
       setSelectedDocumentId(documentId);
+      expandFolderAncestors(folderId);
       await refreshContent(documentId);
     } catch {
       setError("Could not move document.");
@@ -247,7 +296,7 @@ export function MdezWorkspace() {
       selectedDocumentId === documentId
         ? documents
             .filter((item) => item.id !== documentId && item.folderId === document.folderId)
-            .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))[0] ?? null
+            .sort(byOrderThenTitle)[0] ?? null
         : documents.find((item) => item.id === selectedDocumentId) ?? null;
 
     try {
@@ -291,7 +340,10 @@ export function MdezWorkspace() {
               onRenameDocument={handleRenameDocument}
               onMoveDocument={handleMoveDocument}
               onDeleteDocument={handleDeleteDocument}
-              onOpenImport={() => setIsImportOpen(true)}
+              onOpenImport={() => {
+                setIsImportOpen(true);
+                setError("Markdown import connects in Task 9.");
+              }}
               onExportFolder={() => setError("Folder export connects in Task 11.")}
             />
             {importStatus ? <span className="sr-only">{importStatus}</span> : null}
@@ -306,7 +358,7 @@ export function MdezWorkspace() {
               <div className="flex flex-col gap-3 border-b-2 border-white/40 pb-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-ice">
-                    {selectedFolder ? selectedFolder.name : "All documents"}
+                    {selectedFolder ? selectedFolder.name : "Root"}
                   </p>
                   <h2 className="mt-1 truncate text-3xl font-black text-cream">
                     {selectedDocument?.title ?? (isReady ? "No document selected" : "Loading workspace...")}
