@@ -2,9 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { listContent } from "@/lib/repository";
+import { folderHasContent } from "@/lib/tree";
+import {
+  createDocument,
+  createFolder,
+  deleteDocument,
+  deleteFolder,
+  listContent,
+  moveDocument,
+  renameDocument,
+  renameFolder
+} from "@/lib/repository";
 import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
-import { Mascot } from "@/components/mdez/Mascot";
+import { Sidebar } from "@/components/mdez/Sidebar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 const viewOptions: { value: ViewMode; label: string }[] = [
@@ -24,6 +34,8 @@ export function MdezWorkspace() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [mobileTab, setMobileTab] = useState<MobileTab>("files");
   const [saveStatus] = useState<SaveStatus>("Saved");
@@ -64,18 +76,187 @@ export function MdezWorkspace() {
     [documents, selectedDocumentId]
   );
 
-  const visibleDocuments = selectedFolderId === null ? documents : documents.filter((document) => document.folderId === selectedFolderId);
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
 
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
   const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
+  const importStatus = isImportOpen ? "Import dialog connects in Task 11." : null;
 
   function handleSelectFolder(folderId: string | null) {
-    const firstDocument = folderId === null ? documents[0] : documents.find((document) => document.folderId === folderId);
+    const firstDocument = documents
+      .filter((document) => document.folderId === folderId)
+      .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))[0];
 
     setSelectedFolderId(folderId);
     setSelectedDocumentId(firstDocument?.id ?? null);
+  }
+
+  function handleSelectDocument(documentId: string) {
+    const document = documents.find((item) => item.id === documentId);
+
+    if (!document) {
+      return;
+    }
+
+    setSelectedFolderId(document.folderId);
+    setSelectedDocumentId(document.id);
+    setMobileTab("edit");
+  }
+
+  async function refreshContent(nextSelectedDocumentId?: string | null) {
+    const content = await listContent();
+
+    setFolders(content.folders);
+    setDocuments(content.documents);
+
+    if (nextSelectedDocumentId !== undefined) {
+      setSelectedDocumentId(nextSelectedDocumentId);
+    }
+  }
+
+  function handleToggleFolder(folderId: string) {
+    setExpandedFolderIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+
+      return next;
+    });
+  }
+
+  async function handleCreateFolder(parentId: string | null) {
+    const name = window.prompt("New folder name", "New Folder");
+
+    if (name === null) {
+      return;
+    }
+
+    try {
+      const folder = await createFolder(name, parentId);
+
+      setError(null);
+      setExpandedFolderIds((current) => {
+        const next = new Set(current);
+
+        if (parentId !== null) {
+          next.add(parentId);
+        }
+
+        next.add(folder.id);
+        return next;
+      });
+      setSelectedFolderId(folder.id);
+      await refreshContent(null);
+    } catch {
+      setError("Could not create folder.");
+    }
+  }
+
+  async function handleRenameFolder(folderId: string, name: string) {
+    try {
+      await renameFolder(folderId, name);
+      setError(null);
+      await refreshContent();
+    } catch {
+      setError("Could not rename folder.");
+    }
+  }
+
+  async function handleDeleteFolder(folderId: string) {
+    if (folderHasContent(folders, documents, folderId)) {
+      setError("Move or delete nested folders and documents before deleting this folder.");
+      return;
+    }
+
+    if (!window.confirm("Delete this empty folder?")) {
+      return;
+    }
+
+    try {
+      await deleteFolder(folderId);
+      setError(null);
+      setExpandedFolderIds((current) => {
+        const next = new Set(current);
+        next.delete(folderId);
+        return next;
+      });
+      setSelectedFolderId(null);
+      await refreshContent(null);
+    } catch {
+      setError("Could not delete folder.");
+    }
+  }
+
+  async function handleCreateDocument() {
+    try {
+      const document = await createDocument({
+        title: "Untitled Document",
+        body: "# Untitled Document\n",
+        folderId: selectedFolderId
+      });
+
+      setError(null);
+      setSelectedDocumentId(document.id);
+      await refreshContent(document.id);
+      setMobileTab("edit");
+    } catch {
+      setError("Could not create document.");
+    }
+  }
+
+  async function handleRenameDocument(documentId: string, title: string) {
+    try {
+      await renameDocument(documentId, title);
+      setError(null);
+      await refreshContent(documentId);
+    } catch {
+      setError("Could not rename document.");
+    }
+  }
+
+  async function handleMoveDocument(documentId: string, folderId: string | null) {
+    try {
+      await moveDocument(documentId, folderId);
+      setError(null);
+      setSelectedFolderId(folderId);
+      setSelectedDocumentId(documentId);
+      await refreshContent(documentId);
+    } catch {
+      setError("Could not move document.");
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string) {
+    if (!window.confirm("Delete this document?")) {
+      return;
+    }
+
+    const document = documents.find((item) => item.id === documentId);
+
+    if (!document) {
+      setError("Document not found.");
+      return;
+    }
+
+    const nextDocument =
+      selectedDocumentId === documentId
+        ? documents
+            .filter((item) => item.id !== documentId && item.folderId === document.folderId)
+            .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title))[0] ?? null
+        : documents.find((item) => item.id === selectedDocumentId) ?? null;
+
+    try {
+      await deleteDocument(documentId);
+      setError(null);
+      await refreshContent(nextDocument?.id ?? null);
+    } catch {
+      setError("Could not delete document.");
+    }
   }
 
   return (
@@ -92,93 +273,29 @@ export function MdezWorkspace() {
         </header>
 
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <aside
-            className={`min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker lg:block ${
-              mobileTab === "files" ? "block" : "hidden"
-            }`}
-          >
-            <div className="flex h-full min-h-[calc(100vh-8rem)] flex-col gap-5 lg:min-h-0">
-              <div className="text-center">
-                <Mascot />
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-ice">Markdown Easy Reader</p>
-                <h2 className="mt-1 text-4xl font-black text-bubble drop-shadow-[0_3px_0_rgba(255,255,255,0.95)]">Mdez</h2>
-              </div>
-
-              {error ? (
-                <p className="rounded-3xl border-2 border-bubble/70 bg-bubble/15 p-3 text-sm font-semibold leading-6 text-cream" role="alert">
-                  {error}
-                </p>
-              ) : null}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-3xl border-2 border-white/60 bg-abyss/45 p-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-cream/60">Folders</p>
-                  <p className="mt-1 text-3xl font-black text-ice">{folders.length}</p>
-                </div>
-                <div className="rounded-3xl border-2 border-white/60 bg-abyss/45 p-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-cream/60">Documents</p>
-                  <p className="mt-1 text-3xl font-black text-mint">{documents.length}</p>
-                </div>
-              </div>
-
-              <section className="min-h-0 flex-1 overflow-hidden rounded-3xl border-2 border-white/60 bg-abyss/45">
-                <div className="border-b-2 border-white/40 px-4 py-3">
-                  <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cream/75">Files</h3>
-                </div>
-                <div className="max-h-[48vh] overflow-auto p-3 lg:max-h-none">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectFolder(null)}
-                    aria-pressed={selectedFolderId === null}
-                    className={`mb-2 w-full rounded-2xl px-3 py-2 text-left text-sm font-bold transition ${
-                      selectedFolderId === null ? "bg-ice text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
-                    }`}
-                  >
-                    All documents
-                  </button>
-
-                  {folders.map((folder) => (
-                    <button
-                      key={folder.id}
-                      type="button"
-                      onClick={() => handleSelectFolder(folder.id)}
-                      aria-pressed={selectedFolderId === folder.id}
-                      className={`mb-2 w-full rounded-2xl px-3 py-2 text-left text-sm font-bold transition ${
-                        selectedFolderId === folder.id ? "bg-ice text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
-                      }`}
-                    >
-                      {folder.name}
-                    </button>
-                  ))}
-
-                  <div className="mt-4 border-t-2 border-white/30 pt-3">
-                    {isReady && visibleDocuments.length === 0 ? (
-                      <p className="rounded-2xl bg-white/10 p-3 text-sm leading-6 text-cream/70">No documents here yet.</p>
-                    ) : null}
-                    {!isReady ? <p className="rounded-2xl bg-white/10 p-3 text-sm leading-6 text-cream/70">Loading workspace...</p> : null}
-                    {visibleDocuments.map((document) => (
-                      <button
-                        key={document.id}
-                        type="button"
-                        onClick={() => {
-                          handleSelectFolder(document.folderId);
-                          setSelectedDocumentId(document.id);
-                          setMobileTab("edit");
-                        }}
-                        aria-pressed={selectedDocumentId === document.id}
-                        className={`mb-2 w-full rounded-2xl px-3 py-2 text-left transition ${
-                          selectedDocumentId === document.id ? "bg-bubble text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
-                        }`}
-                      >
-                        <span className="block truncate text-sm font-black">{document.title}</span>
-                        <span className="mt-1 block truncate text-xs font-semibold opacity-70">{document.updatedAt}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            </div>
-          </aside>
+          <div className={`min-h-0 lg:block ${mobileTab === "files" ? "block" : "hidden"}`}>
+            <Sidebar
+              folders={folders}
+              documents={documents}
+              selectedFolderId={selectedFolderId}
+              selectedDocumentId={selectedDocumentId}
+              expandedFolderIds={expandedFolderIds}
+              error={error}
+              onSelectFolder={handleSelectFolder}
+              onToggleFolder={handleToggleFolder}
+              onCreateFolder={handleCreateFolder}
+              onRenameFolder={handleRenameFolder}
+              onDeleteFolder={handleDeleteFolder}
+              onSelectDocument={handleSelectDocument}
+              onCreateDocument={handleCreateDocument}
+              onRenameDocument={handleRenameDocument}
+              onMoveDocument={handleMoveDocument}
+              onDeleteDocument={handleDeleteDocument}
+              onOpenImport={() => setIsImportOpen(true)}
+              onExportFolder={() => setError("Folder export connects in Task 11.")}
+            />
+            {importStatus ? <span className="sr-only">{importStatus}</span> : null}
+          </div>
 
           <section
             className={`min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker ${
