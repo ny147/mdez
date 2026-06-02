@@ -123,7 +123,6 @@ function FolderTreeRow({
         <button
           type="button"
           onClick={() => onSelectFolder(folder.id)}
-          onDoubleClick={handleRename}
           aria-pressed={isSelected}
           title={`Open ${folder.name}`}
           className={`min-w-0 flex-1 rounded-2xl px-2 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-ice ${
