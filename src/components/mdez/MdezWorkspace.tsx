@@ -47,6 +47,10 @@ function getAncestorFolderIds(folders: Folder[], folderId: string | null) {
   return ancestors;
 }
 
+function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | null) {
+  return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
+}
+
 export function MdezWorkspace() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -75,7 +79,7 @@ export function MdezWorkspace() {
         setDocuments(content.documents);
         setSelectedDocumentId(firstDocument?.id ?? null);
         setSelectedFolderId(firstDocument?.folderId ?? null);
-        setExpandedFolderIds(new Set(getAncestorFolderIds(content.folders, firstDocument?.folderId ?? null)));
+        setExpandedFolderIds(new Set(getExpandedFolderIdsForSelection(content.folders, firstDocument?.folderId ?? null)));
         setIsReady(true);
       })
       .catch(() => {
@@ -127,7 +131,7 @@ export function MdezWorkspace() {
 
     setSelectedFolderId(folderId);
     setSelectedDocumentId(firstDocument?.id ?? null);
-    expandFolderAncestors(folderId);
+    expandFolderAncestors(folderId, folders, true);
   }
 
   function handleSelectDocument(documentId: string) {
@@ -139,7 +143,7 @@ export function MdezWorkspace() {
 
     setSelectedFolderId(document.folderId);
     setSelectedDocumentId(document.id);
-    expandFolderAncestors(document.folderId);
+    expandFolderAncestors(document.folderId, folders, true);
     setMobileTab("edit");
   }
 
@@ -273,7 +277,7 @@ export function MdezWorkspace() {
       setError(null);
       setSelectedFolderId(folderId);
       setSelectedDocumentId(documentId);
-      expandFolderAncestors(folderId);
+      expandFolderAncestors(folderId, folders, true);
       await refreshContent(documentId);
     } catch {
       setError("Could not move document.");
