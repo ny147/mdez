@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { folderHasContent } from "@/lib/tree";
 import {
@@ -12,14 +12,17 @@ import {
   listContent,
   moveDocument,
   renameDocument,
-  renameFolder
+  renameFolder,
+  updateDocumentBody
 } from "@/lib/repository";
 import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
+import { EditorPane } from "@/components/mdez/EditorPane";
 import { ImportDialog } from "@/components/mdez/ImportDialog";
+import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
-const viewOptions: { value: ViewMode; label: string }[] = [
+const readerViewOptions: { value: ViewMode; label: string }[] = [
   { value: "split", label: "Split" },
   { value: "editor", label: "Edit" },
   { value: "preview", label: "Read" }
@@ -62,9 +65,11 @@ export function MdezWorkspace() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [mobileTab, setMobileTab] = useState<MobileTab>("files");
-  const [saveStatus] = useState<SaveStatus>("Saved");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("Saved");
+  const [draftBody, setDraftBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const saveVersionRef = useRef(0);
 
   useEffect(() => {
     let alive = true;
@@ -104,6 +109,41 @@ export function MdezWorkspace() {
   );
 
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
+
+  useEffect(() => {
+    saveVersionRef.current += 1;
+    setDraftBody(selectedDocument?.body ?? "");
+    setSaveStatus("Saved");
+  }, [selectedDocument?.id, selectedDocument?.body]);
+
+  useEffect(() => {
+    if (!selectedDocument || draftBody === selectedDocument.body) {
+      return;
+    }
+
+    const documentId = selectedDocument.id;
+    const saveVersion = (saveVersionRef.current += 1);
+
+    setSaveStatus("Unsaved");
+    const timeout = window.setTimeout(() => {
+      setSaveStatus("Saving...");
+      updateDocumentBody(documentId, draftBody)
+        .then((updated) => {
+          setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
+          if (saveVersion === saveVersionRef.current) {
+            setSaveStatus("Saved");
+          }
+        })
+        .catch(() => {
+          if (saveVersion === saveVersionRef.current) {
+            setSaveStatus("Unsaved");
+            setError("Mdez could not save this document. Your current text remains visible in the editor.");
+          }
+        });
+    }, 650);
+
+    return () => window.clearTimeout(timeout);
+  }, [draftBody, selectedDocument]);
 
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
@@ -383,48 +423,37 @@ export function MdezWorkspace() {
                     {selectedDocument?.title ?? (isReady ? "No document selected" : "Loading workspace...")}
                   </h2>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="rounded-full border-2 border-white/60 bg-abyss/45 px-3 py-1.5 text-sm font-bold text-cream/80">{saveStatus}</p>
+                {!showEditor ? (
                   <div className="hidden lg:block">
-                    <SegmentedControl label="Workspace view" value={viewMode} options={viewOptions} onChange={setViewMode} />
+                    <SegmentedControl label="Workspace view" value={viewMode} options={readerViewOptions} onChange={setViewMode} />
                   </div>
-                </div>
+                ) : null}
               </div>
 
               <div className={`grid min-h-0 flex-1 gap-4 ${contentGridColumns}`}>
-                <article
-                  className={`min-h-[24rem] rounded-3xl border-2 border-white/60 bg-abyss/55 p-4 ${
-                    mobileTab === "edit" ? "block" : "hidden"
-                  } ${showEditor ? "lg:block" : "lg:hidden"}`}
+                <div
+                  className={`min-h-[24rem] min-w-0 ${mobileTab === "edit" ? "block" : "hidden"} ${
+                    showEditor ? "lg:block" : "lg:hidden"
+                  }`}
                 >
-                  <div className="flex h-full flex-col">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-mint">Editor</p>
-                    <div className="mt-4 flex flex-1 items-center justify-center rounded-[1.5rem] border-2 border-dashed border-white/40 bg-white/5 p-6 text-center">
-                      <p className="max-w-sm text-sm font-semibold leading-6 text-cream/70">
-                        {selectedDocument
-                          ? "Editor placeholder. Markdown editing arrives in the next task."
-                          : "Choose a document to start editing."}
-                      </p>
-                    </div>
-                  </div>
-                </article>
+                  <EditorPane
+                    document={selectedDocument}
+                    body={draftBody}
+                    saveStatus={saveStatus}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    onBodyChange={setDraftBody}
+                    onRename={(title) => selectedDocument && void handleRenameDocument(selectedDocument.id, title)}
+                  />
+                </div>
 
-                <article
-                  className={`min-h-[24rem] rounded-3xl border-2 border-white/60 bg-cream p-4 text-abyss ${
-                    mobileTab === "read" ? "block" : "hidden"
-                  } ${showReader ? "lg:block" : "lg:hidden"}`}
+                <div
+                  className={`min-h-[24rem] min-w-0 ${mobileTab === "read" ? "block" : "hidden"} ${
+                    showReader ? "lg:block" : "lg:hidden"
+                  }`}
                 >
-                  <div className="flex h-full flex-col">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-bubble">Reader</p>
-                    <div className="mt-4 flex flex-1 items-center justify-center rounded-[1.5rem] border-2 border-dashed border-abyss/30 bg-white p-6 text-center">
-                      <p className="max-w-sm text-sm font-semibold leading-6 text-abyss/65">
-                        {selectedDocument
-                          ? "Reader placeholder. Rendered markdown preview arrives in the next task."
-                          : "Select a document to preview it here."}
-                      </p>
-                    </div>
-                  </div>
-                </article>
+                  <PreviewPane document={selectedDocument} body={draftBody} previewOnly={viewMode === "preview"} />
+                </div>
               </div>
             </div>
           </section>
