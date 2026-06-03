@@ -496,7 +496,25 @@ export function MdezWorkspace() {
 
   async function handleRenameDocument(documentId: string, title: string) {
     try {
-      await renameDocument(documentId, title);
+      const updated = await renameDocument(documentId, title);
+
+      titleSaveVersionsRef.current[documentId] = (titleSaveVersionsRef.current[documentId] ?? 0) + 1;
+      persistedTitlesRef.current = { ...persistedTitlesRef.current, [documentId]: updated.title };
+      setDraftTitlesById((current) => {
+        const next = { ...current, [documentId]: updated.title };
+        draftTitlesRef.current = next;
+        return next;
+      });
+      setSavingTitlesById((current) => {
+        if (current[documentId] === undefined) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[documentId];
+        return next;
+      });
+      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
       setError(null);
       await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
     } catch {
@@ -653,7 +671,7 @@ export function MdezWorkspace() {
                     showReader ? "lg:block" : "lg:hidden"
                   }`}
                 >
-                  <PreviewPane document={selectedDocument} body={draftBody} previewOnly={viewMode === "preview"} />
+                  <PreviewPane document={selectedDocument} title={draftTitle} body={draftBody} previewOnly={viewMode === "preview"} />
                 </div>
               </div>
             </div>
