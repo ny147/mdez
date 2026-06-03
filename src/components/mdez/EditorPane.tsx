@@ -15,6 +15,7 @@ const viewOptions: { value: ViewMode; label: string }[] = [
 
 type EditorPaneProps = {
   document: Document | null;
+  title: string;
   body: string;
   saveStatus: SaveStatus;
   viewMode: ViewMode;
@@ -25,6 +26,7 @@ type EditorPaneProps = {
 
 export function EditorPane({
   document,
+  title,
   body,
   saveStatus,
   viewMode,
@@ -54,13 +56,19 @@ export function EditorPane({
         <label className="min-w-0 flex-1">
           <span className="text-xs font-black uppercase tracking-[0.16em] text-mint">Document title</span>
           <input
-            value={document.title}
+            value={title}
             onChange={(event) => onRename(event.target.value)}
             className="mt-2 w-full min-w-0 rounded-2xl border-2 border-white/60 bg-white/10 px-4 py-3 text-xl font-black text-cream outline-none transition placeholder:text-cream/45 focus:border-ice"
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="rounded-full border-2 border-white/60 bg-abyss/45 px-3 py-1.5 text-sm font-bold text-cream/80">{saveStatus}</p>
+          <p
+            role="status"
+            aria-live="polite"
+            className="rounded-full border-2 border-white/60 bg-abyss/45 px-3 py-1.5 text-sm font-bold text-cream/80"
+          >
+            {saveStatus}
+          </p>
           <div className="hidden lg:block">
             <SegmentedControl label="Workspace view" value={viewMode} options={viewOptions} onChange={onViewModeChange} />
           </div>

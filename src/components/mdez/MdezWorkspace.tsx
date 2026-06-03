@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
 import { folderHasContent } from "@/lib/tree";
 import {
@@ -21,6 +22,8 @@ import { ImportDialog } from "@/components/mdez/ImportDialog";
 import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+
+const SAVE_ERROR_MESSAGE = "Mdez could not save this document. Your current text remains visible in the editor.";
 
 const readerViewOptions: { value: ViewMode; label: string }[] = [
   { value: "split", label: "Split" },
@@ -56,6 +59,97 @@ function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | 
   return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
 }
 
+function syncDraftMap(
+  currentDrafts: Record<string, string>,
+  documents: Document[],
+  persistedValues: Record<string, string>,
+  getValue: (document: Document) => string
+) {
+  const nextDrafts: Record<string, string> = {};
+  let changed = false;
+
+  for (const document of documents) {
+    const persistedValue = getValue(document);
+    const currentDraft = currentDrafts[document.id];
+    const previousPersistedValue = persistedValues[document.id];
+    const hasLocalDraft = currentDraft !== undefined && previousPersistedValue !== undefined && currentDraft !== previousPersistedValue;
+
+    nextDrafts[document.id] = hasLocalDraft ? currentDraft : persistedValue;
+
+    if (currentDraft !== nextDrafts[document.id]) {
+      changed = true;
+    }
+  }
+
+  return changed || Object.keys(currentDrafts).length !== documents.length ? nextDrafts : currentDrafts;
+}
+
+function persistDocumentValue(
+  documentId: string,
+  value: string,
+  persist: (id: string, value: string) => Promise<Document>,
+  saveVersions: MutableRefObject<Record<string, number>>,
+  drafts: MutableRefObject<Record<string, string>>,
+  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
+  setDocuments: Dispatch<SetStateAction<Document[]>>,
+  setError: Dispatch<SetStateAction<string | null>>
+) {
+  const saveVersion = (saveVersions.current[documentId] ?? 0) + 1;
+  saveVersions.current[documentId] = saveVersion;
+
+  return window.setTimeout(() => {
+    if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
+      return;
+    }
+
+    setSavingDrafts((current) => ({ ...current, [documentId]: value }));
+    persist(documentId, value)
+      .then((updated) => {
+        if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
+          setSavingDrafts((current) => {
+            if (current[documentId] !== value) {
+              return current;
+            }
+
+            const next = { ...current };
+            delete next[documentId];
+            return next;
+          });
+          return;
+        }
+
+        setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
+        setSavingDrafts((current) => {
+          const next = { ...current };
+          delete next[updated.id];
+          return next;
+        });
+        setError((current) => (current === SAVE_ERROR_MESSAGE ? null : current));
+      })
+      .catch(() => {
+        if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
+          setSavingDrafts((current) => {
+            if (current[documentId] !== value) {
+              return current;
+            }
+
+            const next = { ...current };
+            delete next[documentId];
+            return next;
+          });
+          return;
+        }
+
+        setSavingDrafts((current) => {
+          const next = { ...current };
+          delete next[documentId];
+          return next;
+        });
+        setError(SAVE_ERROR_MESSAGE);
+      });
+  }, 650);
+}
+
 export function MdezWorkspace() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -65,14 +159,18 @@ export function MdezWorkspace() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [mobileTab, setMobileTab] = useState<MobileTab>("files");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("Saved");
-  const [draftBody, setDraftBody] = useState("");
+  const [draftBodiesById, setDraftBodiesById] = useState<Record<string, string>>({});
+  const [draftTitlesById, setDraftTitlesById] = useState<Record<string, string>>({});
+  const [savingBodiesById, setSavingBodiesById] = useState<Record<string, string>>({});
+  const [savingTitlesById, setSavingTitlesById] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const saveVersionRef = useRef(0);
-  const draftBodyRef = useRef("");
-  const persistedBodyRef = useRef("");
-  const selectedDocumentIdRef = useRef<string | null>(null);
+  const bodySaveVersionsRef = useRef<Record<string, number>>({});
+  const titleSaveVersionsRef = useRef<Record<string, number>>({});
+  const draftBodiesRef = useRef<Record<string, string>>({});
+  const draftTitlesRef = useRef<Record<string, string>>({});
+  const persistedBodiesRef = useRef<Record<string, string>>({});
+  const persistedTitlesRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     let alive = true;
@@ -112,68 +210,92 @@ export function MdezWorkspace() {
   );
 
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
-  const selectedDocumentBody = selectedDocument?.body ?? "";
-  const selectedDocumentKey = selectedDocument?.id ?? null;
+  const selectedDocumentKey = selectedDocument?.id ?? "";
+  const draftBody = selectedDocument ? draftBodiesById[selectedDocument.id] ?? selectedDocument.body : "";
+  const draftTitle = selectedDocument ? draftTitlesById[selectedDocument.id] ?? selectedDocument.title : "";
+  const selectedBodyIsDirty = selectedDocument ? draftBody !== selectedDocument.body : false;
+  const selectedTitleIsDirty = selectedDocument ? draftTitle !== selectedDocument.title : false;
+  const selectedBodyIsSaving = selectedDocument ? savingBodiesById[selectedDocument.id] === draftBody : false;
+  const selectedTitleIsSaving = selectedDocument ? savingTitlesById[selectedDocument.id] === draftTitle : false;
+  const saveStatus: SaveStatus =
+    selectedBodyIsSaving || selectedTitleIsSaving ? "Saving..." : selectedBodyIsDirty || selectedTitleIsDirty ? "Unsaved" : "Saved";
 
   useEffect(() => {
-    const nextDocumentId = selectedDocumentKey;
-    const nextBody = selectedDocumentBody;
-    const previousDocumentId = selectedDocumentIdRef.current;
-    const hasUnsavedLocalEdits = previousDocumentId === nextDocumentId && draftBodyRef.current !== persistedBodyRef.current;
+    const previousPersistedBodies = persistedBodiesRef.current;
+    const previousPersistedTitles = persistedTitlesRef.current;
 
-    selectedDocumentIdRef.current = nextDocumentId;
-    persistedBodyRef.current = nextBody;
+    setDraftBodiesById((current) => {
+      const next = syncDraftMap(current, documents, previousPersistedBodies, (document) => document.body);
+      draftBodiesRef.current = next;
+      return next;
+    });
+    setDraftTitlesById((current) => {
+      const next = syncDraftMap(current, documents, previousPersistedTitles, (document) => document.title);
+      draftTitlesRef.current = next;
+      return next;
+    });
 
-    if (previousDocumentId !== nextDocumentId || !hasUnsavedLocalEdits) {
-      saveVersionRef.current += 1;
-      draftBodyRef.current = nextBody;
-      setDraftBody(nextBody);
-      setSaveStatus("Saved");
-    }
-  }, [selectedDocumentKey, selectedDocumentBody]);
+    persistedBodiesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.body]));
+    persistedTitlesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.title]));
+  }, [documents]);
 
   useEffect(() => {
-    if (!selectedDocumentKey || draftBody === selectedDocumentBody) {
-      return;
-    }
+    const timeouts: number[] = [];
 
-    const documentId = selectedDocumentKey;
-    const bodyToSave = draftBody;
-    const saveVersion = (saveVersionRef.current += 1);
+    for (const document of documents) {
+      const draft = draftBodiesById[document.id];
 
-    if (selectedDocumentIdRef.current !== documentId || draftBodyRef.current !== bodyToSave) {
-      return;
-    }
-
-    setSaveStatus("Unsaved");
-    const timeout = window.setTimeout(() => {
-      if (saveVersion !== saveVersionRef.current || selectedDocumentIdRef.current !== documentId || draftBodyRef.current !== bodyToSave) {
-        return;
+      if (draft !== undefined && draft !== document.body) {
+        timeouts.push(
+          persistDocumentValue(
+            document.id,
+            draft,
+            updateDocumentBody,
+            bodySaveVersionsRef,
+            draftBodiesRef,
+            setSavingBodiesById,
+            setDocuments,
+            setError
+          )
+        );
       }
+    }
 
-      setSaveStatus("Saving...");
-      updateDocumentBody(documentId, bodyToSave)
-        .then((updated) => {
-          if (saveVersion !== saveVersionRef.current || selectedDocumentIdRef.current !== updated.id || draftBodyRef.current !== updated.body) {
-            return;
-          }
+    return () => {
+      for (const timeout of timeouts) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [documents, draftBodiesById]);
 
-          persistedBodyRef.current = updated.body;
-          setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-          setSaveStatus("Saved");
-        })
-        .catch(() => {
-          if (saveVersion !== saveVersionRef.current || selectedDocumentIdRef.current !== documentId || draftBodyRef.current !== bodyToSave) {
-            return;
-          }
+  useEffect(() => {
+    const timeouts: number[] = [];
 
-          setSaveStatus("Unsaved");
-          setError("Mdez could not save this document. Your current text remains visible in the editor.");
-        });
-    }, 650);
+    for (const document of documents) {
+      const draft = draftTitlesById[document.id];
 
-    return () => window.clearTimeout(timeout);
-  }, [draftBody, selectedDocumentKey, selectedDocumentBody]);
+      if (draft !== undefined && draft !== document.title) {
+        timeouts.push(
+          persistDocumentValue(
+            document.id,
+            draft,
+            renameDocument,
+            titleSaveVersionsRef,
+            draftTitlesRef,
+            setSavingTitlesById,
+            setDocuments,
+            setError
+          )
+        );
+      }
+    }
+
+    return () => {
+      for (const timeout of timeouts) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [documents, draftTitlesById]);
 
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
@@ -400,8 +522,27 @@ export function MdezWorkspace() {
   }
 
   function handleDraftBodyChange(body: string) {
-    draftBodyRef.current = body;
-    setDraftBody(body);
+    if (!selectedDocumentKey) {
+      return;
+    }
+
+    setDraftBodiesById((current) => {
+      const next = { ...current, [selectedDocumentKey]: body };
+      draftBodiesRef.current = next;
+      return next;
+    });
+  }
+
+  function handleDraftTitleChange(title: string) {
+    if (!selectedDocumentKey) {
+      return;
+    }
+
+    setDraftTitlesById((current) => {
+      const next = { ...current, [selectedDocumentKey]: title };
+      draftTitlesRef.current = next;
+      return next;
+    });
   }
 
   return (
@@ -473,12 +614,13 @@ export function MdezWorkspace() {
                 >
                   <EditorPane
                     document={selectedDocument}
+                    title={draftTitle}
                     body={draftBody}
                     saveStatus={saveStatus}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
                     onBodyChange={handleDraftBodyChange}
-                    onRename={(title) => selectedDocument && void handleRenameDocument(selectedDocument.id, title)}
+                    onRename={handleDraftTitleChange}
                   />
                 </div>
 
