@@ -84,12 +84,160 @@ function syncDraftMap(
   return changed || Object.keys(currentDrafts).length !== documents.length ? nextDrafts : currentDrafts;
 }
 
+type SaveRequest = {
+  value: string;
+  version: number;
+  resolve: (document: Document | null) => void;
+  reject: (error: unknown) => void;
+};
+
+type SaveQueueEntry = {
+  isRunning: boolean;
+  latest: SaveRequest | null;
+};
+
+type SaveQueueRef = MutableRefObject<Record<string, SaveQueueEntry | undefined>>;
+
+function clearSavingDraft(
+  documentId: string,
+  value: string,
+  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>
+) {
+  setSavingDrafts((current) => {
+    if (current[documentId] !== value) {
+      return current;
+    }
+
+    const next = { ...current };
+    delete next[documentId];
+    return next;
+  });
+}
+
+function enqueueDocumentValue(
+  documentId: string,
+  value: string,
+  persist: (id: string, value: string) => Promise<Document>,
+  saveVersions: MutableRefObject<Record<string, number>>,
+  drafts: MutableRefObject<Record<string, string>>,
+  saveQueues: SaveQueueRef,
+  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
+  setDocuments: Dispatch<SetStateAction<Document[]>>,
+  setError: Dispatch<SetStateAction<string | null>>,
+  canonicalizeDraft?: {
+    getValue: (document: Document) => string;
+    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
+  }
+) {
+  const version = (saveVersions.current[documentId] ?? 0) + 1;
+  saveVersions.current[documentId] = version;
+  setSavingDrafts((current) => ({ ...current, [documentId]: value }));
+
+  const entry = saveQueues.current[documentId] ?? { isRunning: false, latest: null };
+  saveQueues.current[documentId] = entry;
+
+  if (entry.latest) {
+    entry.latest.resolve(null);
+  }
+
+  const promise = new Promise<Document | null>((resolve, reject) => {
+    entry.latest = { value, version, resolve, reject };
+  });
+
+  if (!entry.isRunning) {
+    entry.isRunning = true;
+    void runSaveQueue(documentId, persist, saveVersions, drafts, saveQueues, setSavingDrafts, setDocuments, setError, canonicalizeDraft);
+  }
+
+  return promise;
+}
+
+async function runSaveQueue(
+  documentId: string,
+  persist: (id: string, value: string) => Promise<Document>,
+  saveVersions: MutableRefObject<Record<string, number>>,
+  drafts: MutableRefObject<Record<string, string>>,
+  saveQueues: SaveQueueRef,
+  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
+  setDocuments: Dispatch<SetStateAction<Document[]>>,
+  setError: Dispatch<SetStateAction<string | null>>,
+  canonicalizeDraft?: {
+    getValue: (document: Document) => string;
+    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
+  }
+) {
+  const entry = saveQueues.current[documentId];
+
+  if (!entry) {
+    return;
+  }
+
+  while (entry.latest) {
+    const request = entry.latest;
+    entry.latest = null;
+
+    try {
+      const updated = await persist(documentId, request.value);
+      const stillCurrent = saveVersions.current[documentId] === request.version && drafts.current[documentId] === request.value;
+
+      if (!stillCurrent) {
+        clearSavingDraft(documentId, request.value, setSavingDrafts);
+        request.resolve(null);
+        continue;
+      }
+
+      if (canonicalizeDraft) {
+        const canonicalValue = canonicalizeDraft.getValue(updated);
+
+        if (canonicalValue !== request.value) {
+          canonicalizeDraft.setDrafts((current) => {
+            if (current[updated.id] !== request.value) {
+              return current;
+            }
+
+            const next = { ...current, [updated.id]: canonicalValue };
+            drafts.current = next;
+            return next;
+          });
+        }
+      }
+
+      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
+      clearSavingDraft(updated.id, request.value, setSavingDrafts);
+      setError((current) => (current === SAVE_ERROR_MESSAGE ? null : current));
+      request.resolve(updated);
+    } catch (error) {
+      const stillCurrent = saveVersions.current[documentId] === request.version && drafts.current[documentId] === request.value;
+
+      clearSavingDraft(documentId, request.value, setSavingDrafts);
+
+      if (!stillCurrent) {
+        request.resolve(null);
+        continue;
+      }
+
+      setError(SAVE_ERROR_MESSAGE);
+      request.reject(error);
+    }
+  }
+
+  entry.isRunning = false;
+
+  if (entry.latest) {
+    entry.isRunning = true;
+    void runSaveQueue(documentId, persist, saveVersions, drafts, saveQueues, setSavingDrafts, setDocuments, setError, canonicalizeDraft);
+  } else {
+    delete saveQueues.current[documentId];
+  }
+}
+
 function persistDocumentValue(
   documentId: string,
   value: string,
   persist: (id: string, value: string) => Promise<Document>,
   saveVersions: MutableRefObject<Record<string, number>>,
   drafts: MutableRefObject<Record<string, string>>,
+  saveQueues: SaveQueueRef,
   setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
   setDocuments: Dispatch<SetStateAction<Document[]>>,
   setError: Dispatch<SetStateAction<string | null>>,
@@ -106,67 +254,18 @@ function persistDocumentValue(
       return;
     }
 
-    setSavingDrafts((current) => ({ ...current, [documentId]: value }));
-    persist(documentId, value)
-      .then((updated) => {
-        if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
-          setSavingDrafts((current) => {
-            if (current[documentId] !== value) {
-              return current;
-            }
-
-            const next = { ...current };
-            delete next[documentId];
-            return next;
-          });
-          return;
-        }
-
-        if (canonicalizeDraft) {
-          const canonicalValue = canonicalizeDraft.getValue(updated);
-
-          if (canonicalValue !== value) {
-            canonicalizeDraft.setDrafts((current) => {
-              if (current[updated.id] !== value) {
-                return current;
-              }
-
-              const next = { ...current, [updated.id]: canonicalValue };
-              drafts.current = next;
-              return next;
-            });
-          }
-        }
-
-        setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-        setSavingDrafts((current) => {
-          const next = { ...current };
-          delete next[updated.id];
-          return next;
-        });
-        setError((current) => (current === SAVE_ERROR_MESSAGE ? null : current));
-      })
-      .catch(() => {
-        if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
-          setSavingDrafts((current) => {
-            if (current[documentId] !== value) {
-              return current;
-            }
-
-            const next = { ...current };
-            delete next[documentId];
-            return next;
-          });
-          return;
-        }
-
-        setSavingDrafts((current) => {
-          const next = { ...current };
-          delete next[documentId];
-          return next;
-        });
-        setError(SAVE_ERROR_MESSAGE);
-      });
+    void enqueueDocumentValue(
+      documentId,
+      value,
+      persist,
+      saveVersions,
+      drafts,
+      saveQueues,
+      setSavingDrafts,
+      setDocuments,
+      setError,
+      canonicalizeDraft
+    ).catch(() => undefined);
   }, 650);
 }
 
@@ -187,6 +286,8 @@ export function MdezWorkspace() {
   const [isReady, setIsReady] = useState(false);
   const bodySaveVersionsRef = useRef<Record<string, number>>({});
   const titleSaveVersionsRef = useRef<Record<string, number>>({});
+  const bodySaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
+  const titleSaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
   const draftBodiesRef = useRef<Record<string, string>>({});
   const draftTitlesRef = useRef<Record<string, string>>({});
   const persistedBodiesRef = useRef<Record<string, string>>({});
@@ -255,6 +356,14 @@ export function MdezWorkspace() {
       return next;
     });
 
+    const documentIds = new Set(documents.map((document) => document.id));
+    bodySaveVersionsRef.current = Object.fromEntries(
+      Object.entries(bodySaveVersionsRef.current).filter(([documentId]) => documentIds.has(documentId))
+    );
+    titleSaveVersionsRef.current = Object.fromEntries(
+      Object.entries(titleSaveVersionsRef.current).filter(([documentId]) => documentIds.has(documentId))
+    );
+
     persistedBodiesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.body]));
     persistedTitlesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.title]));
   }, [documents]);
@@ -273,6 +382,7 @@ export function MdezWorkspace() {
             updateDocumentBody,
             bodySaveVersionsRef,
             draftBodiesRef,
+            bodySaveQueuesRef,
             setSavingBodiesById,
             setDocuments,
             setError
@@ -302,6 +412,7 @@ export function MdezWorkspace() {
             renameDocument,
             titleSaveVersionsRef,
             draftTitlesRef,
+            titleSaveQueuesRef,
             setSavingTitlesById,
             setDocuments,
             setError,
@@ -496,27 +607,34 @@ export function MdezWorkspace() {
 
   async function handleRenameDocument(documentId: string, title: string) {
     try {
-      const updated = await renameDocument(documentId, title);
-
-      titleSaveVersionsRef.current[documentId] = (titleSaveVersionsRef.current[documentId] ?? 0) + 1;
-      persistedTitlesRef.current = { ...persistedTitlesRef.current, [documentId]: updated.title };
+      draftTitlesRef.current = { ...draftTitlesRef.current, [documentId]: title };
       setDraftTitlesById((current) => {
-        const next = { ...current, [documentId]: updated.title };
+        const next = { ...current, [documentId]: title };
         draftTitlesRef.current = next;
         return next;
       });
-      setSavingTitlesById((current) => {
-        if (current[documentId] === undefined) {
-          return current;
-        }
 
-        const next = { ...current };
-        delete next[documentId];
-        return next;
-      });
-      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-      setError(null);
-      await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
+      const updated = await enqueueDocumentValue(
+        documentId,
+        title,
+        renameDocument,
+        titleSaveVersionsRef,
+        draftTitlesRef,
+        titleSaveQueuesRef,
+        setSavingTitlesById,
+        setDocuments,
+        setError,
+        {
+          getValue: (document) => document.title,
+          setDrafts: setDraftTitlesById
+        }
+      );
+
+      if (updated) {
+        persistedTitlesRef.current = { ...persistedTitlesRef.current, [documentId]: updated.title };
+        setError(null);
+        await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
+      }
     } catch {
       setError("Could not rename document.");
     }
