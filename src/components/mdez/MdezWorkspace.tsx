@@ -70,6 +70,9 @@ export function MdezWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const saveVersionRef = useRef(0);
+  const draftBodyRef = useRef("");
+  const persistedBodyRef = useRef("");
+  const selectedDocumentIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -109,41 +112,68 @@ export function MdezWorkspace() {
   );
 
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
+  const selectedDocumentBody = selectedDocument?.body ?? "";
+  const selectedDocumentKey = selectedDocument?.id ?? null;
 
   useEffect(() => {
-    saveVersionRef.current += 1;
-    setDraftBody(selectedDocument?.body ?? "");
-    setSaveStatus("Saved");
-  }, [selectedDocument?.id, selectedDocument?.body]);
+    const nextDocumentId = selectedDocumentKey;
+    const nextBody = selectedDocumentBody;
+    const previousDocumentId = selectedDocumentIdRef.current;
+    const hasUnsavedLocalEdits = previousDocumentId === nextDocumentId && draftBodyRef.current !== persistedBodyRef.current;
+
+    selectedDocumentIdRef.current = nextDocumentId;
+    persistedBodyRef.current = nextBody;
+
+    if (previousDocumentId !== nextDocumentId || !hasUnsavedLocalEdits) {
+      saveVersionRef.current += 1;
+      draftBodyRef.current = nextBody;
+      setDraftBody(nextBody);
+      setSaveStatus("Saved");
+    }
+  }, [selectedDocumentKey, selectedDocumentBody]);
 
   useEffect(() => {
-    if (!selectedDocument || draftBody === selectedDocument.body) {
+    if (!selectedDocumentKey || draftBody === selectedDocumentBody) {
       return;
     }
 
-    const documentId = selectedDocument.id;
+    const documentId = selectedDocumentKey;
+    const bodyToSave = draftBody;
     const saveVersion = (saveVersionRef.current += 1);
+
+    if (selectedDocumentIdRef.current !== documentId || draftBodyRef.current !== bodyToSave) {
+      return;
+    }
 
     setSaveStatus("Unsaved");
     const timeout = window.setTimeout(() => {
+      if (saveVersion !== saveVersionRef.current || selectedDocumentIdRef.current !== documentId || draftBodyRef.current !== bodyToSave) {
+        return;
+      }
+
       setSaveStatus("Saving...");
-      updateDocumentBody(documentId, draftBody)
+      updateDocumentBody(documentId, bodyToSave)
         .then((updated) => {
-          setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-          if (saveVersion === saveVersionRef.current) {
-            setSaveStatus("Saved");
+          if (saveVersion !== saveVersionRef.current || selectedDocumentIdRef.current !== updated.id || draftBodyRef.current !== updated.body) {
+            return;
           }
+
+          persistedBodyRef.current = updated.body;
+          setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
+          setSaveStatus("Saved");
         })
         .catch(() => {
-          if (saveVersion === saveVersionRef.current) {
-            setSaveStatus("Unsaved");
-            setError("Mdez could not save this document. Your current text remains visible in the editor.");
+          if (saveVersion !== saveVersionRef.current || selectedDocumentIdRef.current !== documentId || draftBodyRef.current !== bodyToSave) {
+            return;
           }
+
+          setSaveStatus("Unsaved");
+          setError("Mdez could not save this document. Your current text remains visible in the editor.");
         });
     }, 650);
 
     return () => window.clearTimeout(timeout);
-  }, [draftBody, selectedDocument]);
+  }, [draftBody, selectedDocumentKey, selectedDocumentBody]);
 
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
@@ -369,6 +399,11 @@ export function MdezWorkspace() {
     }
   }
 
+  function handleDraftBodyChange(body: string) {
+    draftBodyRef.current = body;
+    setDraftBody(body);
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-abyss text-cream">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(159,234,255,0.24),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(200,168,255,0.18),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(255,128,204,0.16),transparent_30%)]" />
@@ -442,7 +477,7 @@ export function MdezWorkspace() {
                     saveStatus={saveStatus}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
-                    onBodyChange={setDraftBody}
+                    onBodyChange={handleDraftBodyChange}
                     onRename={(title) => selectedDocument && void handleRenameDocument(selectedDocument.id, title)}
                   />
                 </div>
