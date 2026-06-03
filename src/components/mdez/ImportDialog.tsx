@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 import type { Folder } from "@/types/content";
@@ -21,6 +21,60 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
   const [targetFolderId, setTargetFolderId] = useState<string | null>(selectedFolderId);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef<HTMLElement>(null);
+  const pasteRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const previousElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    pasteRef.current?.focus();
+
+    return () => {
+      previousElement?.focus();
+    };
+  }, []);
+
+  function closeDialog() {
+    if (!busy) {
+      onClose();
+    }
+  }
+
+  function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      if (!busy) {
+        onClose();
+      }
+
+      return;
+    }
+
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const focusableElements = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), select:not([disabled]), textarea:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      ) ?? []
+    ).filter((element) => !element.hasAttribute("aria-hidden"));
+
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  }
 
   async function submitPaste() {
     if (busy) {
@@ -49,16 +103,25 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
       return;
     }
 
+    setBusy(true);
     const items: ImportItem[] = [];
 
     for (const file of Array.from(files)) {
       if (!isMarkdownFile(file)) {
         setMessage(`${file.name} is not a supported markdown file.`);
+        setBusy(false);
         return;
       }
 
       if (file.size > MAX_MARKDOWN_FILE_BYTES) {
-        setMessage(`${file.name} is larger than 5 MB. Import it only if your browser has enough memory.`);
+        const warning = `${file.name} is larger than 5 MB. Import it only if your browser has enough memory.`;
+
+        setMessage(warning);
+
+        if (!window.confirm(warning)) {
+          setBusy(false);
+          return;
+        }
       }
 
       try {
@@ -66,15 +129,15 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
         items.push({ title: fileNameToTitle(file.name), body });
       } catch {
         setMessage(`Mdez could not read ${file.name}.`);
+        setBusy(false);
         return;
       }
     }
 
     if (items.length === 0) {
+      setBusy(false);
       return;
     }
-
-    setBusy(true);
 
     try {
       await onImport(items, targetFolderId);
@@ -89,9 +152,11 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-abyss/80 px-4 py-6 backdrop-blur-sm">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="import-title"
+        onKeyDown={handleDialogKeyDown}
         className="max-h-full w-full max-w-2xl overflow-y-auto rounded-[2rem] border-2 border-white/80 bg-abyss p-5 text-cream shadow-sticker sm:p-6"
       >
         <div className="flex items-start justify-between gap-4 border-b-2 border-white/30 pb-4">
@@ -101,7 +166,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
               Bring notes into Mdez
             </h2>
           </div>
-          <IconButton label="Close import dialog" onClick={onClose} disabled={busy}>
+          <IconButton label="Close import dialog" onClick={closeDialog} disabled={busy}>
             <X aria-hidden="true" size={20} />
           </IconButton>
         </div>
@@ -128,6 +193,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
           <label className="grid gap-2 text-sm font-bold text-cream" htmlFor="import-paste">
             Paste markdown
             <textarea
+              ref={pasteRef}
               id="import-paste"
               value={pasteBody}
               onChange={(event) => setPasteBody(event.currentTarget.value)}
@@ -178,7 +244,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
         <div className="mt-6 flex flex-col-reverse gap-3 border-t-2 border-white/30 pt-4 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeDialog}
             disabled={busy}
             className="rounded-full border-2 border-white/60 px-5 py-3 text-sm font-black text-cream transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >

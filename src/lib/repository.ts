@@ -88,6 +88,30 @@ export async function createDocument(input: { title: string; body: string; folde
   });
 }
 
+export async function createDocuments(inputs: { title: string; body: string }[], folderId: string | null): Promise<Document[]> {
+  return db.transaction("rw", db.documents, async () => {
+    const timestamp = now();
+    const startingOrder = await countDocumentsByFolder(folderId);
+    const documents = inputs.map((input, index): Document => {
+      return {
+        id: createId("doc"),
+        title: input.title.trim() || "Untitled Document",
+        body: input.body,
+        folderId,
+        order: startingOrder + index,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      };
+    });
+
+    for (const document of documents) {
+      await db.documents.add(document);
+    }
+
+    return documents;
+  });
+}
+
 export async function renameDocument(id: string, title: string) {
   const updatedCount = await db.documents.update(id, {
     title: title.trim() || "Untitled Document",

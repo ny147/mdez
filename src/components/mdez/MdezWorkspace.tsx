@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { folderHasContent } from "@/lib/tree";
 import {
   createDocument,
+  createDocuments,
   createFolder,
   deleteDocument,
   deleteFolder,
@@ -262,13 +263,9 @@ export function MdezWorkspace() {
   }
 
   async function handleImport(items: { title: string; body: string }[], folderId: string | null) {
-    let newestDocumentId: string | null = null;
-
     try {
-      for (const item of items) {
-        const document = await createDocument({ ...item, folderId });
-        newestDocumentId = document.id;
-      }
+      const importedDocuments = await createDocuments(items, folderId);
+      const newestDocumentId = importedDocuments[importedDocuments.length - 1]?.id ?? null;
 
       setError(null);
       setSelectedFolderId(folderId);

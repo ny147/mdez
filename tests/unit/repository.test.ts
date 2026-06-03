@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/lib/db";
 import {
   createDocument,
+  createDocuments,
   createFolder,
   deleteDocument,
   deleteFolder,
@@ -31,6 +32,51 @@ describe("repository", () => {
     expect(content.folders).toHaveLength(1);
     expect(content.documents).toHaveLength(1);
     expect(content.documents[0].id).toBe(document.id);
+  });
+
+  it("creates multiple documents in one folder transaction", async () => {
+    const folder = await createFolder("Imports", null);
+    const existing = await createDocument({ title: "Existing", body: "", folderId: folder.id });
+
+    const imported = await createDocuments(
+      [
+        { title: "First", body: "# First" },
+        { title: "Second", body: "# Second" }
+      ],
+      folder.id
+    );
+
+    expect(imported).toHaveLength(2);
+    expect(imported[0]).toMatchObject({ title: "First", body: "# First", folderId: folder.id, order: 1 });
+    expect(imported[1]).toMatchObject({ title: "Second", body: "# Second", folderId: folder.id, order: 2 });
+    expect(existing.order).toBe(0);
+  });
+
+  it("rolls back all imported documents when a batch insert fails", async () => {
+    const originalAdd = db.documents.add.bind(db.documents);
+    let addCount = 0;
+
+    vi.spyOn(db.documents, "add").mockImplementation(((document) => {
+      addCount += 1;
+
+      if (addCount === 2) {
+        throw new Error("Insert failed.");
+      }
+
+      return originalAdd(document);
+    }) as typeof db.documents.add);
+
+    await expect(
+      createDocuments(
+        [
+          { title: "First", body: "# First" },
+          { title: "Second", body: "# Second" }
+        ],
+        null
+      )
+    ).rejects.toThrow("Insert failed.");
+
+    expect((await listContent()).documents).toHaveLength(0);
   });
 
   it("updates document body and timestamps", async () => {
