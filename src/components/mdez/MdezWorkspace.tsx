@@ -14,6 +14,7 @@ import {
   renameFolder
 } from "@/lib/repository";
 import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
+import { ImportDialog } from "@/components/mdez/ImportDialog";
 import { Sidebar } from "@/components/mdez/Sidebar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
@@ -106,7 +107,6 @@ export function MdezWorkspace() {
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
   const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
-  const importStatus = isImportOpen ? "Markdown import connects in Task 9." : null;
 
   function expandFolderAncestors(folderId: string | null, sourceFolders = folders, includeFolder = false) {
     setExpandedFolderIds((current) => {
@@ -261,6 +261,26 @@ export function MdezWorkspace() {
     }
   }
 
+  async function handleImport(items: { title: string; body: string }[], folderId: string | null) {
+    let newestDocumentId: string | null = null;
+
+    try {
+      for (const item of items) {
+        const document = await createDocument({ ...item, folderId });
+        newestDocumentId = document.id;
+      }
+
+      setError(null);
+      setSelectedFolderId(folderId);
+      expandFolderAncestors(folderId, folders, true);
+      await refreshContent(newestDocumentId);
+      setMobileTab("edit");
+    } catch {
+      setError("Could not import markdown.");
+      throw new Error("Could not import markdown.");
+    }
+  }
+
   async function handleRenameDocument(documentId: string, title: string) {
     try {
       await renameDocument(documentId, title);
@@ -346,11 +366,9 @@ export function MdezWorkspace() {
               onDeleteDocument={handleDeleteDocument}
               onOpenImport={() => {
                 setIsImportOpen(true);
-                setError("Markdown import connects in Task 9.");
               }}
               onExportFolder={() => setError("Folder export connects in Task 11.")}
             />
-            {importStatus ? <span className="sr-only">{importStatus}</span> : null}
           </div>
 
           <section
@@ -415,6 +433,14 @@ export function MdezWorkspace() {
           </section>
         </div>
       </div>
+      {isImportOpen ? (
+        <ImportDialog
+          folders={folders}
+          selectedFolderId={selectedFolderId}
+          onClose={() => setIsImportOpen(false)}
+          onImport={handleImport}
+        />
+      ) : null}
     </main>
   );
 }
