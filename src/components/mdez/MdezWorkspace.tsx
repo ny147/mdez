@@ -92,7 +92,11 @@ function persistDocumentValue(
   drafts: MutableRefObject<Record<string, string>>,
   setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
   setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>
+  setError: Dispatch<SetStateAction<string | null>>,
+  canonicalizeDraft?: {
+    getValue: (document: Document) => string;
+    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
+  }
 ) {
   const saveVersion = (saveVersions.current[documentId] ?? 0) + 1;
   saveVersions.current[documentId] = saveVersion;
@@ -116,6 +120,22 @@ function persistDocumentValue(
             return next;
           });
           return;
+        }
+
+        if (canonicalizeDraft) {
+          const canonicalValue = canonicalizeDraft.getValue(updated);
+
+          if (canonicalValue !== value) {
+            canonicalizeDraft.setDrafts((current) => {
+              if (current[updated.id] !== value) {
+                return current;
+              }
+
+              const next = { ...current, [updated.id]: canonicalValue };
+              drafts.current = next;
+              return next;
+            });
+          }
         }
 
         setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
@@ -284,7 +304,11 @@ export function MdezWorkspace() {
             draftTitlesRef,
             setSavingTitlesById,
             setDocuments,
-            setError
+            setError,
+            {
+              getValue: (document) => document.title,
+              setDrafts: setDraftTitlesById
+            }
           )
         );
       }
