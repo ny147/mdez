@@ -18,10 +18,13 @@ import {
 } from "@/lib/repository";
 import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
 import { EditorPane } from "@/components/mdez/EditorPane";
+import { ExportControls } from "@/components/mdez/ExportControls";
 import { ImportDialog } from "@/components/mdez/ImportDialog";
 import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { createFolderZipBlob } from "@/lib/export";
+import { makeMarkdownFileName } from "@/lib/markdown";
 
 const SAVE_ERROR_MESSAGE = "Mdez could not save this document. Your current text remains visible in the editor.";
 
@@ -57,6 +60,16 @@ function getAncestorFolderIds(folders: Folder[], folderId: string | null) {
 
 function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | null) {
   return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function syncDraftMap(
@@ -681,6 +694,25 @@ export function MdezWorkspace() {
     }
   }
 
+  async function handleSidebarFolderExport() {
+    if (!selectedFolderId) {
+      return;
+    }
+
+    const folder = folders.find((item) => item.id === selectedFolderId);
+
+    if (!folder) {
+      return;
+    }
+
+    try {
+      const blob = await createFolderZipBlob(folders, documents, selectedFolderId);
+      downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
+    } catch {
+      setError("Mdez could not generate the ZIP export.");
+    }
+  }
+
   function handleDraftBodyChange(body: string) {
     if (!selectedDocumentKey) {
       return;
@@ -740,7 +772,7 @@ export function MdezWorkspace() {
               onOpenImport={() => {
                 setIsImportOpen(true);
               }}
-              onExportFolder={() => setError("Folder export connects in Task 11.")}
+              onExportFolder={() => void handleSidebarFolderExport()}
             />
           </div>
 
@@ -778,6 +810,15 @@ export function MdezWorkspace() {
                     body={draftBody}
                     saveStatus={saveStatus}
                     viewMode={viewMode}
+                    rightSlot={
+                      <ExportControls
+                        folders={folders}
+                        documents={documents}
+                        selectedDocument={selectedDocument}
+                        selectedFolderId={selectedFolderId}
+                        onError={setError}
+                      />
+                    }
                     onViewModeChange={setViewMode}
                     onBodyChange={handleDraftBodyChange}
                     onRename={handleDraftTitleChange}

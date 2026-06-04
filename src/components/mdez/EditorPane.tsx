@@ -3,6 +3,7 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
+import type { ReactNode } from "react";
 
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -19,6 +20,7 @@ type EditorPaneProps = {
   body: string;
   saveStatus: SaveStatus;
   viewMode: ViewMode;
+  rightSlot?: ReactNode;
   onViewModeChange: (viewMode: ViewMode) => void;
   onBodyChange: (body: string) => void;
   onRename: (title: string) => void;
@@ -30,6 +32,7 @@ export function EditorPane({
   body,
   saveStatus,
   viewMode,
+  rightSlot,
   onViewModeChange,
   onBodyChange,
   onRename
@@ -69,8 +72,11 @@ export function EditorPane({
           >
             {saveStatus}
           </p>
-          <div className="hidden lg:block">
-            <SegmentedControl label="Workspace view" value={viewMode} options={viewOptions} onChange={onViewModeChange} />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden lg:block">
+              <SegmentedControl label="Workspace view" value={viewMode} options={viewOptions} onChange={onViewModeChange} />
+            </div>
+            {rightSlot}
           </div>
         </div>
       </div>
