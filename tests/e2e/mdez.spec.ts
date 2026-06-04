@@ -37,6 +37,10 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
   await page.getByRole("button", { name: "Create root folder" }).click();
   await expect(page.getByRole("button", { name: "Projects", exact: true })).toBeVisible();
 
+  page.once("dialog", (dialog) => dialog.accept("Launch"));
+  await page.getByRole("button", { name: "Create folder inside Projects" }).click();
+  await expect(page.getByRole("button", { name: "Launch", exact: true })).toBeVisible();
+
   await page.getByRole("button", { name: "Create document" }).click();
   await showFilesIfAvailable(page);
   await page.getByRole("button", { name: "Delete Projects" }).click();
