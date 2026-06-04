@@ -9,17 +9,17 @@ async function showFilesIfAvailable(page: import("@playwright/test").Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/favicon.ico");
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {
       const request = indexedDB.deleteDatabase("mdez");
 
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
-      request.onblocked = () => resolve();
+      request.onblocked = () => reject(new Error("Timed out deleting the mdez IndexedDB database."));
     });
   });
-  await page.reload();
+  await page.goto("/");
 });
 
 test("imports markdown by paste and previews it", async ({ page }) => {
