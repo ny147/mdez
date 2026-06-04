@@ -11,17 +11,20 @@ type ExportControlsProps = {
   documents: Document[];
   selectedDocument: Document | null;
   selectedFolderId: string | null;
-  onError: (message: string) => void;
+  onError: (message: string | null) => void;
 };
 
-function downloadBlob(blob: Blob, fileName: string) {
+export function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
 
   anchor.href = url;
   anchor.download = fileName;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function ExportControls({ folders, documents, selectedDocument, selectedFolderId, onError }: ExportControlsProps) {
@@ -32,6 +35,7 @@ export function ExportControls({ folders, documents, selectedDocument, selectedF
     }
 
     downloadBlob(new Blob([selectedDocument.body], { type: "text/markdown;charset=utf-8" }), getDocumentExportName(selectedDocument));
+    onError(null);
   }
 
   async function exportFolder() {
@@ -50,6 +54,7 @@ export function ExportControls({ folders, documents, selectedDocument, selectedF
     try {
       const blob = await createFolderZipBlob(folders, documents, selectedFolderId);
       downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
+      onError(null);
     } catch {
       onError("Mdez could not generate the ZIP export.");
     }

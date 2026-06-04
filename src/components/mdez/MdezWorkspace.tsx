@@ -18,7 +18,7 @@ import {
 } from "@/lib/repository";
 import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
 import { EditorPane } from "@/components/mdez/EditorPane";
-import { ExportControls } from "@/components/mdez/ExportControls";
+import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
 import { ImportDialog } from "@/components/mdez/ImportDialog";
 import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
@@ -60,16 +60,6 @@ function getAncestorFolderIds(folders: Folder[], folderId: string | null) {
 
 function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | null) {
   return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
-}
-
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.click();
-  URL.revokeObjectURL(url);
 }
 
 function syncDraftMap(
@@ -347,6 +337,16 @@ export function MdezWorkspace() {
   const selectedDocumentKey = selectedDocument?.id ?? "";
   const draftBody = selectedDocument ? draftBodiesById[selectedDocument.id] ?? selectedDocument.body : "";
   const draftTitle = selectedDocument ? draftTitlesById[selectedDocument.id] ?? selectedDocument.title : "";
+  const liveDocuments = useMemo(
+    () =>
+      documents.map((document) => ({
+        ...document,
+        title: draftTitlesById[document.id] ?? document.title,
+        body: draftBodiesById[document.id] ?? document.body
+      })),
+    [documents, draftBodiesById, draftTitlesById]
+  );
+  const liveSelectedDocument = selectedDocument ? { ...selectedDocument, title: draftTitle, body: draftBody } : null;
   const selectedBodyIsDirty = selectedDocument ? draftBody !== selectedDocument.body : false;
   const selectedTitleIsDirty = selectedDocument ? draftTitle !== selectedDocument.title : false;
   const selectedBodyIsSaving = selectedDocument ? savingBodiesById[selectedDocument.id] === draftBody : false;
@@ -696,18 +696,21 @@ export function MdezWorkspace() {
 
   async function handleSidebarFolderExport() {
     if (!selectedFolderId) {
+      setError("Select a folder before exporting a ZIP.");
       return;
     }
 
     const folder = folders.find((item) => item.id === selectedFolderId);
 
     if (!folder) {
+      setError("Mdez could not find that folder for export.");
       return;
     }
 
     try {
-      const blob = await createFolderZipBlob(folders, documents, selectedFolderId);
+      const blob = await createFolderZipBlob(folders, liveDocuments, selectedFolderId);
       downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
+      setError(null);
     } catch {
       setError("Mdez could not generate the ZIP export.");
     }
@@ -813,8 +816,8 @@ export function MdezWorkspace() {
                     rightSlot={
                       <ExportControls
                         folders={folders}
-                        documents={documents}
-                        selectedDocument={selectedDocument}
+                        documents={liveDocuments}
+                        selectedDocument={liveSelectedDocument}
                         selectedFolderId={selectedFolderId}
                         onError={setError}
                       />
