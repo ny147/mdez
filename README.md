@@ -5,7 +5,7 @@ Mdez is a local-first Markdown reader and editor built with Next.js. Markdown do
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
