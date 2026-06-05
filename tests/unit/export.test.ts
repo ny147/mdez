@@ -36,6 +36,12 @@ describe("export helpers", () => {
     ]);
   });
 
+  it("roots nested folder ZIP entries at the selected folder", () => {
+    expect(buildFolderExportEntries(folders, documents, "f2")).toEqual([
+      { path: "launch/checklist.md", body: "- [ ] Ship" }
+    ]);
+  });
+
   it("creates a manifest with metadata and original relationships", () => {
     const manifest = buildExportManifest(folders, documents, "f1");
     expect(manifest.exportedFolderId).toBe("f1");
@@ -145,6 +151,22 @@ describe("export helpers", () => {
       exportedFolderId: "f1",
       folders,
       documents: documents.map(documentMetadata)
+    });
+  });
+
+  it("creates a nested folder ZIP rooted at the selected folder", async () => {
+    const blob = await createFolderZipBlob(folders, documents, "f2");
+    const zip = await JSZip.loadAsync(blob);
+
+    await expect(zip.file("launch/checklist.md")?.async("string")).resolves.toBe("- [ ] Ship");
+    expect(zip.file("projects/launch/checklist.md")).toBeNull();
+
+    const manifest = JSON.parse(await zip.file("launch/manifest.json")!.async("string"));
+    expect(manifest).toMatchObject({
+      app: "Mdez",
+      exportedFolderId: "f2",
+      folders: [folders[1]],
+      documents: [documentMetadata(documents[1])]
     });
   });
 });

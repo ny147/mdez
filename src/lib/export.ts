@@ -60,7 +60,7 @@ function folderSegment(folders: Folder[], folder: Folder) {
   return slugifyTitle(folder.name);
 }
 
-function folderPath(folders: Folder[], folderId: string) {
+function folderPath(folders: Folder[], folderId: string, exportRootId: string) {
   const byId = new Map(folders.map((folder) => [folder.id, folder]));
   const segments: string[] = [];
   const visited = new Set<string>();
@@ -73,10 +73,19 @@ function folderPath(folders: Folder[], folderId: string) {
 
     visited.add(current.id);
     segments.unshift(folderSegment(folders, current));
+
+    if (current.id === exportRootId) {
+      if (current.parentId === current.id) {
+        throw new Error("Folder cycle detected while building export path.");
+      }
+
+      return segments.join("/");
+    }
+
     current = current.parentId ? byId.get(current.parentId) : undefined;
   }
 
-  return segments.join("/");
+  throw new Error("Folder path does not include export root.");
 }
 
 function documentMetadata(document: Document): Omit<Document, "body"> {
@@ -101,7 +110,7 @@ export function buildFolderExportEntries(folders: Folder[], documents: Document[
       .filter((document) => document.folderId === currentFolderId)
       .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
       .map((document) => {
-        const basePath = folderPath(folders, document.folderId as string);
+        const basePath = folderPath(folders, document.folderId as string, folderId);
         const baseName = slugifyTitle(document.title);
         let fileName = `${baseName}.md`;
         let path = `${basePath}/${fileName}`;
@@ -149,7 +158,7 @@ export async function createFolderZipBlob(folders: Folder[], documents: Document
     zip.file(entry.path, entry.body);
   }
 
-  zip.file(`${folderPath(folders, rootFolder.id)}/manifest.json`, JSON.stringify(buildExportManifest(folders, documents, folderId), null, 2));
+  zip.file(`${folderPath(folders, rootFolder.id, rootFolder.id)}/manifest.json`, JSON.stringify(buildExportManifest(folders, documents, folderId), null, 2));
 
   return zip.generateAsync({ type: "blob" });
 }
