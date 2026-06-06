@@ -32,10 +32,16 @@ export function FolderTree({
   return (
     <section className="min-h-0">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cream/75">Folders</h3>
-        <IconButton label="Create root folder" onClick={() => onCreateFolder(null)} className="h-9 w-9">
+        <h3 className="font-display text-sm font-black text-ink">Folders</h3>
+        <button
+          type="button"
+          onClick={() => onCreateFolder(null)}
+          aria-label="New folder - create root folder"
+          className="holo-ghost-button inline-flex min-h-9 items-center justify-center gap-2 px-3 py-1.5 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-holo-blue"
+        >
           <FolderPlus aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
+          New folder
+        </button>
       </div>
 
       <div className="space-y-1">
@@ -43,12 +49,20 @@ export function FolderTree({
           type="button"
           onClick={() => onSelectFolder(null)}
           aria-pressed={selectedFolderId === null}
-          className={`w-full rounded-2xl px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-ice ${
-            selectedFolderId === null ? "bg-ice text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
+          className={`w-full rounded border px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-holo-blue ${
+            selectedFolderId === null
+              ? "border-holo-blue bg-holo-blue text-deep-void shadow-glow-pink"
+              : "border-transparent text-ink-muted hover:border-holo-blue/30 hover:bg-holo-blue/10 hover:text-ink"
           }`}
         >
           Root
         </button>
+
+        {tree.length === 0 ? (
+          <p className="rounded border border-markdown-gray/15 bg-deep-void/25 px-3 py-2 text-xs font-semibold leading-5 text-ink-muted">
+            Create folders when this library grows.
+          </p>
+        ) : null}
 
         {tree.map((node) => (
           <FolderTreeRow
@@ -100,14 +114,14 @@ function FolderTreeRow({
 
   return (
     <div>
-      <div className="group flex items-center gap-1 rounded-2xl transition hover:bg-white/10" style={{ paddingLeft: `${depth * 0.75}rem` }}>
+      <div className="group flex items-center gap-1 rounded transition hover:bg-holo-blue/10" style={{ paddingLeft: `${depth * 0.75}rem` }}>
         <button
           type="button"
           onClick={() => hasChildren && onToggleFolder(folder.id)}
           disabled={!hasChildren}
           aria-label={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
           title={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
-          className="flex h-9 w-7 shrink-0 items-center justify-center rounded-full text-cream/75 transition hover:bg-white/10 hover:text-cream focus:outline-none focus:ring-2 focus:ring-ice disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
+          className="flex h-9 w-7 shrink-0 items-center justify-center rounded text-ink-muted transition hover:bg-holo-blue/10 hover:text-ink focus:outline-none focus:ring-2 focus:ring-holo-blue disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
         >
           {hasChildren ? (
             isExpanded ? (
@@ -125,8 +139,8 @@ function FolderTreeRow({
           onClick={() => onSelectFolder(folder.id)}
           aria-pressed={isSelected}
           title={`Open ${folder.name}`}
-          className={`min-w-0 flex-1 rounded-2xl px-2 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-ice ${
-            isSelected ? "bg-ice text-abyss" : "text-cream/80 hover:text-cream"
+          className={`min-w-0 flex-1 rounded border px-2 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-holo-blue ${
+            isSelected ? "border-holo-blue bg-holo-blue text-deep-void shadow-glow-pink" : "border-transparent text-ink-muted hover:text-ink"
           }`}
         >
           <span className="block truncate">{folder.name}</span>
@@ -135,17 +149,17 @@ function FolderTreeRow({
         <button
           type="button"
           onClick={handleRename}
-          className="rounded-full px-2 py-1 text-xs font-black text-cream/60 opacity-100 transition hover:bg-white/10 hover:text-cream focus:outline-none focus:ring-2 focus:ring-ice sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+          className="rounded px-2 py-1 text-xs font-black text-ink-muted opacity-100 transition hover:bg-holo-blue/10 hover:text-ink focus:outline-none focus:ring-2 focus:ring-holo-blue sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
           aria-label={`Rename ${folder.name}`}
           title={`Rename ${folder.name}`}
         >
           Rename
         </button>
 
-        <IconButton label={`Create folder inside ${folder.name}`} onClick={() => onCreateFolder(folder.id)} className="h-8 w-8 border-white/50">
+        <IconButton label={`Create folder inside ${folder.name}`} onClick={() => onCreateFolder(folder.id)} className="h-8 w-8 border-holo-blue/30">
           <FolderPlus aria-hidden="true" className="h-4 w-4" />
         </IconButton>
-        <IconButton label={`Delete ${folder.name}`} onClick={() => onDeleteFolder(folder.id)} className="h-8 w-8 border-white/50">
+        <IconButton label={`Delete ${folder.name}`} onClick={() => onDeleteFolder(folder.id)} className="h-8 w-8 border-holo-blue/30">
           <Trash2 aria-hidden="true" className="h-4 w-4" />
         </IconButton>
       </div>

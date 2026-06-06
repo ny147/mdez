@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { BookOpen, Files, PencilLine } from "lucide-react";
 
 import { folderHasContent } from "@/lib/tree";
 import {
@@ -39,6 +40,12 @@ const mobileOptions: { value: MobileTab; label: string }[] = [
   { value: "edit", label: "Edit" },
   { value: "read", label: "Read" }
 ];
+
+const mobileIcons = {
+  files: Files,
+  edit: PencilLine,
+  read: BookOpen
+};
 
 function byOrderThenTitle(a: Document, b: Document) {
   return a.order - b.order || a.title.localeCompare(b.title);
@@ -716,6 +723,10 @@ export function MdezWorkspace() {
     }
   }
 
+  function handleOpenImport() {
+    setIsImportOpen(true);
+  }
+
   function handleDraftBodyChange(body: string) {
     if (!selectedDocumentKey) {
       return;
@@ -741,16 +752,23 @@ export function MdezWorkspace() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-abyss text-cream">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(159,234,255,0.24),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(200,168,255,0.18),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(255,128,204,0.16),transparent_30%)]" />
+    <main className="relative min-h-screen overflow-hidden bg-deep-void text-ink">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(39,194,255,0.04)_1px,transparent_1px),linear-gradient(0deg,rgba(39,194,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_10%,rgba(39,194,255,0.2),transparent_24rem),radial-gradient(circle_at_84%_14%,rgba(255,133,218,0.16),transparent_22rem),radial-gradient(circle_at_52%_96%,rgba(185,131,255,0.12),transparent_26rem)]" />
+      <span className="kawaii-motif left-[7%] top-[8%] h-14 w-14 rotate-12" aria-hidden="true" />
+      <span className="kawaii-motif right-[8%] top-[11%] h-10 w-10 -rotate-12" aria-hidden="true" />
+      <span className="kawaii-motif bottom-[15%] left-[12%] hidden h-11 w-11 rotate-45 sm:block" aria-hidden="true" />
+      <span className="kawaii-motif bottom-[21%] right-[11%] h-8 w-8 rotate-12" aria-hidden="true" />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-4 sm:px-5 lg:px-6">
-        <header className="mb-4 flex items-center justify-between gap-3 rounded-[2rem] border-2 border-white/70 bg-white/10 p-3 shadow-sticker lg:hidden">
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 pb-24 pt-4 sm:px-5 lg:px-6 lg:pb-4">
+        <header className="cyber-panel mb-4 flex items-center justify-between gap-3 rounded-md p-3 shadow-sticker lg:hidden">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ice">Mdez</p>
-            <h1 className="truncate text-2xl font-black text-bubble">Workspace</h1>
+            <p className="holo-label">Markdown Easy Reader</p>
+            <h1 className="sticker-logo truncate font-display text-3xl font-black">Mdez</h1>
           </div>
-          <SegmentedControl label="Mobile workspace view" value={mobileTab} options={mobileOptions} onChange={setMobileTab} />
+          <p className="shrink-0 rounded border border-holo-blue/45 bg-deep-void/65 px-3 py-1.5 font-mono text-xs font-extrabold text-holo-blue shadow-glow">
+            {saveStatus}
+          </p>
         </header>
 
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -772,25 +790,23 @@ export function MdezWorkspace() {
               onRenameDocument={handleRenameDocument}
               onMoveDocument={handleMoveDocument}
               onDeleteDocument={handleDeleteDocument}
-              onOpenImport={() => {
-                setIsImportOpen(true);
-              }}
+              onOpenImport={handleOpenImport}
               onExportFolder={() => void handleSidebarFolderExport()}
             />
           </div>
 
           <section
-            className={`min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker ${
+            className={`cyber-panel min-h-0 rounded-md p-4 ${
               mobileTab === "files" ? "hidden lg:block" : "block"
             }`}
           >
             <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:min-h-0 lg:h-full">
-              <div className="flex flex-col gap-3 border-b-2 border-white/40 pb-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3 border-b border-markdown-gray/20 pb-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-ice">
+                  <p className="holo-label">
                     {selectedFolder ? selectedFolder.name : "Root"}
                   </p>
-                  <h2 className="mt-1 truncate text-3xl font-black text-cream">
+                  <h2 className="mt-1 truncate font-display text-3xl font-black text-ink">
                     {selectedDocument?.title ?? (isReady ? "No document selected" : "Loading workspace...")}
                   </h2>
                 </div>
@@ -822,6 +838,8 @@ export function MdezWorkspace() {
                         onError={setError}
                       />
                     }
+                    onCreateDocument={handleCreateDocument}
+                    onOpenImport={handleOpenImport}
                     onViewModeChange={setViewMode}
                     onBodyChange={handleDraftBodyChange}
                     onRename={handleDraftTitleChange}
@@ -833,13 +851,48 @@ export function MdezWorkspace() {
                     showReader ? "lg:block" : "lg:hidden"
                   }`}
                 >
-                  <PreviewPane document={selectedDocument} title={draftTitle} body={draftBody} previewOnly={viewMode === "preview"} />
+                  <PreviewPane
+                    document={selectedDocument}
+                    title={draftTitle}
+                    body={draftBody}
+                    previewOnly={viewMode === "preview"}
+                    onCreateDocument={handleCreateDocument}
+                    onOpenImport={handleOpenImport}
+                  />
                 </div>
               </div>
             </div>
           </section>
         </div>
       </div>
+      <nav
+        aria-label="Mobile workspace navigation"
+        className="fixed inset-x-4 bottom-4 z-40 rounded-md border border-markdown-gray/30 bg-panel/90 p-1.5 shadow-[0_0_24px_rgba(39,194,255,0.26)] backdrop-blur-xl lg:hidden"
+      >
+        <div className="grid grid-cols-3 gap-1">
+          {mobileOptions.map((option) => {
+            const Icon = mobileIcons[option.value];
+            const active = mobileTab === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => setMobileTab(option.value)}
+                className={`flex min-h-12 items-center justify-center gap-2 rounded px-3 text-sm font-extrabold transition active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-holo-blue ${
+                  active
+                    ? "border border-holo-blue bg-holo-blue text-deep-void shadow-glow-pink"
+                    : "border border-transparent text-ink-muted hover:border-holo-blue/35 hover:bg-deep-void/45 hover:text-ink"
+                }`}
+              >
+                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <span className="truncate">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
       {isImportOpen ? (
         <ImportDialog
           folders={folders}

@@ -6,7 +6,6 @@ import type { Document, Folder } from "@/types/content";
 import { DocumentList } from "@/components/mdez/DocumentList";
 import { FolderTree } from "@/components/mdez/FolderTree";
 import { Mascot } from "@/components/mdez/Mascot";
-import { IconButton } from "@/components/ui/IconButton";
 
 type SidebarProps = {
   folders: Folder[];
@@ -49,36 +48,45 @@ export function Sidebar({
   onOpenImport,
   onExportFolder
 }: SidebarProps) {
+  const canExportSelectedFolder = selectedFolderId !== null;
+
   return (
-    <aside className="min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker">
+    <aside className="cyber-panel min-h-0 rounded-md p-4">
       <div className="flex h-full min-h-[calc(100vh-8rem)] flex-col gap-5 lg:min-h-0">
         <div className="text-center">
           <Mascot />
-          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-ice">Markdown Easy Reader</p>
-          <h2 className="mt-1 text-4xl font-black text-bubble drop-shadow-[0_3px_0_rgba(255,255,255,0.95)]">Mdez</h2>
+          <p className="holo-label mt-4">Markdown Easy Reader</p>
+          <h2 className="sticker-logo mt-1 font-display text-5xl font-black">Mdez</h2>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onOpenImport}
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border-2 border-white/80 bg-white/10 px-3 py-2 text-sm font-black text-cream shadow-glow transition hover:border-white hover:bg-ice/20 focus:outline-none focus:ring-2 focus:ring-ice"
+            className="holo-button flex-1 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-holo-blue"
           >
             <Upload aria-hidden="true" className="h-4 w-4" />
             Import
           </button>
-          <IconButton label="Export selected folder" onClick={onExportFolder}>
+          <button
+            type="button"
+            onClick={onExportFolder}
+            disabled={!canExportSelectedFolder}
+            aria-label="Folder ZIP for selected folder in Files"
+            className="holo-ghost-button inline-flex min-h-10 items-center justify-center gap-2 px-3 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:border-markdown-gray/15 disabled:bg-deep-void/25 disabled:text-ink-muted/60 disabled:hover:bg-deep-void/25 disabled:hover:text-ink-muted/60 focus:outline-none focus:ring-2 focus:ring-holo-blue"
+          >
             <Download aria-hidden="true" className="h-4 w-4" />
-          </IconButton>
+            Folder ZIP
+          </button>
         </div>
 
         {error ? (
-          <p className="rounded-3xl border-2 border-bubble/70 bg-bubble/15 p-3 text-sm font-semibold leading-6 text-cream" role="alert">
+          <p className="rounded border border-oshi-pink/60 bg-oshi-pink/10 p-3 text-sm font-semibold leading-6 text-ink" role="alert">
             {error}
           </p>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-auto rounded-3xl border-2 border-white/60 bg-abyss/45 p-3">
+        <div className="cyber-subpanel min-h-0 flex-1 overflow-auto rounded-md p-3">
           <div className="space-y-5">
             <FolderTree
               folders={folders}
@@ -90,7 +98,7 @@ export function Sidebar({
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
             />
-            <div className="border-t-2 border-white/30 pt-4">
+            <div className="border-t border-markdown-gray/15 pt-4">
               <DocumentList
                 folders={folders}
                 documents={documents}
@@ -98,6 +106,7 @@ export function Sidebar({
                 selectedDocumentId={selectedDocumentId}
                 onSelectDocument={onSelectDocument}
                 onCreateDocument={onCreateDocument}
+                onOpenImport={onOpenImport}
                 onRenameDocument={onRenameDocument}
                 onMoveDocument={onMoveDocument}
                 onDeleteDocument={onDeleteDocument}
