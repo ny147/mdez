@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
-import { BookOpen, Files, PencilLine } from "lucide-react";
+import { BookOpen, Columns2, Library, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
 
 import { folderHasContent } from "@/lib/tree";
 import {
@@ -17,34 +17,39 @@ import {
   renameFolder,
   updateDocumentBody
 } from "@/lib/repository";
-import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
+import type { Document, Folder, SaveStatus, ViewMode } from "@/types/content";
 import { EditorPane } from "@/components/mdez/EditorPane";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
 import { ImportDialog } from "@/components/mdez/ImportDialog";
 import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { ShelfPane } from "@/components/mdez/ShelfPane";
+import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
+import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
 import { makeMarkdownFileName } from "@/lib/markdown";
 
-const SAVE_ERROR_MESSAGE = "Mdez could not save this document. Your current text remains visible in the editor.";
+const SAVE_ERROR_MESSAGE = "Mdez could not save this page. Your current text remains visible in the editor.";
 
 const readerViewOptions: { value: ViewMode; label: string }[] = [
-  { value: "split", label: "Split" },
+  { value: "shelf", label: "Shelf" },
   { value: "editor", label: "Edit" },
-  { value: "preview", label: "Read" }
+  { value: "preview", label: "Read" },
+  { value: "split", label: "Split" }
 ];
 
-const mobileOptions: { value: MobileTab; label: string }[] = [
-  { value: "files", label: "Files" },
-  { value: "edit", label: "Edit" },
-  { value: "read", label: "Read" }
+const mobileOptions: { value: ViewMode; label: string }[] = [
+  { value: "shelf", label: "Shelf" },
+  { value: "editor", label: "Edit" },
+  { value: "preview", label: "Read" },
+  { value: "split", label: "Split" }
 ];
 
 const mobileIcons = {
-  files: Files,
-  edit: PencilLine,
-  read: BookOpen
+  shelf: Library,
+  editor: PencilLine,
+  preview: BookOpen,
+  split: Columns2
 };
 
 function byOrderThenTitle(a: Document, b: Document) {
@@ -286,14 +291,18 @@ export function MdezWorkspace() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
-  const [mobileTab, setMobileTab] = useState<MobileTab>("files");
+  const [viewMode, setViewMode] = useState<ViewMode>("shelf");
   const [draftBodiesById, setDraftBodiesById] = useState<Record<string, string>>({});
   const [draftTitlesById, setDraftTitlesById] = useState<Record<string, string>>({});
   const [savingBodiesById, setSavingBodiesById] = useState<Record<string, string>>({});
   const [savingTitlesById, setSavingTitlesById] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const bodySaveVersionsRef = useRef<Record<string, number>>({});
   const titleSaveVersionsRef = useRef<Record<string, number>>({});
   const bodySaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
@@ -334,6 +343,44 @@ export function MdezWorkspace() {
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobile(query.matches);
+
+    syncViewport();
+    query.addEventListener("change", syncViewport);
+    return () => query.removeEventListener("change", syncViewport);
+  }, []);
+
+  useEffect(() => {
+    const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
+    if (savedSidebar === "hidden") {
+      setIsSidebarVisible(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      return;
+    }
+
+    window.setTimeout(() => sidebarRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(), 0);
+  }, [isDrawerOpen]);
+
+  useEffect(() => {
+    function closeOverlays(event: KeyboardEvent) {
+      if (event.key !== "Escape" || !isDrawerOpen) {
+        return;
+      }
+
+      setIsDrawerOpen(false);
+      window.setTimeout(() => drawerTriggerRef.current?.focus(), 0);
+    }
+
+    document.addEventListener("keydown", closeOverlays);
+    return () => document.removeEventListener("keydown", closeOverlays);
+  }, [isDrawerOpen]);
 
   const selectedDocument = useMemo(
     () => documents.find((document) => document.id === selectedDocumentId) ?? null,
@@ -452,9 +499,9 @@ export function MdezWorkspace() {
     };
   }, [documents, draftTitlesById]);
 
+  const showShelf = viewMode === "shelf";
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
-  const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
 
   function expandFolderAncestors(folderId: string | null, sourceFolders = folders, includeFolder = false) {
     setExpandedFolderIds((current) => {
@@ -480,6 +527,8 @@ export function MdezWorkspace() {
     setSelectedFolderId(folderId);
     setSelectedDocumentId(firstDocument?.id ?? null);
     expandFolderAncestors(folderId, folders, true);
+    setViewMode("shelf");
+    setIsDrawerOpen(false);
   }
 
   function handleSelectDocument(documentId: string) {
@@ -492,7 +541,8 @@ export function MdezWorkspace() {
     setSelectedFolderId(document.folderId);
     setSelectedDocumentId(document.id);
     expandFolderAncestors(document.folderId, folders, true);
-    setMobileTab("edit");
+    setViewMode("editor");
+    setIsDrawerOpen(false);
   }
 
   async function refreshContent(nextSelectedDocumentId?: string | null) {
@@ -521,7 +571,7 @@ export function MdezWorkspace() {
   }
 
   async function handleCreateFolder(parentId: string | null) {
-    const name = window.prompt("New folder name", "New Folder");
+    const name = window.prompt("New book name", "New Book");
 
     if (name === null) {
       return;
@@ -548,7 +598,7 @@ export function MdezWorkspace() {
       setSelectedFolderId(folder.id);
       await refreshContent(null);
     } catch {
-      setError("Could not create folder.");
+      setError("Could not create book.");
     }
   }
 
@@ -558,17 +608,17 @@ export function MdezWorkspace() {
       setError(null);
       await refreshContent();
     } catch {
-      setError("Could not rename folder.");
+      setError("Could not rename book.");
     }
   }
 
   async function handleDeleteFolder(folderId: string) {
     if (folderHasContent(folders, documents, folderId)) {
-      setError("Move or delete nested folders and documents before deleting this folder.");
+      setError("Move or delete nested books and pages before deleting this book.");
       return;
     }
 
-    if (!window.confirm("Delete this empty folder?")) {
+    if (!window.confirm("Delete this empty book?")) {
       return;
     }
 
@@ -588,24 +638,25 @@ export function MdezWorkspace() {
         await refreshContent();
       }
     } catch {
-      setError("Could not delete folder.");
+      setError("Could not delete book.");
     }
   }
 
   async function handleCreateDocument() {
     try {
       const document = await createDocument({
-        title: "Untitled Document",
-        body: "# Untitled Document\n",
+        title: "untitled.md",
+        body: "# Untitled\n",
         folderId: selectedFolderId
       });
 
       setError(null);
       setSelectedDocumentId(document.id);
+      setViewMode("editor");
+      setIsDrawerOpen(false);
       await refreshContent(document.id);
-      setMobileTab("edit");
     } catch {
-      setError("Could not create document.");
+      setError("Could not create page.");
     }
   }
 
@@ -617,8 +668,9 @@ export function MdezWorkspace() {
       setError(null);
       setSelectedFolderId(folderId);
       expandFolderAncestors(folderId, folders, true);
+      setViewMode("editor");
+      setIsDrawerOpen(false);
       await refreshContent(newestDocumentId);
-      setMobileTab("edit");
     } catch {
       setError("Could not import markdown.");
       throw new Error("Could not import markdown.");
@@ -656,7 +708,7 @@ export function MdezWorkspace() {
         await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
       }
     } catch {
-      setError("Could not rename document.");
+      setError("Could not rename page.");
     }
   }
 
@@ -669,19 +721,19 @@ export function MdezWorkspace() {
       expandFolderAncestors(folderId, folders, true);
       await refreshContent(documentId);
     } catch {
-      setError("Could not move document.");
+      setError("Could not move page.");
     }
   }
 
   async function handleDeleteDocument(documentId: string) {
-    if (!window.confirm("Delete this document?")) {
+    if (!window.confirm("Delete this page?")) {
       return;
     }
 
     const document = documents.find((item) => item.id === documentId);
 
     if (!document) {
-      setError("Document not found.");
+      setError("Page not found.");
       return;
     }
 
@@ -697,20 +749,20 @@ export function MdezWorkspace() {
       setError(null);
       await refreshContent(nextDocument?.id ?? null);
     } catch {
-      setError("Could not delete document.");
+      setError("Could not delete page.");
     }
   }
 
   async function handleSidebarFolderExport() {
     if (!selectedFolderId) {
-      setError("Select a folder before exporting a ZIP.");
+      setError("Open a book before preparing a ZIP.");
       return;
     }
 
     const folder = folders.find((item) => item.id === selectedFolderId);
 
     if (!folder) {
-      setError("Mdez could not find that folder for export.");
+      setError("Mdez could not find that book for export.");
       return;
     }
 
@@ -719,7 +771,7 @@ export function MdezWorkspace() {
       downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
       setError(null);
     } catch {
-      setError("Mdez could not generate the ZIP export.");
+      setError("Mdez could not prepare the book ZIP.");
     }
   }
 
@@ -751,148 +803,206 @@ export function MdezWorkspace() {
     });
   }
 
+  function handleViewModeChange(nextMode: ViewMode) {
+    setViewMode(nextMode);
+    setIsDrawerOpen(false);
+  }
+
+  function toggleDesktopSidebar() {
+    const nextVisible = !isSidebarVisible;
+    setIsSidebarVisible(nextVisible);
+    window.localStorage.setItem("mdez-sidebar-state", nextVisible ? "visible" : "hidden");
+  }
+
+  const sidebarIsHidden = isMobile ? !isDrawerOpen : !isSidebarVisible;
+  const statusMessage = error ?? (saveStatus === "Saving..." ? "Saving" : saveStatus);
+  const statusState = error ? "error" : saveStatus === "Saving..." ? "saving" : "saved";  const editorPane = (
+    <EditorPane
+      document={selectedDocument}
+      title={draftTitle}
+      body={draftBody}
+      saveStatus={saveStatus}
+      viewMode={viewMode}
+      rightSlot={
+        <ExportControls
+          folders={folders}
+          documents={liveDocuments}
+          selectedDocument={liveSelectedDocument}
+          selectedFolderId={selectedFolderId}
+          onError={setError}
+        />
+      }
+      onCreateDocument={handleCreateDocument}
+      onOpenImport={handleOpenImport}
+      onViewModeChange={handleViewModeChange}
+      onBodyChange={handleDraftBodyChange}
+      onRename={handleDraftTitleChange}
+    />
+  );
+  const readerPane = (
+    <PreviewPane
+      document={selectedDocument}
+      title={draftTitle}
+      body={draftBody}
+      previewOnly={viewMode === "preview"}
+      onCreateDocument={handleCreateDocument}
+      onOpenImport={handleOpenImport}
+    />
+  );
   return (
-    <main className="relative min-h-screen overflow-hidden bg-deep-void text-ink">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(39,194,255,0.04)_1px,transparent_1px),linear-gradient(0deg,rgba(39,194,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_14%_10%,rgba(39,194,255,0.2),transparent_24rem),radial-gradient(circle_at_84%_14%,rgba(255,133,218,0.16),transparent_22rem),radial-gradient(circle_at_52%_96%,rgba(185,131,255,0.12),transparent_26rem)]" />
-      <span className="kawaii-motif left-[7%] top-[8%] h-14 w-14 rotate-12" aria-hidden="true" />
-      <span className="kawaii-motif right-[8%] top-[11%] h-10 w-10 -rotate-12" aria-hidden="true" />
-      <span className="kawaii-motif bottom-[15%] left-[12%] hidden h-11 w-11 rotate-45 sm:block" aria-hidden="true" />
-      <span className="kawaii-motif bottom-[21%] right-[11%] h-8 w-8 rotate-12" aria-hidden="true" />
-
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 pb-24 pt-4 sm:px-5 lg:px-6 lg:pb-4">
-        <header className="cyber-panel mb-4 flex items-center justify-between gap-3 rounded-md p-3 shadow-sticker lg:hidden">
-          <div className="min-w-0">
-            <p className="holo-label">Markdown Easy Reader</p>
-            <h1 className="sticker-logo truncate font-display text-3xl font-black">Mdez</h1>
-          </div>
-          <p className="shrink-0 rounded border border-holo-blue/45 bg-deep-void/65 px-3 py-1.5 font-mono text-xs font-extrabold text-holo-blue shadow-glow">
-            {saveStatus}
-          </p>
-        </header>
-
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <div className={`min-h-0 lg:block ${mobileTab === "files" ? "block" : "hidden"}`}>
-            <Sidebar
-              folders={folders}
-              documents={documents}
-              selectedFolderId={selectedFolderId}
-              selectedDocumentId={selectedDocumentId}
-              expandedFolderIds={expandedFolderIds}
-              error={error}
-              onSelectFolder={handleSelectFolder}
-              onToggleFolder={handleToggleFolder}
-              onCreateFolder={handleCreateFolder}
-              onRenameFolder={handleRenameFolder}
-              onDeleteFolder={handleDeleteFolder}
-              onSelectDocument={handleSelectDocument}
-              onCreateDocument={handleCreateDocument}
-              onRenameDocument={handleRenameDocument}
-              onMoveDocument={handleMoveDocument}
-              onDeleteDocument={handleDeleteDocument}
-              onOpenImport={handleOpenImport}
-              onExportFolder={() => void handleSidebarFolderExport()}
-            />
-          </div>
-
-          <section
-            className={`cyber-panel min-h-0 rounded-md p-4 ${
-              mobileTab === "files" ? "hidden lg:block" : "block"
-            }`}
+    <div
+      className="workspace-shell"
+      data-testid="workspace-shell"
+      data-mode={viewMode}
+      data-sidebar={isSidebarVisible ? "visible" : "hidden"}
+    >
+      <header className="workspace-topbar">
+        <div className="workspace-brand">
+          <button
+            type="button"
+            onClick={toggleDesktopSidebar}
+            aria-label="Toggle sidebar"
+            aria-expanded={isSidebarVisible}
+            className="workspace-icon-button desktop-sidebar-toggle"
           >
-            <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:min-h-0 lg:h-full">
-              <div className="flex flex-col gap-3 border-b border-markdown-gray/20 pb-4 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0">
-                  <p className="holo-label">
-                    {selectedFolder ? selectedFolder.name : "Root"}
-                  </p>
-                  <h2 className="mt-1 truncate font-display text-3xl font-black text-ink">
-                    {selectedDocument?.title ?? (isReady ? "No document selected" : "Loading workspace...")}
-                  </h2>
-                </div>
-                {!showEditor ? (
-                  <div className="hidden lg:block">
-                    <SegmentedControl label="Workspace view" value={viewMode} options={readerViewOptions} onChange={setViewMode} />
-                  </div>
-                ) : null}
-              </div>
+            {isSidebarVisible ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}
+          </button>
+          <span className="workspace-wordmark">Mdez</span>
+        </div>
 
-              <div className={`grid min-h-0 flex-1 gap-4 ${contentGridColumns}`}>
-                <div
-                  className={`min-h-[24rem] min-w-0 ${mobileTab === "edit" ? "block" : "hidden"} ${
-                    showEditor ? "lg:block" : "lg:hidden"
-                  }`}
-                >
-                  <EditorPane
-                    document={selectedDocument}
-                    title={draftTitle}
-                    body={draftBody}
-                    saveStatus={saveStatus}
-                    viewMode={viewMode}
-                    rightSlot={
-                      <ExportControls
-                        folders={folders}
-                        documents={liveDocuments}
-                        selectedDocument={liveSelectedDocument}
-                        selectedFolderId={selectedFolderId}
-                        onError={setError}
-                      />
-                    }
-                    onCreateDocument={handleCreateDocument}
-                    onOpenImport={handleOpenImport}
-                    onViewModeChange={setViewMode}
-                    onBodyChange={handleDraftBodyChange}
-                    onRename={handleDraftTitleChange}
-                  />
-                </div>
+        <nav className="workspace-mode-nav" aria-label="Workspace modes">
+          {readerViewOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === option.value}
+              onClick={() => handleViewModeChange(option.value)}
+              className="workspace-mode-button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </nav>
 
-                <div
-                  className={`min-h-[24rem] min-w-0 ${mobileTab === "read" ? "block" : "hidden"} ${
-                    showReader ? "lg:block" : "lg:hidden"
-                  }`}
-                >
-                  <PreviewPane
-                    document={selectedDocument}
-                    title={draftTitle}
-                    body={draftBody}
-                    previewOnly={viewMode === "preview"}
-                    onCreateDocument={handleCreateDocument}
-                    onOpenImport={handleOpenImport}
-                  />
-                </div>
+        <div className="workspace-actions">
+          <button
+            ref={drawerTriggerRef}
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            aria-label="Open library shelf"
+            aria-controls="library-shelf"
+            aria-expanded={isDrawerOpen}
+            className="workspace-icon-button mobile-drawer-trigger"
+          >
+            <Menu aria-hidden="true" className="h-4 w-4" />
+          </button>
+          <span className="hidden font-mono text-xs text-muted sm:inline">Local</span>
+        </div>
+      </header>
+
+      <section className="workspace-content" aria-label="Mdez workspace">
+        <Sidebar
+          folders={folders}
+          documents={liveDocuments}
+          selectedFolderId={selectedFolderId}
+          selectedDocumentId={selectedDocumentId}
+          expandedFolderIds={expandedFolderIds}
+          error={error}
+          isHidden={sidebarIsHidden}
+          sidebarRef={sidebarRef}
+          onClose={() => setIsDrawerOpen(false)}
+          onSelectFolder={handleSelectFolder}
+          onToggleFolder={handleToggleFolder}
+          onCreateFolder={handleCreateFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onSelectDocument={handleSelectDocument}
+          onCreateDocument={handleCreateDocument}
+          onRenameDocument={handleRenameDocument}
+          onMoveDocument={handleMoveDocument}
+          onDeleteDocument={handleDeleteDocument}
+          onOpenImport={handleOpenImport}
+          onExportFolder={() => void handleSidebarFolderExport()}
+        />
+
+        {isMobile && isDrawerOpen ? (
+          <button
+            type="button"
+            className="workspace-scrim"
+            aria-label="Close library shelf"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+        ) : null}
+
+        <main
+          className="workspace-main"
+          data-testid="workspace-main"
+          inert={isMobile && isDrawerOpen}
+        >
+          <section className="workspace-surface">
+            <div className="mb-4 flex min-w-0 items-center justify-between gap-3 border-b border-border pb-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-muted">
+                  {selectedFolder ? `${selectedFolder.name} book` : "Shelf root"}
+                </p>
+                <h1 className="truncate font-display text-2xl font-bold text-ink">
+                  {showShelf ? "Bookshelf" : selectedDocument?.title ?? (isReady ? "No page selected" : "Loading workspace...")}
+                </h1>
               </div>
             </div>
-          </section>
-        </div>
-      </div>
-      <nav
-        aria-label="Mobile workspace navigation"
-        className="fixed inset-x-4 bottom-4 z-40 rounded-md border border-markdown-gray/30 bg-panel/90 p-1.5 shadow-[0_0_24px_rgba(39,194,255,0.26)] backdrop-blur-xl lg:hidden"
-      >
-        <div className="grid grid-cols-3 gap-1">
-          {mobileOptions.map((option) => {
-            const Icon = mobileIcons[option.value];
-            const active = mobileTab === option.value;
 
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-current={active ? "page" : undefined}
-                onClick={() => setMobileTab(option.value)}
-                className={`flex min-h-12 items-center justify-center gap-2 rounded px-3 text-sm font-extrabold transition active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-holo-blue ${
-                  active
-                    ? "border border-holo-blue bg-holo-blue text-deep-void shadow-glow-pink"
-                    : "border border-transparent text-ink-muted hover:border-holo-blue/35 hover:bg-deep-void/45 hover:text-ink"
-                }`}
-              >
-                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-                <span className="truncate">{option.label}</span>
-              </button>
-            );
-          })}
-        </div>
+            {showShelf ? (
+              <ShelfPane
+                folders={folders}
+                documents={liveDocuments}
+                selectedFolderId={selectedFolderId}
+                selectedDocumentId={selectedDocumentId}
+                isReady={isReady}
+                onSelectFolder={handleSelectFolder}
+                onSelectDocument={handleSelectDocument}
+                onCreateDocument={handleCreateDocument}
+                onCreateFolder={handleCreateFolder}
+                onOpenImport={handleOpenImport}
+                onExportFolder={() => void handleSidebarFolderExport()}
+              />
+            ) : viewMode === "split" ? (
+              <SplitWorkspace editor={editorPane} reader={readerPane} />
+            ) : (
+              <div className="grid min-h-0 gap-4">
+                {showEditor ? <div data-testid="screen-editor" className="min-h-[24rem] min-w-0">{editorPane}</div> : null}
+                {showReader ? <div data-testid="screen-reader" className="min-h-[24rem] min-w-0">{readerPane}</div> : null}
+              </div>
+            )}
+          </section>
+        </main>
+      </section>
+
+      <WorkspaceStatus
+        message={statusMessage}
+        state={statusState}
+        activePage={selectedDocument?.title ?? "Shelf root"}
+      />
+
+      <nav className="mobile-mode-nav" aria-label="Workspace modes">
+        {mobileOptions.map((option) => {
+          const Icon = mobileIcons[option.value];
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === option.value}
+              onClick={() => handleViewModeChange(option.value)}
+              className="mobile-mode-button"
+            >
+              <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span className="truncate">{option.label}</span>
+            </button>
+          );
+        })}
       </nav>
+
       {isImportOpen ? (
         <ImportDialog
           folders={folders}
@@ -901,6 +1011,7 @@ export function MdezWorkspace() {
           onImport={handleImport}
         />
       ) : null}
-    </main>
+    </div>
   );
+
 }

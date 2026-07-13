@@ -21,6 +21,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
   const [targetFolderId, setTargetFolderId] = useState<string | null>(selectedFolderId);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
 
@@ -108,7 +109,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
 
     for (const file of Array.from(files)) {
       if (!isMarkdownFile(file)) {
-        setMessage(`${file.name} is not a supported markdown file.`);
+        setMessage("Choose a .md file.");
         setBusy(false);
         return;
       }
@@ -150,19 +151,19 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-abyss/80 px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/35 px-4 py-6 backdrop-blur-sm">
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="import-title"
         onKeyDown={handleDialogKeyDown}
-        className="max-h-full w-full max-w-2xl overflow-y-auto rounded-[2rem] border-2 border-white/80 bg-abyss p-5 text-cream shadow-sticker sm:p-6"
+        className="library-panel max-h-full w-full max-w-2xl overflow-y-auto rounded-md p-5 text-ink sm:p-6"
       >
-        <div className="flex items-start justify-between gap-4 border-b-2 border-white/30 pb-4">
+        <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-ice">Import markdown</p>
-            <h2 id="import-title" className="mt-1 text-3xl font-black text-bubble">
+            <p className="field-label">Import markdown</p>
+            <h2 id="import-title" className="mt-1 font-display text-3xl font-black text-ink">
               Bring notes into Mdez
             </h2>
           </div>
@@ -172,16 +173,16 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
         </div>
 
         <div className="mt-5 grid gap-5">
-          <label className="grid gap-2 text-sm font-bold text-cream" htmlFor="import-target-folder">
-            Target folder
+          <label className="grid gap-2 text-sm font-bold text-ink" htmlFor="import-target-folder">
+            Target book
             <select
               id="import-target-folder"
               value={targetFolderId ?? ""}
               onChange={(event) => setTargetFolderId(event.currentTarget.value === "" ? null : event.currentTarget.value)}
               disabled={busy}
-              className="rounded-2xl border-2 border-white/60 bg-white px-4 py-3 text-sm font-bold text-abyss outline-none transition focus:border-ice focus:ring-4 focus:ring-ice/25 disabled:cursor-not-allowed disabled:opacity-60"
+              className="workspace-input px-4 py-3 text-sm font-bold focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="">Root</option>
+              <option value="">Shelf root</option>
               {folders.map((folder) => (
                 <option key={folder.id} value={folder.id}>
                   {folder.name}
@@ -190,7 +191,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
             </select>
           </label>
 
-          <label className="grid gap-2 text-sm font-bold text-cream" htmlFor="import-paste">
+          <label className="grid gap-2 text-sm font-bold text-ink" htmlFor="import-paste">
             Paste markdown
             <textarea
               ref={pasteRef}
@@ -198,23 +199,31 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
               value={pasteBody}
               onChange={(event) => setPasteBody(event.currentTarget.value)}
               disabled={busy}
-              className="min-h-48 resize-y rounded-[1.5rem] border-2 border-white/60 bg-white p-4 font-mono text-sm leading-6 text-abyss outline-none transition placeholder:text-abyss/45 focus:border-ice focus:ring-4 focus:ring-ice/25 disabled:cursor-not-allowed disabled:opacity-60"
+              className="workspace-input min-h-48 resize-y p-4 font-mono text-sm leading-6 placeholder:text-ink-muted/70 focus:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
               placeholder="# Meeting notes"
             />
           </label>
 
           <label
-            className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[1.5rem] border-2 border-dashed border-white/50 bg-white/10 px-4 py-8 text-center transition hover:border-ice hover:bg-ice/10"
+            data-drop-state={isDragging ? "active" : "idle"}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded border border-dashed border-border bg-panel px-4 py-8 text-center transition hover:border-accent hover:bg-surface-2 ${isDragging ? "border-accent bg-surface-2" : ""}`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
             onDragOver={(event) => {
               event.preventDefault();
+              setIsDragging(true);
             }}
+            onDragLeave={() => setIsDragging(false)}
             onDrop={(event) => {
               event.preventDefault();
+              setIsDragging(false);
               void importFiles(event.dataTransfer.files);
             }}
           >
-            <span className="text-sm font-black uppercase tracking-[0.14em] text-mint">Drop markdown files here</span>
-            <span className="rounded-full border-2 border-white/70 bg-white px-4 py-2 text-sm font-black text-abyss shadow-glow">
+            <span className="text-sm font-black text-accent-read">Drop markdown files here</span>
+            <span className="primary-button px-4 py-2">
               Choose .md files
             </span>
             <input
@@ -235,18 +244,18 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
           </label>
 
           {message ? (
-            <p role="alert" className="rounded-2xl border-2 border-bubble/60 bg-bubble/15 px-4 py-3 text-sm font-bold text-cream">
+            <p role="alert" className="rounded border border-accent-files/40 bg-panel px-4 py-3 text-sm font-bold text-ink">
               {message}
             </p>
           ) : null}
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t-2 border-white/30 pt-4 sm:flex-row sm:justify-end">
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={closeDialog}
             disabled={busy}
-            className="rounded-full border-2 border-white/60 px-5 py-3 text-sm font-black text-cream transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="secondary-button px-5 py-3 text-sm font-black focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -254,7 +263,7 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
             type="button"
             onClick={() => void submitPaste()}
             disabled={busy}
-            className="rounded-full border-2 border-mint bg-mint px-5 py-3 text-sm font-black text-abyss shadow-glow transition hover:bg-ice disabled:cursor-not-allowed disabled:opacity-50"
+            className="primary-button px-5 py-3 focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? "Importing..." : "Import Paste"}
           </button>

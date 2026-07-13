@@ -5,21 +5,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        lagoon: "#07292f",
-        abyss: "#071827",
-        ice: "#9feaff",
-        mint: "#8cffd7",
-        lavender: "#c8a8ff",
-        bubble: "#ff80cc",
-        cream: "#fff8fb"
+        blush: "var(--bg)",
+        panel: "var(--panel)",
+        surface: "var(--surface)",
+        "surface-2": "var(--surface-2)",
+        ink: "var(--fg)",
+        muted: "var(--muted)",
+        border: "var(--border)",
+        accent: "var(--accent)",
+        "accent-read": "var(--accent-read)",
+        "accent-files": "var(--accent-files)",
+        "accent-on": "var(--accent-on)",
+        success: "var(--success)",
+        warning: "var(--warn)",
+        error: "var(--error)",
+        "ink-muted": "var(--muted)",
+        "markdown-gray": "var(--muted)"
       },
       boxShadow: {
-        glow: "0 0 26px rgba(159, 234, 255, 0.38)",
-        sticker: "0 16px 50px rgba(0, 0, 0, 0.35)"
+        soft: "0 12px 28px rgb(83 45 92 / 10%)"
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Arial", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "Consolas", "monospace"]
+        sans: ["var(--font-body)"],
+        display: ["var(--font-display)"],
+        mono: ["var(--font-mono)"],
+        reader: ["var(--font-reader)"]
       }
     }
   },

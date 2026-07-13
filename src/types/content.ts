@@ -19,6 +19,4 @@ export type Document = {
 
 export type SaveStatus = "Saved" | "Saving..." | "Unsaved";
 
-export type ViewMode = "split" | "editor" | "preview";
-
-export type MobileTab = "files" | "edit" | "read";
+export type ViewMode = "shelf" | "editor" | "preview" | "split";

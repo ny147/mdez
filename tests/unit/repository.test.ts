@@ -196,10 +196,10 @@ describe("repository", () => {
     const renamedFolder = await renameFolder(folder.id, " ");
     const renamedDocument = await renameDocument(document.id, " ");
 
-    expect(folder.name).toBe("Untitled Folder");
-    expect(document.title).toBe("Untitled Document");
-    expect(renamedFolder.name).toBe("Untitled Folder");
-    expect(renamedDocument.title).toBe("Untitled Document");
+    expect(folder.name).toBe("Untitled Book");
+    expect(document.title).toBe("untitled.md");
+    expect(renamedFolder.name).toBe("Untitled Book");
+    expect(renamedDocument.title).toBe("untitled.md");
   });
 
   it("assigns sibling order by folder", async () => {

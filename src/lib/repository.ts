@@ -34,7 +34,7 @@ export async function createFolder(name: string, parentId: string | null): Promi
     const order = await countFoldersByParent(parentId);
     const folder: Folder = {
       id: createId("folder"),
-      name: name.trim() || "Untitled Folder",
+      name: name.trim() || "Untitled Book",
       parentId,
       order,
       createdAt: timestamp,
@@ -48,7 +48,7 @@ export async function createFolder(name: string, parentId: string | null): Promi
 
 export async function renameFolder(id: string, name: string) {
   const updatedCount = await db.folders.update(id, {
-    name: name.trim() || "Untitled Folder",
+    name: name.trim() || "Untitled Book",
     updatedAt: now()
   });
 
@@ -75,7 +75,7 @@ export async function createDocument(input: { title: string; body: string; folde
     const order = await countDocumentsByFolder(input.folderId);
     const document: Document = {
       id: createId("doc"),
-      title: input.title.trim() || "Untitled Document",
+      title: input.title.trim() || "untitled.md",
       body: input.body,
       folderId: input.folderId,
       order,
@@ -95,7 +95,7 @@ export async function createDocuments(inputs: { title: string; body: string }[],
     const documents = inputs.map((input, index): Document => {
       return {
         id: createId("doc"),
-        title: input.title.trim() || "Untitled Document",
+        title: input.title.trim() || "untitled.md",
         body: input.body,
         folderId,
         order: startingOrder + index,
@@ -114,7 +114,7 @@ export async function createDocuments(inputs: { title: string; body: string }[],
 
 export async function renameDocument(id: string, title: string) {
   const updatedCount = await db.documents.update(id, {
-    title: title.trim() || "Untitled Document",
+    title: title.trim() || "untitled.md",
     updatedAt: now()
   });
 

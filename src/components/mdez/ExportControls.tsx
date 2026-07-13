@@ -30,7 +30,7 @@ export function downloadBlob(blob: Blob, fileName: string) {
 export function ExportControls({ folders, documents, selectedDocument, selectedFolderId, onError }: ExportControlsProps) {
   function exportDocument() {
     if (!selectedDocument) {
-      onError("Select a document before exporting markdown.");
+      onError("Select a page before exporting markdown.");
       return;
     }
 
@@ -40,14 +40,14 @@ export function ExportControls({ folders, documents, selectedDocument, selectedF
 
   async function exportFolder() {
     if (!selectedFolderId) {
-      onError("Select a folder before exporting a ZIP.");
+      onError("Open a book before preparing a ZIP.");
       return;
     }
 
     const folder = folders.find((item) => item.id === selectedFolderId);
 
     if (!folder) {
-      onError("Mdez could not find that folder for export.");
+      onError("Mdez could not find that book for export.");
       return;
     }
 
@@ -56,7 +56,7 @@ export function ExportControls({ folders, documents, selectedDocument, selectedF
       downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
       onError(null);
     } catch {
-      onError("Mdez could not generate the ZIP export.");
+      onError("Mdez could not prepare the book ZIP.");
     }
   }
 
@@ -65,18 +65,20 @@ export function ExportControls({ folders, documents, selectedDocument, selectedF
       <button
         type="button"
         onClick={exportDocument}
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border-2 border-white/70 bg-white/10 px-3 py-2 text-sm font-black text-cream shadow-glow transition hover:border-white hover:bg-ice/20 focus:outline-none focus:ring-2 focus:ring-ice"
+        className="secondary-button inline-flex min-h-10 items-center justify-center gap-2 px-3 py-2 text-sm font-black focus:outline-none focus:ring-2 focus:ring-accent active:scale-[0.98]"
       >
         <Download aria-hidden="true" className="h-4 w-4" />
-        Document
+        Export .md
       </button>
       <button
         type="button"
         onClick={() => void exportFolder()}
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border-2 border-white/70 bg-white/10 px-3 py-2 text-sm font-black text-cream shadow-glow transition hover:border-white hover:bg-ice/20 focus:outline-none focus:ring-2 focus:ring-ice"
+        disabled={!selectedFolderId}
+        aria-label="Book ZIP for open book in Shelf"
+        className="secondary-button inline-flex min-h-10 items-center justify-center gap-2 px-3 py-2 text-sm font-black focus:outline-none focus:ring-2 focus:ring-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55"
       >
         <Download aria-hidden="true" className="h-4 w-4" />
-        Folder ZIP
+        Book ZIP
       </button>
     </div>
   );

@@ -12,15 +12,15 @@ type SegmentedControlProps<T extends string> = {
 
 export function SegmentedControl<T extends string>({ label, value, options, onChange }: SegmentedControlProps<T>) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-full border-2 border-white/70 bg-white/10 p-1">
+    <div role="group" aria-label={label} className="inline-flex rounded border border-border bg-surface p-1 shadow-soft">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`rounded-full px-3 py-1.5 text-sm font-bold transition ${
-            value === option.value ? "bg-ice text-abyss" : "text-cream/80 hover:bg-white/10 hover:text-cream"
+          className={`rounded px-3 py-1.5 text-sm font-bold transition active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-accent ${
+            value === option.value ? "bg-accent text-accent-on shadow-soft" : "text-muted hover:bg-panel hover:text-ink"
           }`}
         >
           {option.label}

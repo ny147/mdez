@@ -14,21 +14,21 @@ describe("markdown helpers", () => {
     expect(fileNameToTitle("Project Plan.markdown")).toBe("Project Plan");
   });
 
-  it("uses the first heading as a pasted document title", () => {
+  it("uses the first heading as a pasted page title", () => {
     expect(titleFromBody("# Launch Notes\n\nBody")).toBe("Launch Notes");
   });
 
-  it("uses the first ATX heading level one through six as a pasted document title", () => {
+  it("uses the first ATX heading level one through six as a pasted page title", () => {
     expect(titleFromBody("Intro\n\n### Import Plan\n\nBody")).toBe("Import Plan");
   });
 
   it("falls back to Untitled when pasted content has no heading", () => {
-    expect(titleFromBody("plain text")).toBe("Untitled Document");
+    expect(titleFromBody("plain text")).toBe("untitled.md");
   });
 
   it("creates safe markdown file names", () => {
     expect(makeMarkdownFileName("Sprint / Plan?")).toBe("sprint-plan.md");
-    expect(makeMarkdownFileName("")).toBe("untitled-document.md");
+    expect(makeMarkdownFileName("")).toBe("untitled.md");
   });
 
   it("caps generated markdown filename slugs", () => {
