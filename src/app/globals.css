@@ -583,11 +583,7 @@ body {
   display: none;
 }
 
-@media (max-width: 767px) {
-  .workspace-shell {
-    grid-template-rows: var(--topbar-h) minmax(0, 1fr) calc(var(--status-h) + 3.25rem);
-  }
-
+@media (max-width: 1023px) {
   .workspace-topbar {
     grid-template-columns: max-content minmax(0, 1fr) max-content;
   }
@@ -596,7 +592,6 @@ body {
     border-right: 0;
   }
 
-  .workspace-mode-nav,
   .desktop-sidebar-toggle {
     display: none;
   }
@@ -611,7 +606,7 @@ body {
 
   .workspace-sidebar {
     position: fixed;
-    inset: var(--topbar-h) auto calc(var(--status-h) + 3.25rem) 0;
+    inset: var(--topbar-h) auto var(--status-h) 0;
     z-index: 70;
     width: min(19rem, 86vw);
     border-right: 1px solid var(--border);
@@ -625,7 +620,7 @@ body {
 
   .workspace-scrim {
     position: fixed;
-    inset: var(--topbar-h) 0 calc(var(--status-h) + 3.25rem);
+    inset: var(--topbar-h) 0 var(--status-h);
     z-index: 60;
     display: block;
     border: 0;
@@ -634,6 +629,39 @@ body {
 
   .workspace-main {
     padding: 0.75rem;
+  }
+
+  .split-workspace[data-orientation="horizontal"] {
+    min-height: 70rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split-workspace[data-orientation="horizontal"] .split-separator {
+    min-height: 2rem;
+    cursor: row-resize;
+  }
+
+  .split-workspace[data-orientation="horizontal"] .split-separator::after {
+    width: 2rem;
+    height: 0.2rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-shell {
+    grid-template-rows: var(--topbar-h) minmax(0, 1fr) calc(var(--status-h) + 3.25rem);
+  }
+
+  .workspace-mode-nav {
+    display: none;
+  }
+
+  .workspace-sidebar {
+    inset: var(--topbar-h) auto calc(var(--status-h) + 3.25rem) 0;
+  }
+
+  .workspace-scrim {
+    inset: var(--topbar-h) 0 calc(var(--status-h) + 3.25rem);
   }
 
   .workspace-status {
@@ -739,18 +767,4 @@ body {
   content: "";
   opacity: 0.8;
   transform: translate(-50%, -50%);
-}
-@media (max-width: 767px) {
-  .split-workspace {
-    min-height: 70rem;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .split-separator {
-    min-height: 2rem;
-    cursor: row-resize;
-  }
-  .split-separator::after {
-    width: 2rem;
-    height: 0.2rem;
-  }
 }

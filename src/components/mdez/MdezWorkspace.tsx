@@ -31,6 +31,7 @@ import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
 import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
+import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { makeMarkdownFileName } from "@/lib/markdown";
 
 const SAVE_ERROR_MESSAGE = "Mdez could not save this page. Your current text remains visible in the editor.";
@@ -312,7 +313,7 @@ export function MdezWorkspace() {
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
   const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const bodySaveVersionsRef = useRef<Record<string, number>>({});
@@ -358,15 +359,6 @@ export function MdezWorkspace() {
   }, []);
 
   useEffect(() => {
-    const query = window.matchMedia("(max-width: 767px)");
-    const syncViewport = () => setIsMobile(query.matches);
-
-    syncViewport();
-    query.addEventListener("change", syncViewport);
-    return () => query.removeEventListener("change", syncViewport);
-  }, []);
-
-  useEffect(() => {
     const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
     if (savedSidebar === "hidden") {
       setIsSidebarVisible(false);
@@ -374,12 +366,12 @@ export function MdezWorkspace() {
   }, []);
 
   useEffect(() => {
-    if (!isDrawerOpen) {
+    if (!isTabletLayout || !isDrawerOpen) {
       return;
     }
 
     window.setTimeout(() => sidebarRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(), 0);
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isTabletLayout]);
 
   useEffect(() => {
     function closeOverlays(event: KeyboardEvent) {
@@ -388,12 +380,14 @@ export function MdezWorkspace() {
       }
 
       setIsDrawerOpen(false);
-      window.setTimeout(() => drawerTriggerRef.current?.focus(), 0);
+      if (isTabletLayout) {
+        window.setTimeout(() => drawerTriggerRef.current?.focus(), 0);
+      }
     }
 
     document.addEventListener("keydown", closeOverlays);
     return () => document.removeEventListener("keydown", closeOverlays);
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isTabletLayout]);
 
   const selectedDocument = useMemo(
     () => documents.find((document) => document.id === selectedDocumentId) ?? null,
@@ -922,7 +916,7 @@ export function MdezWorkspace() {
     window.localStorage.setItem("mdez-sidebar-state", nextVisible ? "visible" : "hidden");
   }
 
-  const sidebarIsHidden = isMobile ? !isDrawerOpen : !isSidebarVisible;
+  const sidebarIsHidden = isTabletLayout ? !isDrawerOpen : !isSidebarVisible;
   const statusMessage =
     error ?? (saveStatus === "Saving..." ? "Saving" : operationStatus?.message ?? saveStatus);
   const statusState = error
@@ -1043,7 +1037,7 @@ export function MdezWorkspace() {
           onRefreshGitHub={(source) => void handleRefreshGitHub(source)}
         />
 
-        {isMobile && isDrawerOpen ? (
+        {isTabletLayout && isDrawerOpen ? (
           <button
             type="button"
             className="workspace-scrim"
@@ -1055,7 +1049,7 @@ export function MdezWorkspace() {
         <main
           className="workspace-main"
           data-testid="workspace-main"
-          inert={isMobile && isDrawerOpen}
+          inert={isTabletLayout && isDrawerOpen}
         >
           <section className="workspace-surface">
             <div className="mb-4 flex min-w-0 items-center justify-between gap-3 border-b border-border pb-3">
@@ -1084,7 +1078,11 @@ export function MdezWorkspace() {
                 onExportFolder={() => void handleSidebarFolderExport()}
               />
             ) : viewMode === "split" ? (
-              <SplitWorkspace editor={editorPane} reader={readerPane} />
+              <SplitWorkspace
+                editor={editorPane}
+                reader={readerPane}
+                orientation={isTabletLayout ? "horizontal" : "vertical"}
+              />
             ) : (
               <div className="grid min-h-0 gap-4">
                 {showEditor ? <div data-testid="screen-editor" className="min-h-[24rem] min-w-0">{editorPane}</div> : null}
@@ -1099,10 +1097,10 @@ export function MdezWorkspace() {
         message={statusMessage}
         state={statusState}
         activePage={selectedDocument?.title ?? "Shelf root"}
-        isInert={isMobile && isDrawerOpen}
+        isInert={isMobileLayout && isDrawerOpen}
       />
 
-      <nav className="mobile-mode-nav" aria-label="Workspace modes" inert={isMobile && isDrawerOpen}>
+      <nav className="mobile-mode-nav" aria-label="Workspace modes" inert={isMobileLayout && isDrawerOpen}>
         {mobileOptions.map((option) => {
           const Icon = mobileIcons[option.value];
           return (

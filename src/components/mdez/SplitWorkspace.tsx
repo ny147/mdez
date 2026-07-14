@@ -1,28 +1,21 @@
 "use client";
 
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type PointerEvent, type ReactNode, useRef, useState } from "react";
 
 type SplitWorkspaceProps = {
   editor: ReactNode;
   reader: ReactNode;
+  orientation: "horizontal" | "vertical";
 };
 
 function clampSplit(value: number) {
   return Math.max(30, Math.min(70, Math.round(value)));
 }
 
-export function SplitWorkspace({ editor, reader }: SplitWorkspaceProps) {
+export function SplitWorkspace({ editor, reader, orientation }: SplitWorkspaceProps) {
   const [value, setValue] = useState(50);
-  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 767px)");
-    const sync = () => setIsMobile(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
+  const isHorizontal = orientation === "horizontal";
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
     const changes: Record<string, number> = {
@@ -39,31 +32,31 @@ export function SplitWorkspace({ editor, reader }: SplitWorkspaceProps) {
   }
 
   function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
-    if (isMobile || !event.currentTarget.hasPointerCapture(event.pointerId) || !containerRef.current) return;
+    if (!event.currentTarget.hasPointerCapture(event.pointerId) || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    setValue(clampSplit(((event.clientX - rect.left) / rect.width) * 100));
+    const position = isHorizontal ? event.clientY - rect.top : event.clientX - rect.left;
+    const extent = isHorizontal ? rect.height : rect.width;
+    setValue(clampSplit((position / extent) * 100));
   }
 
-  const style = isMobile
+  const style = isHorizontal
     ? { gridTemplateRows: `${value}% 2rem ${100 - value}%` }
     : { gridTemplateColumns: `${value}% 0.5rem ${100 - value}%` };
 
   return (
-    <div ref={containerRef} className="split-workspace" style={style}>
+    <div ref={containerRef} className="split-workspace" data-orientation={orientation} style={style}>
       <div className="min-h-0 min-w-0 overflow-hidden">{editor}</div>
       <button
         type="button"
         role="separator"
         aria-label="Resize editor and reader panes"
-        aria-orientation={isMobile ? "horizontal" : "vertical"}
+        aria-orientation={orientation}
         aria-valuemin={30}
         aria-valuemax={70}
         aria-valuenow={value}
-        aria-valuetext={`Editor ${value} percent ${isMobile ? "height" : "width"}`}
+        aria-valuetext={`Editor ${value} percent ${isHorizontal ? "height" : "width"}`}
         onKeyDown={handleKeyDown}
-        onPointerDown={(event) => {
-          if (!isMobile) event.currentTarget.setPointerCapture(event.pointerId);
-        }}
+        onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
         onPointerMove={handlePointerMove}
         onPointerUp={(event) => {
           if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);

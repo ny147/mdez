@@ -598,6 +598,31 @@ test("split separator resizes from 30 to 70 percent", async ({ page }) => {
   await page.keyboard.press("Home");
   await expect(separator).toHaveAttribute("aria-valuenow", "30");
 });
+test("mobile split separator resizes from vertical pointer movement", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await clickViewportModeTab(page, "Split");
+
+  const split = page.locator(".split-workspace");
+  const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
+  await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
+  await expect(separator).toHaveAttribute("aria-valuenow", "50");
+
+  const splitBox = await split.boundingBox();
+  const separatorBox = await separator.boundingBox();
+  expect(splitBox).not.toBeNull();
+  expect(separatorBox).not.toBeNull();
+
+  await page.mouse.move(
+    separatorBox!.x + separatorBox!.width / 2,
+    separatorBox!.y + separatorBox!.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(splitBox!.x + splitBox!.width / 2, splitBox!.y + splitBox!.height * 0.35);
+  await page.mouse.up();
+
+  await expect(separator).not.toHaveAttribute("aria-valuenow", "50");
+});
 test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
