@@ -386,7 +386,7 @@ body {
   position: relative;
   z-index: 40;
   display: grid;
-  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) max-content;
+  grid-template-columns: max(var(--sidebar-w), var(--rail-w)) minmax(0, 1fr) max-content;
   align-items: center;
   min-width: 0;
   border-bottom: 1px solid var(--border);
@@ -482,6 +482,15 @@ body {
 
 .workspace-shell[data-sidebar="hidden"] {
   --sidebar-w: 0px;
+}
+
+.workspace-shell[data-sidebar="hidden"] .workspace-brand {
+  gap: 0;
+  padding-inline: 0.25rem;
+}
+
+.workspace-shell[data-sidebar="hidden"] .workspace-wordmark {
+  display: none;
 }
 
 .workspace-sidebar {

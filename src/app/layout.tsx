@@ -2,6 +2,7 @@
 import { Inter, JetBrains_Mono, Shippori_Mincho_B1, Space_Grotesk } from "next/font/google";
 import "highlight.js/styles/github.css";
 import "./globals.css";
+import { appMetadata } from "@/app/metadata";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"], display: "swap" });
@@ -13,10 +14,7 @@ const shipporiMincho = Shippori_Mincho_B1({
   display: "swap"
 });
 
-export const metadata: Metadata = {
-  title: "Mdez",
-  description: "A local-first Markdown easy reader and editor."
-};
+export const metadata: Metadata = appMetadata;
 
 export const viewport: Viewport = {
   width: "device-width",

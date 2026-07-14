@@ -138,7 +138,13 @@ export function EditorPane({
             onClick={() => applyFormat(item.action)}
             className="workspace-icon-button shrink-0 font-mono text-xs font-bold"
           >
-            {item.glyph}
+            {item.action === "link"
+              ? "\u2197"
+              : item.action === "image"
+                ? "\u25a7"
+                : item.action === "divider"
+                  ? "---"
+                  : item.glyph}
           </button>
         ))}
         <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />

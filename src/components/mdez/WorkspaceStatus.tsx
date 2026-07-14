@@ -4,11 +4,12 @@ type WorkspaceStatusProps = {
   message: string;
   state: "saved" | "saving" | "loading" | "error";
   activePage: string;
+  isInert?: boolean;
 };
 
-export function WorkspaceStatus({ message, state, activePage }: WorkspaceStatusProps) {
+export function WorkspaceStatus({ message, state, activePage, isInert = false }: WorkspaceStatusProps) {
   return (
-    <footer className="workspace-status" aria-label="Workspace status">
+    <footer className="workspace-status" aria-label="Workspace status" inert={isInert}>
       <div className="status-cluster">
         <span className={`status-dot status-dot-${state}`} aria-hidden="true" />
         <span role="status" aria-live="polite">{message}</span>

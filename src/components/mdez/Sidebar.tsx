@@ -4,8 +4,10 @@ import type { RefObject } from "react";
 import { Download, Upload, X } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
+import type { GitHubSource } from "@/types/github";
 import { DocumentList } from "@/components/mdez/DocumentList";
 import { FolderTree } from "@/components/mdez/FolderTree";
+import { GitHubSourcePanel } from "@/components/mdez/GitHubSourcePanel";
 
 type SidebarProps = {
   folders: Folder[];
@@ -14,6 +16,8 @@ type SidebarProps = {
   selectedDocumentId: string | null;
   expandedFolderIds: Set<string>;
   error: string | null;
+  githubSource: GitHubSource | null;
+  refreshingSourceId: string | null;
   isHidden: boolean;
   sidebarRef: RefObject<HTMLElement | null>;
   onClose: () => void;
@@ -29,6 +33,7 @@ type SidebarProps = {
   onDeleteDocument: (documentId: string) => void;
   onOpenImport: () => void;
   onExportFolder: () => void;
+  onRefreshGitHub: (source: GitHubSource) => void;
 };
 
 export function Sidebar({
@@ -38,6 +43,8 @@ export function Sidebar({
   selectedDocumentId,
   expandedFolderIds,
   error,
+  githubSource,
+  refreshingSourceId,
   isHidden,
   sidebarRef,
   onClose,
@@ -52,12 +59,14 @@ export function Sidebar({
   onMoveDocument,
   onDeleteDocument,
   onOpenImport,
-  onExportFolder
+  onExportFolder,
+  onRefreshGitHub
 }: SidebarProps) {
   const canExportSelectedFolder = selectedFolderId !== null;
 
   return (
     <aside
+      id="library-shelf"
       ref={sidebarRef}
       className="workspace-sidebar"
       aria-label="Library shelf"
@@ -90,8 +99,16 @@ export function Sidebar({
           </button>
         </div>
 
+        {githubSource ? (
+          <GitHubSourcePanel
+            source={githubSource}
+            isRefreshing={refreshingSourceId === githubSource.id}
+            onRefresh={onRefreshGitHub}
+          />
+        ) : null}
+
         {error ? (
-          <p className="rounded border border-accent-files/40 bg-panel p-3 text-sm font-semibold leading-6 text-ink" role="alert">
+          <p className="rounded border border-accent-files/40 bg-panel p-3 text-sm font-semibold leading-6 text-ink">
             {error}
           </p>
         ) : null}

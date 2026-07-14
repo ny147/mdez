@@ -12,12 +12,16 @@ import {
   deleteDocument,
   deleteFolder,
   listContent,
+  importGitHubSource,
   moveDocument,
   renameDocument,
+  refreshGitHubSource,
   renameFolder,
   updateDocumentBody
 } from "@/lib/repository";
 import type { Document, Folder, SaveStatus, ViewMode } from "@/types/content";
+import type { GitHubImportSession, GitHubSource } from "@/types/github";
+import { requestGitHubImportPreview } from "@/lib/github-import";
 import { EditorPane } from "@/components/mdez/EditorPane";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
 import { ImportDialog } from "@/components/mdez/ImportDialog";
@@ -30,6 +34,11 @@ import { createFolderZipBlob } from "@/lib/export";
 import { makeMarkdownFileName } from "@/lib/markdown";
 
 const SAVE_ERROR_MESSAGE = "Mdez could not save this page. Your current text remains visible in the editor.";
+
+type OperationStatus = {
+  message: string;
+  state: "saved" | "loading" | "error";
+};
 
 const readerViewOptions: { value: ViewMode; label: string }[] = [
   { value: "shelf", label: "Shelf" },
@@ -289,6 +298,7 @@ export function MdezWorkspace() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [sources, setSources] = useState<GitHubSource[]>([]);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
@@ -299,6 +309,8 @@ export function MdezWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
+  const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -325,6 +337,7 @@ export function MdezWorkspace() {
 
         setFolders(content.folders);
         setDocuments(content.documents);
+        setSources(content.sources);
         setSelectedDocumentId(firstDocument?.id ?? null);
         setSelectedFolderId(firstDocument?.folderId ?? null);
         setExpandedFolderIds(new Set(getExpandedFolderIdsForSelection(content.folders, firstDocument?.folderId ?? null)));
@@ -389,6 +402,8 @@ export function MdezWorkspace() {
 
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
   const selectedDocumentKey = selectedDocument?.id ?? "";
+  const activeSourceId = selectedFolder?.sourceId ?? selectedDocument?.sourceId;
+  const activeGitHubSource = sources.find((source) => source.id === activeSourceId) ?? null;
   const draftBody = selectedDocument ? draftBodiesById[selectedDocument.id] ?? selectedDocument.body : "";
   const draftTitle = selectedDocument ? draftTitlesById[selectedDocument.id] ?? selectedDocument.title : "";
   const liveDocuments = useMemo(
@@ -550,10 +565,12 @@ export function MdezWorkspace() {
 
     setFolders(content.folders);
     setDocuments(content.documents);
+    setSources(content.sources);
 
     if (nextSelectedDocumentId !== undefined) {
       setSelectedDocumentId(nextSelectedDocumentId);
     }
+    return content;
   }
 
   function handleToggleFolder(folderId: string) {
@@ -674,6 +691,97 @@ export function MdezWorkspace() {
     } catch {
       setError("Could not import markdown.");
       throw new Error("Could not import markdown.");
+    }
+  }
+
+  async function handleRequestGitHubPreview(url: string) {
+    setError(null);
+    setOperationStatus({ message: "Checking GitHub repository", state: "loading" });
+
+    try {
+      const session = await requestGitHubImportPreview(url);
+      setOperationStatus({
+        message: "Previewed " + session.repository.owner + "/" + session.repository.repository,
+        state: "saved"
+      });
+      return session;
+    } catch (previewError) {
+      const message = previewError instanceof Error ? previewError.message : "Mdez could not preview this repository.";
+      setError(message);
+      setOperationStatus({ message: "GitHub import failed", state: "error" });
+      throw previewError;
+    }
+  }
+
+  async function handleImportGitHub(session: GitHubImportSession) {
+    setError(null);
+    setOperationStatus({ message: "Importing GitHub repository", state: "loading" });
+
+    try {
+      const result = await importGitHubSource(session);
+      const content = await refreshContent(result.firstDocumentId);
+      const firstDocument = content.documents.find((document) => document.id === result.firstDocumentId) ?? null;
+      const folderId = firstDocument?.folderId ?? result.rootFolderId;
+
+      setSelectedFolderId(folderId);
+      expandFolderAncestors(folderId, content.folders, true);
+      setViewMode("editor");
+      setIsDrawerOpen(false);
+      setOperationStatus({
+        message: "Imported " + result.source.owner + "/" + result.source.repository + " from GitHub",
+        state: "saved"
+      });
+    } catch (importError) {
+      const message = importError instanceof Error ? importError.message : "Mdez could not import this repository.";
+      setError(message);
+      setOperationStatus({ message: "GitHub import failed", state: "error" });
+      throw importError;
+    }
+  }
+
+  async function handleRefreshGitHub(source: GitHubSource) {
+    if (refreshingSourceId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Refresh " +
+        source.owner +
+        "/" +
+        source.repository +
+        " from GitHub? This replaces local edits inside this imported book."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRefreshingSourceId(source.id);
+    setError(null);
+    setOperationStatus({ message: "Checking GitHub for changes", state: "loading" });
+
+    try {
+      const session = await handleRequestGitHubPreview(source.normalizedUrl);
+      setOperationStatus({ message: "Refreshing imported book", state: "loading" });
+      const result = await refreshGitHubSource(source.id, session);
+      const content = await refreshContent(result.firstDocumentId);
+      const firstDocument = content.documents.find((document) => document.id === result.firstDocumentId) ?? null;
+      const folderId = firstDocument?.folderId ?? result.rootFolderId;
+
+      setSelectedFolderId(folderId);
+      expandFolderAncestors(folderId, content.folders, true);
+      setViewMode("editor");
+      setIsDrawerOpen(false);
+      setOperationStatus({
+        message: "Refreshed " + source.owner + "/" + source.repository + " from GitHub",
+        state: "saved"
+      });
+    } catch (refreshError) {
+      const message = refreshError instanceof Error ? refreshError.message : "Mdez could not refresh this repository.";
+      setError(message);
+      setOperationStatus({ message: "GitHub refresh failed", state: "error" });
+    } finally {
+      setRefreshingSourceId(null);
     }
   }
 
@@ -815,8 +923,14 @@ export function MdezWorkspace() {
   }
 
   const sidebarIsHidden = isMobile ? !isDrawerOpen : !isSidebarVisible;
-  const statusMessage = error ?? (saveStatus === "Saving..." ? "Saving" : saveStatus);
-  const statusState = error ? "error" : saveStatus === "Saving..." ? "saving" : "saved";  const editorPane = (
+  const statusMessage =
+    error ?? (saveStatus === "Saving..." ? "Saving" : operationStatus?.message ?? saveStatus);
+  const statusState = error
+    ? "error"
+    : saveStatus === "Saving..."
+      ? "saving"
+      : operationStatus?.state ?? "saved";
+  const editorPane = (
     <EditorPane
       document={selectedDocument}
       title={draftTitle}
@@ -909,6 +1023,8 @@ export function MdezWorkspace() {
           selectedDocumentId={selectedDocumentId}
           expandedFolderIds={expandedFolderIds}
           error={error}
+          githubSource={activeGitHubSource}
+          refreshingSourceId={refreshingSourceId}
           isHidden={sidebarIsHidden}
           sidebarRef={sidebarRef}
           onClose={() => setIsDrawerOpen(false)}
@@ -924,6 +1040,7 @@ export function MdezWorkspace() {
           onDeleteDocument={handleDeleteDocument}
           onOpenImport={handleOpenImport}
           onExportFolder={() => void handleSidebarFolderExport()}
+          onRefreshGitHub={(source) => void handleRefreshGitHub(source)}
         />
 
         {isMobile && isDrawerOpen ? (
@@ -944,7 +1061,7 @@ export function MdezWorkspace() {
             <div className="mb-4 flex min-w-0 items-center justify-between gap-3 border-b border-border pb-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-muted">
-                  {selectedFolder ? `${selectedFolder.name} book` : "Shelf root"}
+                  {selectedFolder ? selectedFolder.name + " book" : "Shelf root"}
                 </p>
                 <h1 className="truncate font-display text-2xl font-bold text-ink">
                   {showShelf ? "Bookshelf" : selectedDocument?.title ?? (isReady ? "No page selected" : "Loading workspace...")}
@@ -982,9 +1099,10 @@ export function MdezWorkspace() {
         message={statusMessage}
         state={statusState}
         activePage={selectedDocument?.title ?? "Shelf root"}
+        isInert={isMobile && isDrawerOpen}
       />
 
-      <nav className="mobile-mode-nav" aria-label="Workspace modes">
+      <nav className="mobile-mode-nav" aria-label="Workspace modes" inert={isMobile && isDrawerOpen}>
         {mobileOptions.map((option) => {
           const Icon = mobileIcons[option.value];
           return (
@@ -1009,6 +1127,8 @@ export function MdezWorkspace() {
           selectedFolderId={selectedFolderId}
           onClose={() => setIsImportOpen(false)}
           onImport={handleImport}
+          onRequestGitHubPreview={handleRequestGitHubPreview}
+          onImportGitHub={handleImportGitHub}
         />
       ) : null}
     </div>
