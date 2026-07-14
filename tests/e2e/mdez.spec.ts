@@ -41,6 +41,15 @@ async function clickVisibleButtonIfAvailable(page: import("@playwright/test").Pa
     }
   }
 }
+async function clickViewportModeTab(page: import("@playwright/test").Page, name: string) {
+  const viewportWidth = page.viewportSize()?.width ?? 1280;
+  const navigation = page.locator(viewportWidth <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
+  const control = navigation.getByRole("tab", { name, exact: true });
+
+  await control.click();
+  await expect(control).toHaveAttribute("aria-selected", "true");
+}
+
 async function expectInsideViewport(locator: Locator, viewportWidth: number) {
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
@@ -220,7 +229,7 @@ test("editor exposes the renewed markdown toolbar", async ({ page }) => {
 test("mobile editor keeps document actions visible and touch safe", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await page.getByRole("tab", { name: "Edit" }).click();
+  await clickViewportModeTab(page, "Edit");
 
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
   for (const name of ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
@@ -231,7 +240,7 @@ test("mobile editor keeps document actions visible and touch safe", async ({ pag
 
 test("read mode exposes one workspace-level document heading", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeTab(page, "Read");
 
   const main = page.getByRole("main");
   const identity = main.getByRole("heading", { name: "Untitled Document", exact: true });
@@ -592,7 +601,7 @@ test("split separator resizes from 30 to 70 percent", async ({ page }) => {
 test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await page.getByRole("tab", { name: "Split" }).click();
+  await clickViewportModeTab(page, "Split");
 
   await expect(page.getByRole("button", { name: "Open library shelf" })).toBeVisible();
   const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
