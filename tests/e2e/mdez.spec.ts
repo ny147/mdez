@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 
@@ -41,6 +41,20 @@ async function clickVisibleButtonIfAvailable(page: import("@playwright/test").Pa
     }
   }
 }
+async function expectInsideViewport(locator: Locator, viewportWidth: number) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth);
+}
+
+async function expectMinimumTouchTarget(locator: Locator) {
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
+}
+
 async function makeGitHubArchive(entries: Record<string, string>) {
   const zip = new JSZip();
 
@@ -201,6 +215,28 @@ test("editor exposes the renewed markdown toolbar", async ({ page }) => {
   for (const name of ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider", "Export .md"]) {
     await expect(toolbar.getByRole("button", { name })).toBeVisible();
   }
+});
+
+test("mobile editor keeps document actions visible and touch safe", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("tab", { name: "Edit" }).click();
+
+  const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
+  for (const name of ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
+    await expectMinimumTouchTarget(toolbar.getByRole("button", { name }));
+  }
+  await expectInsideViewport(toolbar.getByRole("button", { name: "Export .md" }), 390);
+});
+
+test("read mode exposes one workspace-level document heading", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("tab", { name: "Read" }).click();
+
+  const main = page.getByRole("main");
+  const identity = main.getByRole("heading", { name: "Untitled Document", exact: true });
+  await expect(identity).toHaveCount(1);
+  await expect(identity).toHaveJSProperty("tagName", "H1");
 });
 
 test("import source tabs expose only the active input", async ({ page }) => {
@@ -552,6 +588,23 @@ test("split separator resizes from 30 to 70 percent", async ({ page }) => {
   await expect(separator).toHaveAttribute("aria-valuenow", "70");
   await page.keyboard.press("Home");
   await expect(separator).toHaveAttribute("aria-valuenow", "30");
+});
+test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("tab", { name: "Split" }).click();
+
+  await expect(page.getByRole("button", { name: "Open library shelf" })).toBeVisible();
+  const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
+  await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
+
+  const articles = page.locator("main article");
+  await expect(articles).toHaveCount(2);
+  for (const article of await articles.all()) {
+    const box = await article.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(680);
+  }
 });
 test("switches editor, split, and preview modes", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
