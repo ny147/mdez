@@ -584,6 +584,17 @@ test("edits a document and reloads with local persistence", async ({ page }) => 
 
 
 
+test("content refresh keeps the selected page when it still exists", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  const title = page.getByRole("textbox", { name: "Page title" });
+  await title.fill("Selection survives refresh");
+  await expect(page.getByRole("status").filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 3000 });
+
+  await page.reload();
+  await clickVisibleButtonIfAvailable(page, "Edit");
+  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Selection survives refresh");
+});
+
 test("split separator resizes from 30 to 70 percent", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickVisibleButtonIfAvailable(page, "Split");

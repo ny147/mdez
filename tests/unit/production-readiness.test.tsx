@@ -66,4 +66,12 @@ describe("production readiness", () => {
     expect(workspaceSource).not.toContain("const updated = await renameDocument(documentId, title)");
     expect(workspaceSource).toContain('setError("Could not rename page.")');
   });
+
+  it("composes repository-backed library orchestration through a named controller", () => {
+    const workspaceSource = readFileSync(resolve(process.cwd(), "src/components/mdez/MdezWorkspace.tsx"), "utf8");
+
+    expect(workspaceSource).toContain("const library = useWorkspaceLibrary();");
+    expect(workspaceSource).not.toMatch(/\b(?:createDocument|createDocuments|createFolder|deleteDocument|deleteFolder|listContent|moveDocument|renameFolder)\b/);
+    expect(workspaceSource).not.toContain("from \"@/lib/tree\"");
+  });
 });
