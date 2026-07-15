@@ -32,6 +32,8 @@ export type DocumentDraftController = {
 type Values = Record<string, string>;
 type Timers = Record<string, number | undefined>;
 type Counters = Record<string, number | undefined>;
+type SavingMarker = { value: string; version: number };
+type SavingMarkers = Record<string, SavingMarker | undefined>;
 
 function valuesByDocument(documents: Document[], getValue: (document: Document) => string) {
   return Object.fromEntries(documents.map((document) => [document.id, getValue(document)]));
@@ -74,20 +76,32 @@ function updateDraft(
   setDrafts(next);
 }
 
-function clearSavingDraft(
+function clearSavingRequest(
   id: string,
-  value: string,
-  setSavingDrafts: Dispatch<SetStateAction<Values>>
+  version: number,
+  setSavingDrafts: Dispatch<SetStateAction<SavingMarkers>>
 ) {
   setSavingDrafts((current) => {
-    if (current[id] !== value) return current;
+    if (current[id]?.version !== version) return current;
     const next = { ...current };
     delete next[id];
     return next;
   });
 }
 
-function retainActiveValues(current: Values, activeIds: Set<string>) {
+function clearSavingDocument(
+  id: string,
+  setSavingDrafts: Dispatch<SetStateAction<SavingMarkers>>
+) {
+  setSavingDrafts((current) => {
+    if (!current[id]) return current;
+    const next = { ...current };
+    delete next[id];
+    return next;
+  });
+}
+
+function retainActiveValues<T>(current: Record<string, T>, activeIds: Set<string>) {
   const entries = Object.entries(current).filter(([id]) => activeIds.has(id));
   return entries.length === Object.keys(current).length ? current : Object.fromEntries(entries);
 }
@@ -116,8 +130,8 @@ export function useDocumentDrafts({
   const initialTitles = () => valuesByDocument(documents, (document) => document.title);
   const [bodyDrafts, setBodyDrafts] = useState<Values>(initialBodies);
   const [titleDrafts, setTitleDrafts] = useState<Values>(initialTitles);
-  const [savingBodies, setSavingBodies] = useState<Values>({});
-  const [savingTitles, setSavingTitles] = useState<Values>({});
+  const [savingBodies, setSavingBodies] = useState<SavingMarkers>({});
+  const [savingTitles, setSavingTitles] = useState<SavingMarkers>({});
 
   const bodyDraftsRef = useRef(bodyDrafts);
   const titleDraftsRef = useRef(titleDrafts);
@@ -163,12 +177,12 @@ export function useDocumentDrafts({
     async (id: string, body: string, version: number) => {
       knownBodyIdsRef.current.add(id);
       nextCounter(bodyRequestsRef, id);
-      setSavingBodies((current) => ({ ...current, [id]: body }));
+      setSavingBodies((current) => ({ ...current, [id]: { value: body, version } }));
 
       try {
         const updated = await bodyQueue.enqueue(id, body);
         if (!mountedRef.current) return null;
-        clearSavingDraft(id, body, setSavingBodies);
+        clearSavingRequest(id, version, setSavingBodies);
         if (!updated) return null;
 
         const stillCurrent =
@@ -185,15 +199,15 @@ export function useDocumentDrafts({
         }
         return updated;
       } catch (error) {
-        if (mountedRef.current) {
-          clearSavingDraft(id, body, setSavingBodies);
-          const stillCurrent =
-            bodyVersionsRef.current[id] === version &&
-            bodyDraftsRef.current[id] === body &&
-            documentsRef.current.some((document) => document.id === id);
-          if (stillCurrent && selectedDocumentIdRef.current === id) {
-            setErrorRef.current(SAVE_ERROR_MESSAGE);
-          }
+        if (!mountedRef.current) return null;
+        clearSavingRequest(id, version, setSavingBodies);
+        const stillCurrent =
+          bodyVersionsRef.current[id] === version &&
+          bodyDraftsRef.current[id] === body &&
+          documentsRef.current.some((document) => document.id === id);
+        if (!stillCurrent) return null;
+        if (selectedDocumentIdRef.current === id) {
+          setErrorRef.current(SAVE_ERROR_MESSAGE);
         }
         throw error;
       } finally {
@@ -207,12 +221,12 @@ export function useDocumentDrafts({
     async (id: string, title: string, version: number, reportSaveError: boolean) => {
       knownTitleIdsRef.current.add(id);
       nextCounter(titleRequestsRef, id);
-      setSavingTitles((current) => ({ ...current, [id]: title }));
+      setSavingTitles((current) => ({ ...current, [id]: { value: title, version } }));
 
       try {
         const updated = await titleQueue.enqueue(id, title);
         if (!mountedRef.current) return null;
-        clearSavingDraft(id, title, setSavingTitles);
+        clearSavingRequest(id, version, setSavingTitles);
         if (!updated) return null;
 
         const stillCurrent =
@@ -232,15 +246,15 @@ export function useDocumentDrafts({
         }
         return updated;
       } catch (error) {
-        if (mountedRef.current) {
-          clearSavingDraft(id, title, setSavingTitles);
-          const stillCurrent =
-            titleVersionsRef.current[id] === version &&
-            titleDraftsRef.current[id] === title &&
-            documentsRef.current.some((document) => document.id === id);
-          if (reportSaveError && stillCurrent && selectedDocumentIdRef.current === id) {
-            setErrorRef.current(SAVE_ERROR_MESSAGE);
-          }
+        if (!mountedRef.current) return null;
+        clearSavingRequest(id, version, setSavingTitles);
+        const stillCurrent =
+          titleVersionsRef.current[id] === version &&
+          titleDraftsRef.current[id] === title &&
+          documentsRef.current.some((document) => document.id === id);
+        if (!stillCurrent) return null;
+        if (reportSaveError && selectedDocumentIdRef.current === id) {
+          setErrorRef.current(SAVE_ERROR_MESSAGE);
         }
         throw error;
       } finally {
@@ -259,7 +273,7 @@ export function useDocumentDrafts({
 
       const restoringActiveSave = (bodyRequestsRef.current[id] ?? 0) > 0;
       if (body === persistedBodiesRef.current[id] && !restoringActiveSave) {
-        clearSavingDraft(id, body, setSavingBodies);
+        clearSavingDocument(id, setSavingBodies);
         return;
       }
 
@@ -288,7 +302,7 @@ export function useDocumentDrafts({
 
       const restoringActiveSave = (titleRequestsRef.current[id] ?? 0) > 0;
       if (title === persistedTitlesRef.current[id] && !restoringActiveSave) {
-        clearSavingDraft(id, title, setSavingTitles);
+        clearSavingDocument(id, setSavingTitles);
         return;
       }
 
@@ -426,8 +440,14 @@ export function useDocumentDrafts({
   const selectedDocument = documents.find((document) => document.id === selectedDocumentId) ?? null;
   const draftBody = selectedDocument ? bodyDrafts[selectedDocument.id] ?? selectedDocument.body : "";
   const draftTitle = selectedDocument ? titleDrafts[selectedDocument.id] ?? selectedDocument.title : "";
-  const bodyIsSaving = selectedDocument ? savingBodies[selectedDocument.id] === draftBody : false;
-  const titleIsSaving = selectedDocument ? savingTitles[selectedDocument.id] === draftTitle : false;
+  const bodyIsSaving = selectedDocument
+    ? savingBodies[selectedDocument.id]?.version === bodyVersionsRef.current[selectedDocument.id] &&
+      savingBodies[selectedDocument.id]?.value === draftBody
+    : false;
+  const titleIsSaving = selectedDocument
+    ? savingTitles[selectedDocument.id]?.version === titleVersionsRef.current[selectedDocument.id] &&
+      savingTitles[selectedDocument.id]?.value === draftTitle
+    : false;
   const bodyIsDirty = selectedDocument ? draftBody !== selectedDocument.body : false;
   const titleIsDirty = selectedDocument ? draftTitle !== selectedDocument.title : false;
   const saveStatus: SaveStatus =

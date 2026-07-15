@@ -483,4 +483,179 @@ describe("useDocumentDrafts", () => {
     await act(async () => restoreSave.resolve(page));
     expect(result.current.draftBody).toBe(page.body);
   });
+  it("resolves an obsolete immediate rename failure with null after document removal", async () => {
+    const active = deferred<Document>();
+    const setError = vi.fn();
+    const props = {
+      selectedDocumentId: page.id as string | null,
+      setDocuments: vi.fn(),
+      setError,
+      persistBody: vi.fn(),
+      persistTitle: vi.fn().mockReturnValue(active.promise)
+    };
+    const { result, rerender } = renderHook(
+      ({ documents }: { documents: Document[] }) => useDocumentDrafts({ ...props, documents }),
+      { initialProps: { documents: [page] } }
+    );
+
+    let renamePromise!: Promise<Document | null>;
+    act(() => {
+      renamePromise = result.current.renameTitleById(page.id, "Sidebar X");
+    });
+    rerender({ documents: [] });
+    let renamed: Document | null | undefined;
+    await act(async () => {
+      active.reject(new Error("offline"));
+      renamed = await renamePromise;
+    });
+
+    expect(renamed).toBeNull();
+    expect(setError).not.toHaveBeenCalled();
+  });
+
+  it("resolves a superseded sidebar failure with null while the newer editor title saves", async () => {
+    vi.useFakeTimers();
+    const sidebarSave = deferred<Document>();
+    const editorSave = deferred<Document>();
+    const persistTitle = vi
+      .fn<(id: string, title: string) => Promise<Document>>()
+      .mockReturnValueOnce(sidebarSave.promise)
+      .mockReturnValueOnce(editorSave.promise);
+    const setError = vi.fn();
+    const { result } = renderHook(() =>
+      useDocumentDrafts({
+        documents: [page],
+        selectedDocumentId: page.id,
+        setDocuments: vi.fn(),
+        setError,
+        persistBody: vi.fn(),
+        persistTitle
+      })
+    );
+
+    let renamePromise!: Promise<Document | null>;
+    act(() => {
+      renamePromise = result.current.renameTitleById(page.id, "Sidebar X");
+    });
+    act(() => {
+      result.current.changeTitle("Editor Y");
+      vi.advanceTimersByTime(650);
+    });
+    let renamed: Document | null | undefined;
+    await act(async () => {
+      sidebarSave.reject(new Error("offline"));
+      renamed = await renamePromise;
+    });
+
+    expect(renamed).toBeNull();
+    expect(setError).not.toHaveBeenCalled();
+    expect(persistTitle).toHaveBeenLastCalledWith(page.id, "Editor Y");
+
+    await act(async () => editorSave.resolve({ ...page, title: "Editor Y" }));
+    expect(result.current.draftTitle).toBe("Editor Y");
+  });
+
+  it("rejects a still-current immediate rename failure for the sidebar handler", async () => {
+    const failure = new Error("offline");
+    const { result } = renderHook(() =>
+      useDocumentDrafts({
+        documents: [page],
+        selectedDocumentId: page.id,
+        setDocuments: vi.fn(),
+        setError: vi.fn(),
+        persistBody: vi.fn(),
+        persistTitle: vi.fn().mockRejectedValue(failure)
+      })
+    );
+
+    let rejection: unknown;
+    await act(async () => {
+      try {
+        await result.current.renameTitleById(page.id, "Current failure");
+      } catch (error) {
+        rejection = error;
+      }
+    });
+    expect(rejection).toBe(failure);
+  });
+
+  it("keeps body status Saving when an obsolete save matches the latest draft value", async () => {
+    vi.useFakeTimers();
+    const firstX = deferred<Document>();
+    const latestX = deferred<Document>();
+    const persistBody = vi
+      .fn<(id: string, body: string) => Promise<Document>>()
+      .mockReturnValueOnce(firstX.promise)
+      .mockReturnValueOnce(latestX.promise);
+    const { result } = renderHook(() =>
+      useDocumentDrafts({
+        documents: [page],
+        selectedDocumentId: page.id,
+        setDocuments: vi.fn(),
+        setError: vi.fn(),
+        persistBody,
+        persistTitle: vi.fn()
+      })
+    );
+
+    act(() => {
+      result.current.changeBody("X");
+      vi.advanceTimersByTime(650);
+    });
+    act(() => {
+      result.current.changeBody("Y");
+      vi.advanceTimersByTime(650);
+    });
+    act(() => {
+      result.current.changeBody("X");
+      vi.advanceTimersByTime(650);
+    });
+    expect(result.current.saveStatus).toBe("Saving...");
+
+    await act(async () => firstX.resolve({ ...page, body: "X" }));
+    expect(persistBody).toHaveBeenLastCalledWith(page.id, "X");
+    expect(result.current.saveStatus).toBe("Saving...");
+
+    await act(async () => latestX.resolve({ ...page, body: "X" }));
+  });
+
+  it("keeps title status Saving when an obsolete save matches the latest draft value", async () => {
+    vi.useFakeTimers();
+    const firstX = deferred<Document>();
+    const latestX = deferred<Document>();
+    const persistTitle = vi
+      .fn<(id: string, title: string) => Promise<Document>>()
+      .mockReturnValueOnce(firstX.promise)
+      .mockReturnValueOnce(latestX.promise);
+    const { result } = renderHook(() =>
+      useDocumentDrafts({
+        documents: [page],
+        selectedDocumentId: page.id,
+        setDocuments: vi.fn(),
+        setError: vi.fn(),
+        persistBody: vi.fn(),
+        persistTitle
+      })
+    );
+
+    act(() => {
+      result.current.changeTitle("X");
+      vi.advanceTimersByTime(650);
+    });
+    act(() => {
+      result.current.changeTitle("Y");
+      vi.advanceTimersByTime(650);
+    });
+    act(() => {
+      result.current.changeTitle("X");
+      vi.advanceTimersByTime(650);
+    });
+    expect(result.current.saveStatus).toBe("Saving...");
+
+    await act(async () => firstX.resolve({ ...page, title: "X" }));
+    expect(persistTitle).toHaveBeenLastCalledWith(page.id, "X");
+    expect(result.current.saveStatus).toBe("Saving...");
+
+    await act(async () => latestX.resolve({ ...page, title: "X" }));
+  });
 });
