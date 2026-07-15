@@ -176,7 +176,8 @@ export function MdezWorkspace() {
     draftTitle,
     saveStatus,
     changeBody: handleDraftBodyChange,
-    changeTitle: handleDraftTitleChange
+    changeTitle: handleDraftTitleChange,
+    renameTitleById: renameDraftTitle
   } = useDocumentDrafts({
     documents,
     selectedDocumentId,
@@ -463,9 +464,9 @@ export function MdezWorkspace() {
 
   async function handleRenameDocument(documentId: string, title: string) {
     try {
-      const updated = await renameDocument(documentId, title);
-      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-      setError(null);
+      const updated = await renameDraftTitle(documentId, title);
+      if (!updated) return;
+      setError((current) => (current === "Could not rename page." ? null : current));
       await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
     } catch {
       setError("Could not rename page.");

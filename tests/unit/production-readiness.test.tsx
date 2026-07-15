@@ -58,4 +58,12 @@ describe("production readiness", () => {
     expect(sidebarSource).toContain('className="flex items-center justify-between gap-3 lg:hidden"');
     expect(sidebarSource).not.toContain('className="flex items-center justify-between gap-3 md:hidden"');
   });
+  it("routes sidebar renames through the document draft title queue", () => {
+    const workspaceSource = readFileSync(resolve(process.cwd(), "src/components/mdez/MdezWorkspace.tsx"), "utf8");
+
+    expect(workspaceSource).toContain("renameTitleById: renameDraftTitle");
+    expect(workspaceSource).toContain("await renameDraftTitle(documentId, title)");
+    expect(workspaceSource).not.toContain("const updated = await renameDocument(documentId, title)");
+    expect(workspaceSource).toContain('setError("Could not rename page.")');
+  });
 });
