@@ -700,11 +700,11 @@ body {
   }
 
   .editor-document-actions {
-    grid-row: 1;
+    grid-row: 2;
     justify-content: flex-end;
   }
 
   .editor-format-actions {
-    grid-row: 2;
+    grid-row: 1;
   }
 }

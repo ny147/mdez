@@ -226,16 +226,57 @@ test("editor exposes the renewed markdown toolbar", async ({ page }) => {
   }
 });
 
-test("mobile editor keeps document actions visible and touch safe", async ({ page }) => {
+test("mobile editor follows visual toolbar focus order and keeps actions visible", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Edit");
 
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
-  for (const name of ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
+  const formatNames = ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider"];
+  for (const name of formatNames) {
     await expectMinimumTouchTarget(toolbar.getByRole("button", { name }));
   }
-  await expectInsideViewport(toolbar.getByRole("button", { name: "Export .md" }), 390);
+
+  const exportMarkdown = toolbar.getByRole("button", { name: "Export .md" });
+  const exportBook = toolbar.getByRole("button", { name: "Book ZIP for open book in Shelf" });
+  await expectInsideViewport(exportMarkdown, 390);
+  await expectInsideViewport(exportBook, 390);
+
+  const formatBox = await toolbar.locator(".editor-format-actions").boundingBox();
+  const documentBox = await toolbar.locator(".editor-document-actions").boundingBox();
+  expect(formatBox).not.toBeNull();
+  expect(documentBox).not.toBeNull();
+  expect(formatBox!.y).toBeLessThan(documentBox!.y);
+
+  const geometry = await page.evaluate(() => {
+    const formatStrip = document.querySelector<HTMLElement>(".editor-format-actions");
+    return {
+      formatScrolls: formatStrip ? formatStrip.scrollWidth > formatStrip.clientWidth : false,
+      pageClientWidth: document.documentElement.clientWidth,
+      pageScrollWidth: document.documentElement.scrollWidth
+    };
+  });
+  expect(geometry.formatScrolls).toBe(true);
+  expect(geometry.pageScrollWidth).toBe(geometry.pageClientWidth);
+
+  const focusOrder = [...formatNames, "Export .md"];
+  const visualPositions = await Promise.all(
+    focusOrder.map(async (name) => {
+      const box = await toolbar.getByRole("button", { name }).boundingBox();
+      expect(box).not.toBeNull();
+      return { name, x: box!.x, y: box!.y };
+    })
+  );
+  const visualOrder = visualPositions
+    .sort((left, right) => left.y - right.y || left.x - right.x)
+    .map(({ name }) => name);
+  expect(visualOrder).toEqual(focusOrder);
+
+  await page.getByLabel("Page title").focus();
+  for (const name of focusOrder) {
+    await page.keyboard.press("Tab");
+    await expect(toolbar.getByRole("button", { name })).toBeFocused();
+  }
 });
 
 test("read mode exposes one workspace-level document heading", async ({ page }) => {
