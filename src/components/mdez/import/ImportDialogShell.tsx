@@ -76,7 +76,7 @@ export function ImportDialogShell({
         aria-modal="true"
         aria-labelledby={labelledBy}
         onKeyDown={handleDialogKeyDown}
-        className="library-panel max-h-full w-full max-w-2xl overflow-y-auto rounded-md p-4 text-ink sm:p-6"
+        className="floating-surface max-h-full w-full max-w-2xl overflow-y-auto p-4 text-ink sm:p-6"
       >
         <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
           <div>

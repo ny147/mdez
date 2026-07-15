@@ -23,7 +23,7 @@ const config: Config = {
         "markdown-gray": "var(--muted)"
       },
       boxShadow: {
-        soft: "0 12px 28px rgb(83 45 92 / 10%)"
+        soft: "none"
       },
       fontFamily: {
         sans: ["var(--font-body)"],

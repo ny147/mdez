@@ -393,15 +393,14 @@ export function MdezWorkspace() {
           inert={isTabletLayout && isDrawerOpen}
         >
           <section className="workspace-surface">
-            <div className="mb-4 flex min-w-0 items-center justify-between gap-3 border-b border-border pb-3">
+            <div className="workspace-context">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-muted">
-                  {library.selectedFolder ? library.selectedFolder.name + " book" : "Shelf root"}
+                <p className="workspace-context-label">
+                  {library.selectedFolder ? `${library.selectedFolder.name} book` : "Shelf root"}
                 </p>
-                <h1 className="truncate font-display text-2xl font-bold text-ink">
-                  {showShelf ? "Bookshelf" : library.selectedDocument?.title ?? (library.isReady ? "No page selected" : "Loading workspace...")}
-                </h1>
+                {showShelf ? <h1 className="workspace-title truncate">Bookshelf</h1> : null}
               </div>
+              {!showShelf ? <p className="workspace-context-label">{readerViewOptions.find((option) => option.value === viewMode)?.label}</p> : null}
             </div>
 
             {showShelf ? (

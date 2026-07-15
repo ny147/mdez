@@ -102,7 +102,7 @@ export function ShelfPane({
         </div>
       </div>
 
-      <section className="min-w-0 rounded-md border border-border bg-surface p-4 shadow-soft" aria-labelledby="bookshelf-title">
+      <section className="workspace-section min-w-0" aria-labelledby="bookshelf-title">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 id="bookshelf-title" className="font-display text-xl font-black text-ink">
             Bookshelf
@@ -146,7 +146,7 @@ export function ShelfPane({
         )}
       </section>
 
-      <section className="min-h-0 overflow-hidden rounded-md border border-border bg-surface p-4 shadow-soft" aria-labelledby="bookmarked-pages-title">
+      <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="bookmarked-pages-title">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 id="bookmarked-pages-title" className="font-display text-xl font-black text-ink">
             Bookmarked pages
@@ -173,7 +173,7 @@ export function ShelfPane({
                     aria-label={`${document.title} page in ${parentBook}, updated ${updated}`}
                     aria-pressed={selectedDocumentId === document.id}
                     onClick={() => onSelectDocument(document.id)}
-                    className={`dogear-card w-full rounded-md border bg-surface p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-accent-files focus:outline-none focus:ring-2 focus:ring-accent-files ${
+                    className={`dogear-card w-full rounded-md border bg-surface p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-files focus:outline-none focus:ring-2 focus:ring-accent-files ${
                       selectedDocumentId === document.id ? "border-accent bg-panel" : "border-border"
                     }`}
                   >

@@ -248,6 +248,26 @@ test("read mode exposes one workspace-level document heading", async ({ page }) 
   await expect(identity).toHaveJSProperty("tagName", "H1");
 });
 
+test("reader prose uses the reader token and only overlays receive elevation", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await clickViewportModeTab(page, "Read");
+
+  const evidence = await page.evaluate(() => {
+    const prose = document.querySelector(".markdown-preview");
+    const surface = document.querySelector(".workspace-surface");
+    const panel = document.querySelector("main article");
+    return {
+      readerFamily: prose ? getComputedStyle(prose).fontFamily : "",
+      surfaceShadow: surface ? getComputedStyle(surface).boxShadow : "",
+      panelShadow: panel ? getComputedStyle(panel).boxShadow : ""
+    };
+  });
+
+  expect(evidence.readerFamily).toContain("Shippori");
+  expect(evidence.surfaceShadow).toBe("none");
+  expect(evidence.panelShadow).toBe("none");
+});
+
 test("import source tabs expose only the active input", async ({ page }) => {
   await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
   const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });

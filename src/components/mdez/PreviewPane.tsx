@@ -24,6 +24,7 @@ export function PreviewPane({ document, title, body, previewOnly, onCreateDocume
   const tocRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const headings = useMemo(() => extractHeadings(body), [body]);
+  const documentTitle = title.toLowerCase() === "untitled.md" ? "Untitled Document" : title.replace(/\.(?:md|markdown)$/i, "");
   let headingCursor = 0;
 
   useEffect(() => {
@@ -85,7 +86,7 @@ export function PreviewPane({ document, title, body, previewOnly, onCreateDocume
         aria-label="Table of contents"
         aria-hidden={!isTocOpen}
         inert={!isTocOpen}
-        className={`toc-panel ${isTocOpen ? "toc-panel-open" : ""}`}
+        className={`toc-panel floating-surface ${isTocOpen ? "toc-panel-open" : ""}`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
           <h2 className="font-display text-base font-bold">Table of contents</h2>
@@ -110,10 +111,10 @@ export function PreviewPane({ document, title, body, previewOnly, onCreateDocume
         </ul>
       </nav>
 
-      <div className={`mt-3 min-h-0 flex-1 overflow-auto rounded border border-border bg-surface p-5 shadow-soft ${previewOnly ? "mx-auto w-full max-w-[720px]" : ""}`}>
+      <div className={`mt-3 min-h-0 flex-1 overflow-auto px-1 py-5 ${previewOnly ? "mx-auto w-full max-w-[720px]" : ""}`}>
         {document ? (
           <>
-            <h2 className="mb-4 break-words font-display text-2xl font-bold text-ink">{title}</h2>
+            <h1 className="reader-document-title break-words">{documentTitle}</h1>
             <div className="markdown-preview min-w-0 max-w-[680px]">
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={headingComponents}>
                 {body}

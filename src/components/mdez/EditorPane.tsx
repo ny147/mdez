@@ -118,6 +118,7 @@ export function EditorPane({
 
   return (
     <article className="library-subpanel flex min-h-[24rem] h-full min-w-0 flex-col rounded-md p-4">
+      <h1 className="sr-only">Edit {title}</h1>
       <label className="min-w-0">
         <span className="text-sm font-semibold text-accent">Page title</span>
         <input
