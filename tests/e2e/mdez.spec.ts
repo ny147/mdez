@@ -284,6 +284,19 @@ test("import source tabs support arrows and the dialog restores focus", async ({
   await expect(workspaceShell.locator('[role="alert"]')).toHaveCount(0);
 });
 
+test("import dialog traps focus and returns it to its trigger", async ({ page }) => {
+  const trigger = page.getByRole("button", { name: "Import markdown", exact: true }).last();
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Close import dialog" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Import Paste" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+});
+
 test("imports markdown by paste and previews it", async ({ page }) => {
   await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
 
