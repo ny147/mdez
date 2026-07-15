@@ -5,28 +5,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        blush: "var(--bg)",
-        panel: "var(--panel)",
-        surface: "var(--surface)",
-        "surface-2": "var(--surface-2)",
-        ink: "var(--fg)",
-        muted: "var(--muted)",
-        border: "var(--border)",
-        accent: "var(--accent)",
-        "accent-read": "var(--accent-read)",
-        "accent-files": "var(--accent-files)",
-        "accent-on": "var(--accent-on)",
-        success: "var(--success)",
-        warning: "var(--warn)",
-        error: "var(--error)",
-        "ink-muted": "var(--muted)",
-        "markdown-gray": "var(--muted)"
+        blush: "var(--color-canvas)",
+        panel: "var(--color-panel)",
+        surface: "var(--color-paper)",
+        "surface-2": "var(--color-lavender)",
+        ink: "var(--color-ink)",
+        muted: "var(--color-muted)",
+        border: "var(--color-rule)",
+        accent: "var(--color-edit)",
+        "accent-read": "var(--color-read)",
+        "accent-files": "var(--color-shelf)",
+        "accent-on": "var(--color-on-accent)",
+        success: "var(--color-read)",
+        warning: "var(--color-warning)",
+        error: "var(--color-error)",
+        "ink-muted": "var(--color-muted)",
+        "markdown-gray": "var(--color-muted)"
       },
       boxShadow: {
         soft: "none"
       },
       fontFamily: {
-        sans: ["var(--font-body)"],
+        sans: ["var(--font-ui)"],
         display: ["var(--font-display)"],
         mono: ["var(--font-mono)"],
         reader: ["var(--font-reader)"]

@@ -1,5 +1,5 @@
 .markdown-preview {
-  color: #2b2233;
+  color: var(--color-ink);
   font-family: var(--font-reader);
   font-size: 1rem;
   line-height: 1.78;
@@ -8,7 +8,7 @@
 .markdown-preview h1,
 .markdown-preview h2,
 .markdown-preview h3 {
-  color: #2b2233;
+  color: var(--color-ink);
   font-family: var(--font-display);
   font-weight: 850;
   line-height: 1.16;
@@ -31,14 +31,14 @@
 }
 
 .markdown-preview a {
-  color: #177f71;
+  color: var(--color-read);
   font-weight: 700;
   text-decoration: underline;
 }
 
 .markdown-preview code {
   border-radius: 0.25rem;
-  background: #f6edff;
+  background: var(--color-lavender);
   padding: 0.1rem 0.35rem;
   font-family: var(--font-mono);
 }
@@ -46,9 +46,9 @@
 .markdown-preview pre {
   overflow-x: auto;
   border-radius: 0.375rem;
-  background: #2b2233;
+  background: var(--color-ink);
   padding: 1rem;
-  color: #fffdfd;
+  color: var(--color-paper);
 }
 
 .markdown-preview pre code {
@@ -57,12 +57,12 @@
 }
 
 .markdown-preview blockquote {
-  border: 1px solid rgba(23, 127, 113, 0.24);
-  border-left: 4px solid #177f71;
-  background: rgba(23, 127, 113, 0.06);
+  border: 1px solid color-mix(in srgb, var(--color-read) 24%, transparent);
+  border-left: 4px solid var(--color-read);
+  background: color-mix(in srgb, var(--color-read) 6%, transparent);
   margin-left: 0;
   padding: 0.75rem 1rem;
-  color: #3d3444;
+  color: var(--color-reader-muted);
 }
 
 .markdown-preview table {
@@ -72,25 +72,25 @@
 
 .markdown-preview th,
 .markdown-preview td {
-  border: 1px solid #ead8f0;
+  border: 1px solid var(--color-rule);
   padding: 0.5rem;
 }
 
 .editor-frame .cm-editor {
   height: 100%;
   min-height: 60vh;
-  background: #fffdfd;
-  color: #2b2233;
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-mono);
 }
 
 .editor-frame .cm-gutters {
-  border-right: 1px solid #ead8f0;
-  background: #fff0f8;
-  color: #725f7c;
+  border-right: 1px solid var(--color-rule);
+  background: var(--color-panel);
+  color: var(--color-muted);
 }
 
 .editor-frame .cm-activeLine,
 .editor-frame .cm-activeLineGutter {
-  background-color: rgba(128, 83, 200, 0.08);
+  background-color: color-mix(in srgb, var(--color-edit) 8%, transparent);
 }

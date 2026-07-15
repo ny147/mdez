@@ -111,7 +111,7 @@ test("uses the renewed light library shell and mode accents", async ({ page }) =
 
   const colors = await shell.evaluate((node) => {
     const style = getComputedStyle(node);
-    return ["--bg", "--accent", "--accent-read", "--accent-files"].map((name) => style.getPropertyValue(name).trim());
+    return ["--color-canvas", "--color-edit", "--color-read", "--color-shelf"].map((name) => style.getPropertyValue(name).trim());
   });
 
   expect(colors).toEqual(["#fff7fc", "#8053c8", "#177f71", "#b8487a"]);
@@ -248,6 +248,26 @@ test("read mode exposes one workspace-level document heading", async ({ page }) 
   await expect(identity).toHaveJSProperty("tagName", "H1");
 });
 
+test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) => {
+  const main = page.getByRole("main");
+
+  await expect(main.getByRole("heading", { level: 1, name: "Bookshelf" })).toBeVisible();
+  await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await clickViewportModeTab(page, "Edit");
+  await expect(main.getByRole("heading", { level: 1, name: "Edit untitled.md", includeHidden: true })).toHaveClass(/sr-only/);
+  await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(0);
+
+  await clickViewportModeTab(page, "Read");
+  await expect(main.getByRole("heading", { level: 1, name: "Untitled Document" })).toBeVisible();
+  await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
+
+  await clickViewportModeTab(page, "Split");
+  await expect(main.getByRole("heading", { level: 1, name: "Edit untitled.md", includeHidden: true })).toHaveClass(/sr-only/);
+  await expect(main.getByRole("heading", { level: 1, name: "Untitled Document" })).toBeVisible();
+  await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
+});
 test("reader prose uses the reader token and only overlays receive elevation", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Read");
@@ -268,6 +288,37 @@ test("reader prose uses the reader token and only overlays receive elevation", a
   expect(evidence.panelShadow).toBe("none");
 });
 
+test("drawer, table of contents, and dialog share floating elevation", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await clickViewportModeTab(page, "Read");
+
+  await page.getByRole("button", { name: "Open table of contents" }).click();
+  const toc = page.locator('nav[aria-label="Table of contents"]');
+  const tocShadow = await toc.evaluate((node) => getComputedStyle(node).boxShadow);
+  expect(tocShadow).not.toBe("none");
+  await page.getByRole("button", { name: "Close table of contents" }).click();
+
+  await clickVisibleButtonIfAvailable(page, "Import markdown");
+  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
+  const dialogShadow = await dialog.evaluate((node) => getComputedStyle(node).boxShadow);
+  expect(dialogShadow).toBe(tocShadow);
+  await dialog.getByRole("button", { name: "Close import dialog" }).click();
+
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.getByRole("button", { name: "Open library shelf" }).click();
+  const drawer = page.locator('aside[aria-label="Library shelf"]');
+  await expect(drawer).toHaveClass(/floating-surface/);
+  const drawerShadow = await drawer.evaluate((node) => getComputedStyle(node).boxShadow);
+  expect(drawerShadow).toBe(tocShadow);
+
+  const nonOverlayShadows = await page.evaluate(() => [
+    document.querySelector(".workspace-surface"),
+    document.querySelector("main article"),
+    document.querySelector(".editor-frame")
+  ].filter(Boolean).map((node) => getComputedStyle(node!).boxShadow));
+  expect(nonOverlayShadows.every((shadow) => shadow === "none")).toBe(true);
+});
 test("import source tabs expose only the active input", async ({ page }) => {
   await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
   const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });

@@ -19,6 +19,7 @@ type SidebarProps = {
   githubSource: GitHubSource | null;
   refreshingSourceId: string | null;
   isHidden: boolean;
+  isOverlay: boolean;
   sidebarRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onSelectFolder: (folderId: string | null) => void;
@@ -46,6 +47,7 @@ export function Sidebar({
   githubSource,
   refreshingSourceId,
   isHidden,
+  isOverlay,
   sidebarRef,
   onClose,
   onSelectFolder,
@@ -68,7 +70,7 @@ export function Sidebar({
     <aside
       id="library-shelf"
       ref={sidebarRef}
-      className="workspace-sidebar"
+      className={isOverlay ? "workspace-sidebar floating-surface" : "workspace-sidebar"}
       aria-label="Library shelf"
       aria-hidden={isHidden}
       inert={isHidden}

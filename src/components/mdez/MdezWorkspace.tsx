@@ -361,6 +361,7 @@ export function MdezWorkspace() {
           githubSource={activeGitHubSource}
           refreshingSourceId={refreshingSourceId}
           isHidden={sidebarIsHidden}
+          isOverlay={isTabletLayout}
           sidebarRef={sidebarRef}
           onClose={() => setIsDrawerOpen(false)}
           onSelectFolder={handleSelectFolder}

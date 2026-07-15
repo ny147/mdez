@@ -75,6 +75,25 @@ describe("production readiness", () => {
     expect(workspaceSource).not.toContain("from \"@/lib/tree\"");
   });
 
+  it("uses one canonical workspace token vocabulary", () => {
+    const tokenSource = readFileSync(resolve(process.cwd(), "src/app/styles/tokens.css"), "utf8");
+    const consumerSource = [
+      "src/app/styles/workspace.css",
+      "src/app/styles/markdown.css",
+      "src/components/mdez/MdezWorkspace.tsx",
+      "src/components/mdez/Sidebar.tsx",
+      "src/components/mdez/PreviewPane.tsx",
+      "src/components/mdez/EditorPane.tsx",
+      "src/components/mdez/ShelfPane.tsx",
+      "tailwind.config.ts"
+    ].map((path) => readFileSync(resolve(process.cwd(), path), "utf8")).join("\n");
+    const legacyTokens = /--(?:bg|panel|surface(?:-2)?|fg|muted|border|accent(?:-read|-files|-on)?|font-body|radius-sm|radius-md)\b/;
+
+    expect(tokenSource).not.toMatch(legacyTokens);
+    expect(consumerSource).not.toMatch(legacyTokens);
+    expect(consumerSource).not.toMatch(/#[\da-f]{3,8}\b|rgba?\(/i);
+    expect(tokenSource.match(/:root\s*\{/g)).toHaveLength(1);
+  });
   it("decomposes the import dialog into a shell and source panels", () => {
     const importDialogSource = readFileSync(resolve(process.cwd(), "src/components/mdez/ImportDialog.tsx"), "utf8");
 
