@@ -5,6 +5,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { FilePlus, Upload } from "lucide-react";
 import { type ReactNode, useRef } from "react";
 
+import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
 
 type EditorPaneProps = {
@@ -20,19 +21,6 @@ type EditorPaneProps = {
   onBodyChange: (body: string) => void;
   onRename: (title: string) => void;
 };
-
-type FormatAction = "bold" | "italic" | "link" | "image" | "code" | "h1" | "h2" | "divider";
-
-const toolbarActions: { action: FormatAction; label: string; glyph: string }[] = [
-  { action: "bold", label: "Bold", glyph: "B" },
-  { action: "italic", label: "Italic", glyph: "I" },
-  { action: "link", label: "Insert link", glyph: "↗" },
-  { action: "image", label: "Insert image", glyph: "▧" },
-  { action: "code", label: "Code", glyph: "</>" },
-  { action: "h1", label: "Heading 1", glyph: "H1" },
-  { action: "h2", label: "Heading 2", glyph: "H2" },
-  { action: "divider", label: "Divider", glyph: "—" }
-];
 
 export function EditorPane({
   document,
@@ -129,28 +117,7 @@ export function EditorPane({
         />
       </label>
 
-      <div role="toolbar" aria-label="Markdown toolbar" className="mt-3 flex min-w-0 items-center gap-1 overflow-x-auto rounded-md border border-border bg-panel p-1.5">
-        {toolbarActions.map((item) => (
-          <button
-            key={item.action}
-            type="button"
-            aria-label={item.label}
-            title={item.label}
-            onClick={() => applyFormat(item.action)}
-            className="workspace-icon-button shrink-0 font-mono text-xs font-bold"
-          >
-            {item.action === "link"
-              ? "\u2197"
-              : item.action === "image"
-                ? "\u25a7"
-                : item.action === "divider"
-                  ? "---"
-                  : item.glyph}
-          </button>
-        ))}
-        <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
-        <div className="ml-auto flex shrink-0 items-center gap-1">{rightSlot}</div>
-      </div>
+      <EditorToolbar onFormat={applyFormat} documentActions={rightSlot} />
 
       <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface shadow-soft">
         <CodeMirror

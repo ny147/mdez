@@ -666,3 +666,45 @@ body {
   .workspace-shell { background: linear-gradient(135deg, var(--color-canvas), var(--color-lavender)); }
   .workspace-surface { border-radius: var(--radius-control); padding: var(--space-3); }
 }
+.editor-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+  padding-block: var(--space-2);
+}
+
+.editor-format-actions {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-1);
+  overflow-x: auto;
+}
+
+.editor-document-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 767px) {
+  .editor-format-actions .workspace-icon-button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .editor-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-document-actions {
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+
+  .editor-format-actions {
+    grid-row: 2;
+  }
+}

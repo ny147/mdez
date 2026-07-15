@@ -106,4 +106,12 @@ describe("production readiness", () => {
       expect(panelSource).not.toContain("@/lib/repository");
     }
   });
+
+  it("composes the markdown toolbar through EditorToolbar", () => {
+    const editorPaneSource = readFileSync(resolve(process.cwd(), "src/components/mdez/EditorPane.tsx"), "utf8");
+
+    expect(editorPaneSource).toContain("<EditorToolbar onFormat={applyFormat} documentActions={rightSlot} />");
+    expect(editorPaneSource).not.toContain("const toolbarActions");
+    expect(editorPaneSource).not.toContain('role="toolbar"');
+  });
 });
