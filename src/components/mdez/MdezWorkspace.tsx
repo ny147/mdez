@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { BookOpen, Columns2, Library, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
 
 import { folderHasContent } from "@/lib/tree";
@@ -19,7 +18,7 @@ import {
   renameFolder,
   updateDocumentBody
 } from "@/lib/repository";
-import type { Document, Folder, SaveStatus, ViewMode } from "@/types/content";
+import type { Document, Folder, ViewMode } from "@/types/content";
 import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
 import { EditorPane } from "@/components/mdez/EditorPane";
@@ -31,10 +30,9 @@ import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
 import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
+import { useDocumentDrafts } from "@/hooks/useDocumentDrafts";
 import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { makeMarkdownFileName } from "@/lib/markdown";
-
-const SAVE_ERROR_MESSAGE = "Mdez could not save this page. Your current text remains visible in the editor.";
 
 type OperationStatus = {
   message: string;
@@ -84,216 +82,6 @@ function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | 
   return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
 }
 
-function syncDraftMap(
-  currentDrafts: Record<string, string>,
-  documents: Document[],
-  persistedValues: Record<string, string>,
-  getValue: (document: Document) => string
-) {
-  const nextDrafts: Record<string, string> = {};
-  let changed = false;
-
-  for (const document of documents) {
-    const persistedValue = getValue(document);
-    const currentDraft = currentDrafts[document.id];
-    const previousPersistedValue = persistedValues[document.id];
-    const hasLocalDraft = currentDraft !== undefined && previousPersistedValue !== undefined && currentDraft !== previousPersistedValue;
-
-    nextDrafts[document.id] = hasLocalDraft ? currentDraft : persistedValue;
-
-    if (currentDraft !== nextDrafts[document.id]) {
-      changed = true;
-    }
-  }
-
-  return changed || Object.keys(currentDrafts).length !== documents.length ? nextDrafts : currentDrafts;
-}
-
-type SaveRequest = {
-  value: string;
-  version: number;
-  resolve: (document: Document | null) => void;
-  reject: (error: unknown) => void;
-};
-
-type SaveQueueEntry = {
-  isRunning: boolean;
-  latest: SaveRequest | null;
-};
-
-type SaveQueueRef = MutableRefObject<Record<string, SaveQueueEntry | undefined>>;
-
-function clearSavingDraft(
-  documentId: string,
-  value: string,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>
-) {
-  setSavingDrafts((current) => {
-    if (current[documentId] !== value) {
-      return current;
-    }
-
-    const next = { ...current };
-    delete next[documentId];
-    return next;
-  });
-}
-
-function enqueueDocumentValue(
-  documentId: string,
-  value: string,
-  persist: (id: string, value: string) => Promise<Document>,
-  saveVersions: MutableRefObject<Record<string, number>>,
-  drafts: MutableRefObject<Record<string, string>>,
-  saveQueues: SaveQueueRef,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
-  setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  canonicalizeDraft?: {
-    getValue: (document: Document) => string;
-    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
-  }
-) {
-  const version = (saveVersions.current[documentId] ?? 0) + 1;
-  saveVersions.current[documentId] = version;
-  setSavingDrafts((current) => ({ ...current, [documentId]: value }));
-
-  const entry = saveQueues.current[documentId] ?? { isRunning: false, latest: null };
-  saveQueues.current[documentId] = entry;
-
-  if (entry.latest) {
-    entry.latest.resolve(null);
-  }
-
-  const promise = new Promise<Document | null>((resolve, reject) => {
-    entry.latest = { value, version, resolve, reject };
-  });
-
-  if (!entry.isRunning) {
-    entry.isRunning = true;
-    void runSaveQueue(documentId, persist, saveVersions, drafts, saveQueues, setSavingDrafts, setDocuments, setError, canonicalizeDraft);
-  }
-
-  return promise;
-}
-
-async function runSaveQueue(
-  documentId: string,
-  persist: (id: string, value: string) => Promise<Document>,
-  saveVersions: MutableRefObject<Record<string, number>>,
-  drafts: MutableRefObject<Record<string, string>>,
-  saveQueues: SaveQueueRef,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
-  setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  canonicalizeDraft?: {
-    getValue: (document: Document) => string;
-    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
-  }
-) {
-  const entry = saveQueues.current[documentId];
-
-  if (!entry) {
-    return;
-  }
-
-  while (entry.latest) {
-    const request = entry.latest;
-    entry.latest = null;
-
-    try {
-      const updated = await persist(documentId, request.value);
-      const stillCurrent = saveVersions.current[documentId] === request.version && drafts.current[documentId] === request.value;
-
-      if (!stillCurrent) {
-        clearSavingDraft(documentId, request.value, setSavingDrafts);
-        request.resolve(null);
-        continue;
-      }
-
-      if (canonicalizeDraft) {
-        const canonicalValue = canonicalizeDraft.getValue(updated);
-
-        if (canonicalValue !== request.value) {
-          canonicalizeDraft.setDrafts((current) => {
-            if (current[updated.id] !== request.value) {
-              return current;
-            }
-
-            const next = { ...current, [updated.id]: canonicalValue };
-            drafts.current = next;
-            return next;
-          });
-        }
-      }
-
-      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-      clearSavingDraft(updated.id, request.value, setSavingDrafts);
-      setError((current) => (current === SAVE_ERROR_MESSAGE ? null : current));
-      request.resolve(updated);
-    } catch (error) {
-      const stillCurrent = saveVersions.current[documentId] === request.version && drafts.current[documentId] === request.value;
-
-      clearSavingDraft(documentId, request.value, setSavingDrafts);
-
-      if (!stillCurrent) {
-        request.resolve(null);
-        continue;
-      }
-
-      setError(SAVE_ERROR_MESSAGE);
-      request.reject(error);
-    }
-  }
-
-  entry.isRunning = false;
-
-  if (entry.latest) {
-    entry.isRunning = true;
-    void runSaveQueue(documentId, persist, saveVersions, drafts, saveQueues, setSavingDrafts, setDocuments, setError, canonicalizeDraft);
-  } else {
-    delete saveQueues.current[documentId];
-  }
-}
-
-function persistDocumentValue(
-  documentId: string,
-  value: string,
-  persist: (id: string, value: string) => Promise<Document>,
-  saveVersions: MutableRefObject<Record<string, number>>,
-  drafts: MutableRefObject<Record<string, string>>,
-  saveQueues: SaveQueueRef,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
-  setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  canonicalizeDraft?: {
-    getValue: (document: Document) => string;
-    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
-  }
-) {
-  const saveVersion = (saveVersions.current[documentId] ?? 0) + 1;
-  saveVersions.current[documentId] = saveVersion;
-
-  return window.setTimeout(() => {
-    if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
-      return;
-    }
-
-    void enqueueDocumentValue(
-      documentId,
-      value,
-      persist,
-      saveVersions,
-      drafts,
-      saveQueues,
-      setSavingDrafts,
-      setDocuments,
-      setError,
-      canonicalizeDraft
-    ).catch(() => undefined);
-  }, 650);
-}
-
 export function MdezWorkspace() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -303,10 +91,6 @@ export function MdezWorkspace() {
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
-  const [draftBodiesById, setDraftBodiesById] = useState<Record<string, string>>({});
-  const [draftTitlesById, setDraftTitlesById] = useState<Record<string, string>>({});
-  const [savingBodiesById, setSavingBodiesById] = useState<Record<string, string>>({});
-  const [savingTitlesById, setSavingTitlesById] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
@@ -316,14 +100,6 @@ export function MdezWorkspace() {
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
-  const bodySaveVersionsRef = useRef<Record<string, number>>({});
-  const titleSaveVersionsRef = useRef<Record<string, number>>({});
-  const bodySaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
-  const titleSaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
-  const draftBodiesRef = useRef<Record<string, string>>({});
-  const draftTitlesRef = useRef<Record<string, string>>({});
-  const persistedBodiesRef = useRef<Record<string, string>>({});
-  const persistedTitlesRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     let alive = true;
@@ -394,119 +170,25 @@ export function MdezWorkspace() {
     [documents, selectedDocumentId]
   );
 
+  const {
+    liveDocuments,
+    draftBody,
+    draftTitle,
+    saveStatus,
+    changeBody: handleDraftBodyChange,
+    changeTitle: handleDraftTitleChange
+  } = useDocumentDrafts({
+    documents,
+    selectedDocumentId,
+    setDocuments,
+    setError,
+    persistBody: updateDocumentBody,
+    persistTitle: renameDocument
+  });
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
-  const selectedDocumentKey = selectedDocument?.id ?? "";
   const activeSourceId = selectedFolder?.sourceId ?? selectedDocument?.sourceId;
   const activeGitHubSource = sources.find((source) => source.id === activeSourceId) ?? null;
-  const draftBody = selectedDocument ? draftBodiesById[selectedDocument.id] ?? selectedDocument.body : "";
-  const draftTitle = selectedDocument ? draftTitlesById[selectedDocument.id] ?? selectedDocument.title : "";
-  const liveDocuments = useMemo(
-    () =>
-      documents.map((document) => ({
-        ...document,
-        title: draftTitlesById[document.id] ?? document.title,
-        body: draftBodiesById[document.id] ?? document.body
-      })),
-    [documents, draftBodiesById, draftTitlesById]
-  );
   const liveSelectedDocument = selectedDocument ? { ...selectedDocument, title: draftTitle, body: draftBody } : null;
-  const selectedBodyIsDirty = selectedDocument ? draftBody !== selectedDocument.body : false;
-  const selectedTitleIsDirty = selectedDocument ? draftTitle !== selectedDocument.title : false;
-  const selectedBodyIsSaving = selectedDocument ? savingBodiesById[selectedDocument.id] === draftBody : false;
-  const selectedTitleIsSaving = selectedDocument ? savingTitlesById[selectedDocument.id] === draftTitle : false;
-  const saveStatus: SaveStatus =
-    selectedBodyIsSaving || selectedTitleIsSaving ? "Saving..." : selectedBodyIsDirty || selectedTitleIsDirty ? "Unsaved" : "Saved";
-
-  useEffect(() => {
-    const previousPersistedBodies = persistedBodiesRef.current;
-    const previousPersistedTitles = persistedTitlesRef.current;
-
-    setDraftBodiesById((current) => {
-      const next = syncDraftMap(current, documents, previousPersistedBodies, (document) => document.body);
-      draftBodiesRef.current = next;
-      return next;
-    });
-    setDraftTitlesById((current) => {
-      const next = syncDraftMap(current, documents, previousPersistedTitles, (document) => document.title);
-      draftTitlesRef.current = next;
-      return next;
-    });
-
-    const documentIds = new Set(documents.map((document) => document.id));
-    bodySaveVersionsRef.current = Object.fromEntries(
-      Object.entries(bodySaveVersionsRef.current).filter(([documentId]) => documentIds.has(documentId))
-    );
-    titleSaveVersionsRef.current = Object.fromEntries(
-      Object.entries(titleSaveVersionsRef.current).filter(([documentId]) => documentIds.has(documentId))
-    );
-
-    persistedBodiesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.body]));
-    persistedTitlesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.title]));
-  }, [documents]);
-
-  useEffect(() => {
-    const timeouts: number[] = [];
-
-    for (const document of documents) {
-      const draft = draftBodiesById[document.id];
-
-      if (draft !== undefined && draft !== document.body) {
-        timeouts.push(
-          persistDocumentValue(
-            document.id,
-            draft,
-            updateDocumentBody,
-            bodySaveVersionsRef,
-            draftBodiesRef,
-            bodySaveQueuesRef,
-            setSavingBodiesById,
-            setDocuments,
-            setError
-          )
-        );
-      }
-    }
-
-    return () => {
-      for (const timeout of timeouts) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [documents, draftBodiesById]);
-
-  useEffect(() => {
-    const timeouts: number[] = [];
-
-    for (const document of documents) {
-      const draft = draftTitlesById[document.id];
-
-      if (draft !== undefined && draft !== document.title) {
-        timeouts.push(
-          persistDocumentValue(
-            document.id,
-            draft,
-            renameDocument,
-            titleSaveVersionsRef,
-            draftTitlesRef,
-            titleSaveQueuesRef,
-            setSavingTitlesById,
-            setDocuments,
-            setError,
-            {
-              getValue: (document) => document.title,
-              setDrafts: setDraftTitlesById
-            }
-          )
-        );
-      }
-    }
-
-    return () => {
-      for (const timeout of timeouts) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [documents, draftTitlesById]);
 
   const showShelf = viewMode === "shelf";
   const showEditor = viewMode === "split" || viewMode === "editor";
@@ -781,34 +463,10 @@ export function MdezWorkspace() {
 
   async function handleRenameDocument(documentId: string, title: string) {
     try {
-      draftTitlesRef.current = { ...draftTitlesRef.current, [documentId]: title };
-      setDraftTitlesById((current) => {
-        const next = { ...current, [documentId]: title };
-        draftTitlesRef.current = next;
-        return next;
-      });
-
-      const updated = await enqueueDocumentValue(
-        documentId,
-        title,
-        renameDocument,
-        titleSaveVersionsRef,
-        draftTitlesRef,
-        titleSaveQueuesRef,
-        setSavingTitlesById,
-        setDocuments,
-        setError,
-        {
-          getValue: (document) => document.title,
-          setDrafts: setDraftTitlesById
-        }
-      );
-
-      if (updated) {
-        persistedTitlesRef.current = { ...persistedTitlesRef.current, [documentId]: updated.title };
-        setError(null);
-        await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
-      }
+      const updated = await renameDocument(documentId, title);
+      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
+      setError(null);
+      await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
     } catch {
       setError("Could not rename page.");
     }
@@ -879,30 +537,6 @@ export function MdezWorkspace() {
 
   function handleOpenImport() {
     setIsImportOpen(true);
-  }
-
-  function handleDraftBodyChange(body: string) {
-    if (!selectedDocumentKey) {
-      return;
-    }
-
-    setDraftBodiesById((current) => {
-      const next = { ...current, [selectedDocumentKey]: body };
-      draftBodiesRef.current = next;
-      return next;
-    });
-  }
-
-  function handleDraftTitleChange(title: string) {
-    if (!selectedDocumentKey) {
-      return;
-    }
-
-    setDraftTitlesById((current) => {
-      const next = { ...current, [selectedDocumentKey]: title };
-      draftTitlesRef.current = next;
-      return next;
-    });
   }
 
   function handleViewModeChange(nextMode: ViewMode) {
