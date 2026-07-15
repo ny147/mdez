@@ -47,4 +47,47 @@ describe("LatestSaveQueue", () => {
     await failedExpectation;
     await expect(recovered).resolves.toBe("recovered");
   });
+
+  it("drops the waiting value when cleared during an active save", async () => {
+    const first = deferred<string>();
+    const persist = vi.fn().mockReturnValueOnce(first.promise);
+    const queue = new LatestSaveQueue(persist);
+
+    const active = queue.enqueue("page-1", "active");
+    const waiting = queue.enqueue("page-1", "waiting");
+    queue.clear("page-1");
+    first.resolve("saved active");
+
+    await expect(active).resolves.toBe("saved active");
+    await expect(waiting).resolves.toBeNull();
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(persist).toHaveBeenCalledWith("page-1", "active");
+  });
+
+  it("serializes immediate key reuse after clear behind the active save", async () => {
+    const first = deferred<string>();
+    const second = deferred<string>();
+    const persist = vi.fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue("unexpected stale save");
+    const queue = new LatestSaveQueue(persist);
+
+    const active = queue.enqueue("page-1", "active");
+    const stale = queue.enqueue("page-1", "stale");
+    queue.clear("page-1");
+    const newest = queue.enqueue("page-1", "newest");
+    const callsBeforeActiveSettled = persist.mock.calls.length;
+
+    second.resolve("saved newest");
+    first.resolve("saved active");
+
+    await expect(active).resolves.toBe("saved active");
+    await expect(stale).resolves.toBeNull();
+    await expect(newest).resolves.toBe("saved newest");
+    expect(callsBeforeActiveSettled).toBe(1);
+    expect(persist).toHaveBeenCalledTimes(2);
+    expect(persist).toHaveBeenNthCalledWith(1, "page-1", "active");
+    expect(persist).toHaveBeenNthCalledWith(2, "page-1", "newest");
+  });
 });

@@ -33,8 +33,13 @@ export class LatestSaveQueue<Value, Result> {
 
   clear(key: string) {
     const entry = this.entries.get(key);
-    entry?.latest?.resolve(null);
-    this.entries.delete(key);
+    if (!entry) return;
+
+    entry.latest?.resolve(null);
+    entry.latest = null;
+    if (!entry.running) {
+      this.entries.delete(key);
+    }
   }
 
   private async drain(key: string, entry: Entry<Value, Result>) {
