@@ -16,25 +16,17 @@ export type GitHubImportPanelProps = {
 
 export const GitHubImportPanel = forwardRef<HTMLInputElement, GitHubImportPanelProps>(
   function GitHubImportPanel(
-    { url, preview, message, busyAction, onUrlChange, onPreview, onImport },
+    { url, preview, message, busyAction, onUrlChange },
     ref
   ) {
     const busy = busyAction !== null;
 
     return (
-      <form
+      <div
         id="import-panel-github"
         role="tabpanel"
         aria-labelledby="import-source-github"
         className="mt-5 grid gap-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (preview) {
-            onImport();
-          } else {
-            onPreview();
-          }
-        }}
       >
         <div>
           <label className="grid gap-2 text-sm font-bold text-ink" htmlFor="github-repository-url">
@@ -104,7 +96,7 @@ export const GitHubImportPanel = forwardRef<HTMLInputElement, GitHubImportPanelP
             {message}
           </p>
         ) : null}
-      </form>
+      </div>
     );
   }
 );

@@ -448,10 +448,27 @@ test("shows a typed GitHub error and lets the preview retry", async ({ page }) =
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
   await dialog.getByRole("button", { name: "Preview repository" }).click();
 
-  await expect(dialog.getByText("GitHub is busy. Try again shortly.", { exact: true })).toBeVisible();
+  const errorMessage = dialog.getByText("GitHub is busy. Try again shortly.", { exact: true });
+  await expect(errorMessage).toHaveCount(1);
+  await expect(errorMessage).toBeVisible();
   await dialog.getByRole("button", { name: "Preview repository" }).click();
   await expect(dialog.getByRole("button", { name: "Import repository" })).toBeEnabled();
   expect(requestCount).toBe(2);
+});
+
+test("routes malformed GitHub URLs through app validation", async ({ page }) => {
+  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
+  await dialog.getByRole("tab", { name: "Public GitHub" }).click();
+  await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("not a repository");
+  await dialog.getByRole("button", { name: "Preview repository" }).click();
+
+  const message = dialog.getByText(
+    "Enter a public GitHub repository URL in the form https://github.com/owner/repository.",
+    { exact: true }
+  );
+  await expect(message).toHaveCount(1);
+  await expect(message).toBeVisible();
 });
 
 test("confirms manual GitHub refresh before replacing source-owned pages", async ({ page }) => {

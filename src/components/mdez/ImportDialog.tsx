@@ -268,7 +268,7 @@ export function ImportDialog({
           <PasteImportPanel
             ref={pasteRef}
             body={pasteBody}
-            message={message}
+            message={source === "paste" ? message : ""}
             busy={busy}
             onBodyChange={setPasteBody}
             onSubmit={() => void submitPaste()}
@@ -278,7 +278,7 @@ export function ImportDialog({
         <div hidden={source !== "files"}>
           <FileImportPanel
             dragging={isDragging}
-            message={message}
+            message={source === "files" ? message : ""}
             busy={busy}
             onFiles={(files) => void importFiles(files)}
             onDraggingChange={setIsDragging}
@@ -290,7 +290,7 @@ export function ImportDialog({
             ref={githubRef}
             url={githubUrl}
             preview={githubPreview}
-            message={message}
+            message={source === "github" ? message : ""}
             busyAction={busyAction === "local" ? null : busyAction}
             onUrlChange={(url) => {
               setGitHubUrl(url);
@@ -314,8 +314,8 @@ export function ImportDialog({
 
           {source === "paste" ? (
             <button
-              type="submit"
-              form="import-panel-paste"
+              type="button"
+              onClick={() => void submitPaste()}
               disabled={busy}
               className="primary-button px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -325,8 +325,8 @@ export function ImportDialog({
 
           {source === "github" ? (
             <button
-              type="submit"
-              form="import-panel-github"
+              type="button"
+              onClick={() => void (githubPreview ? importGitHubRepository() : previewGitHubRepository())}
               disabled={busy || (!githubPreview && githubUrl.trim() === "")}
               className="primary-button px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50"
             >
