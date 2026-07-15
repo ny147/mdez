@@ -607,6 +607,7 @@ test("mobile split separator resizes from vertical pointer movement", async ({ p
   const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
   await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
   await expect(separator).toHaveAttribute("aria-valuenow", "50");
+  await expect(separator).toHaveCSS("touch-action", "none");
 
   const splitBox = await split.boundingBox();
   const separatorBox = await separator.boundingBox();
@@ -623,12 +624,28 @@ test("mobile split separator resizes from vertical pointer movement", async ({ p
 
   await expect(separator).not.toHaveAttribute("aria-valuenow", "50");
 });
+test("tablet drawer keeps its close control below the desktop breakpoint", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 1024 });
+
+  const openShelf = page.getByRole("button", { name: "Open library shelf" });
+  await expect(openShelf).toBeVisible();
+  await openShelf.click();
+
+  const closeShelf = page
+    .getByRole("complementary", { name: "Library shelf" })
+    .getByRole("button", { name: "Close library shelf" });
+  await expect(closeShelf).toBeVisible();
+  await closeShelf.click();
+
+  await expect(page.locator('aside[aria-label="Library shelf"]')).toHaveAttribute("aria-hidden", "true");
+});
 test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Split");
 
-  await expect(page.getByRole("button", { name: "Open library shelf" })).toBeVisible();
+  const openShelf = page.getByRole("button", { name: "Open library shelf" });
+  await expect(openShelf).toBeVisible();
   const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
   await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
 

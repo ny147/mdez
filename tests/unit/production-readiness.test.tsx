@@ -51,4 +51,11 @@ describe("production readiness", () => {
       "X-Frame-Options": "DENY"
     });
   });
+
+  it("keeps the drawer close control available through the tablet breakpoint", () => {
+    const sidebarSource = readFileSync(resolve(process.cwd(), "src/components/mdez/Sidebar.tsx"), "utf8");
+
+    expect(sidebarSource).toContain('className="flex items-center justify-between gap-3 lg:hidden"');
+    expect(sidebarSource).not.toContain('className="flex items-center justify-between gap-3 md:hidden"');
+  });
 });

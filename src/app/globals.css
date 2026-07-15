@@ -639,6 +639,7 @@ body {
   .split-workspace[data-orientation="horizontal"] .split-separator {
     min-height: 2rem;
     cursor: row-resize;
+    touch-action: none;
   }
 
   .split-workspace[data-orientation="horizontal"] .split-separator::after {
