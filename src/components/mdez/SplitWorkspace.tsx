@@ -40,8 +40,8 @@ export function SplitWorkspace({ editor, reader, orientation }: SplitWorkspacePr
   }
 
   const style = isHorizontal
-    ? { gridTemplateRows: `${value}% 2rem ${100 - value}%` }
-    : { gridTemplateColumns: `${value}% 0.5rem ${100 - value}%` };
+    ? { gridTemplateRows: `minmax(0, ${value}fr) var(--split-separator-size, 2rem) minmax(0, ${100 - value}fr)` }
+    : { gridTemplateColumns: `minmax(0, ${value}fr) var(--split-separator-size, 0.5rem) minmax(0, ${100 - value}fr)` };
 
   return (
     <div ref={containerRef} className="split-workspace" data-orientation={orientation} style={style}>

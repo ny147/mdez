@@ -1488,9 +1488,9 @@ Append this resolution table to `docs/uxui_improve/mdez_ux_review.md`:
 
 | Reviewed issue | Resolution evidence |
 |---|---|
-| 768px Split breakpoint cliff | Tablet Split test and rendered 768×1024 inspection |
+| 768px Split breakpoint cliff | Tablet Split test and automated 768×1024 capture assertions |
 | Mobile separator rejected touch | Mobile pointer-resize Playwright test |
-| Nested cards flattened hierarchy | Surface-shadow contract and rendered Shelf/Read inspection |
+| Nested cards flattened hierarchy | Surface-shadow contract and automated Shelf/Read capture assertions |
 | Repeated document identity | Single-H1 Read contract |
 | Mobile toolbar targets and hidden exports | 44px target and viewport-containment tests |
 | Typography token drift | Computed Shippori reader-family test |
@@ -1513,7 +1513,7 @@ git commit -m "test: complete workspace quality release gate"
 - `MdezWorkspace.tsx` is a composition root rather than the owner of autosave and repository implementation details.
 - Autosave queue behavior is unit-tested for supersession, rejection, recovery, and rapid edits.
 - Import dialog focus and every import source retain existing behavior through focused components.
-- At 768px and 1024px, the shelf is a drawer and Split uses vertically stacked full-width panes.
+- From 768px through 1023px, the shelf is a drawer and Split uses vertically stacked full-width panes; at 1024px, the persistent desktop sidebar and side-by-side Split layout apply.
 - Mobile Split supports touch and keyboard resizing.
 - Mobile toolbar targets are at least 44px and export actions are visible without horizontal discovery.
 - Reader prose uses `--font-reader`; code remains monospaced.

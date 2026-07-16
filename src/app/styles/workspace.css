@@ -690,6 +690,26 @@ body {
 }
 
 @media (max-width: 767px) {
+  .workspace-shell button,
+  .workspace-shell a[href],
+  .workspace-shell input:not([type="hidden"]):not([type="file"]),
+  .workspace-shell select,
+  .workspace-shell textarea,
+  .workspace-shell summary,
+  .workspace-shell [role="button"],
+  .workspace-shell [role="tab"] {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .workspace-shell .workspace-icon-button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  .split-workspace[data-orientation="horizontal"] {
+    --split-separator-size: 2.75rem;
+  }
+
   .editor-format-actions .workspace-icon-button {
     width: 2.75rem;
     height: 2.75rem;

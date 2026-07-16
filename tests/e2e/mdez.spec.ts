@@ -261,6 +261,8 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
   const exportBook = toolbar.getByRole("button", { name: "Book ZIP for open book in Shelf" });
   await expectInsideViewport(exportMarkdown, 390);
   await expectInsideViewport(exportBook, 390);
+  await expectMinimumTouchTarget(exportMarkdown);
+  await expectMinimumTouchTarget(exportBook);
 
   const formatBox = await toolbar.locator(".editor-format-actions").boundingBox();
   const documentBox = await toolbar.locator(".editor-document-actions").boundingBox();
@@ -380,6 +382,65 @@ test("drawer, table of contents, and dialog share floating elevation", async ({ 
     document.querySelector(".editor-frame")
   ].filter(Boolean).map((node) => getComputedStyle(node!).boxShadow));
   expect(nonOverlayShadows.every((shadow) => shadow === "none")).toBe(true);
+});
+test("mobile workspace interactive targets are at least 44 by 44 pixels", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const violations: Array<{ state: string; target: string; width: number; height: number }> = [];
+
+  async function auditVisibleTargets(state: string) {
+    const targets = await page.getByTestId("workspace-shell")
+      .locator('button, a[href], input:not([type="hidden"]):not([type="file"]), select, textarea, summary, [role="button"], [role="tab"]')
+      .evaluateAll((nodes) => nodes.flatMap((node) => {
+        const element = node as HTMLElement;
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        if (
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          box.width === 0 ||
+          box.height === 0 ||
+          element.closest('[inert], [aria-hidden="true"]')
+        ) return [];
+
+        const label = element.getAttribute("aria-label")
+          ?? element.getAttribute("title")
+          ?? (element as HTMLInputElement).placeholder
+          ?? element.textContent?.trim().replace(/\s+/g, " ")
+          ?? element.tagName.toLowerCase();
+        return [{
+          target: `${element.tagName.toLowerCase()} "${label.slice(0, 80)}"`,
+          width: Math.round(box.width * 10) / 10,
+          height: Math.round(box.height * 10) / 10
+        }];
+      }));
+
+    for (const target of targets) {
+      if (target.width < 44 || target.height < 44) violations.push({ state, ...target });
+    }
+  }
+
+  // CodeMirror's contenteditable surface is an editing canvas rather than a compact activation target,
+  // so it is intentionally outside this button/link/form-control target audit.
+  await auditVisibleTargets("Shelf");
+
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  for (const mode of ["Edit", "Read", "Split"] as const) {
+    await clickViewportModeTab(page, mode);
+    await expectModeReady(page, mode);
+    await auditVisibleTargets(mode);
+  }
+
+  const drawerTrigger = page.getByRole("button", { name: "Open library shelf" });
+  await drawerTrigger.click();
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar).toHaveAttribute("aria-hidden", "false");
+  await auditVisibleTargets("Open drawer");
+
+  await sidebar.getByRole("button", { name: "Import markdown", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Bring notes into Mdez" })).toBeVisible();
+  await auditVisibleTargets("Import dialog");
+
+  expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
 });
 test("import source tabs expose only the active input", async ({ page }) => {
   await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
@@ -830,6 +891,44 @@ test("tablet split stacks full-width panes and keeps the shelf in a drawer", asy
     expect(box).not.toBeNull();
     expect(box!.width).toBeGreaterThanOrEqual(680);
   }
+});
+test("responsive layout switches exactly between 1023 and 1024 pixels", async ({ page }) => {
+  await page.setViewportSize({ width: 1023, height: 900 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await clickViewportModeTab(page, "Split");
+  await expectModeReady(page, "Split");
+
+  const drawerTrigger = page.getByRole("button", { name: "Open library shelf" });
+  const sidebar = page.locator('aside[aria-label="Library shelf"]');
+  const split = page.locator(".split-workspace");
+  const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
+  const editorPane = split.locator(":scope > div").nth(0);
+  const readerPane = split.locator(":scope > div").nth(1);
+
+  await expect(drawerTrigger).toBeVisible();
+  await expect(sidebar).toHaveAttribute("aria-hidden", "true");
+  await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
+
+  const tabletEditorBox = await editorPane.boundingBox();
+  const tabletReaderBox = await readerPane.boundingBox();
+  expect(tabletEditorBox).not.toBeNull();
+  expect(tabletReaderBox).not.toBeNull();
+  expect(Math.abs(tabletEditorBox!.x - tabletReaderBox!.x)).toBeLessThan(2);
+  expect(tabletReaderBox!.y).toBeGreaterThan(tabletEditorBox!.y + tabletEditorBox!.height);
+
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await expectModeReady(page, "Split");
+  await expect(drawerTrigger).toBeHidden();
+  await expect(page.getByRole("button", { name: "Toggle sidebar" })).toBeVisible();
+  await expect(sidebar).toHaveAttribute("aria-hidden", "false");
+  await expect(separator).toHaveAttribute("aria-orientation", "vertical");
+
+  const desktopEditorBox = await editorPane.boundingBox();
+  const desktopReaderBox = await readerPane.boundingBox();
+  expect(desktopEditorBox).not.toBeNull();
+  expect(desktopReaderBox).not.toBeNull();
+  expect(Math.abs(desktopEditorBox!.y - desktopReaderBox!.y)).toBeLessThan(2);
+  expect(desktopReaderBox!.x).toBeGreaterThan(desktopEditorBox!.x + desktopEditorBox!.width);
 });
 test("switches editor, split, and preview modes", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();

@@ -2,7 +2,7 @@
 
 ## Review status
 
-This review records the P1 audit of the shipped quiet pastel library interface and the public GitHub import flow. It replaces the earlier pre-redesign review. Findings here are based on the current implementation, automated coverage, and live browser inspection.
+This review records the P1 audit of the shipped quiet pastel library interface and the public GitHub import flow. It replaces the earlier pre-redesign review. Findings here are based on the current implementation, automated coverage, and captured browser screenshots; direct Task 10 human visual inspection was blocked by the Windows split-root sandbox.
 
 Reviewed states include fresh and populated shelves, local paste/file import, first and repeated GitHub import, preview success/failure/retry, refresh confirmation, refresh success/failure, editor, reader, split view, empty states, and desktop/mobile navigation.
 
@@ -61,7 +61,7 @@ Resolution:
 - Reader prose uses the reader font while inline and block code remain monospaced.
 - Preview content is capped at a comfortable 65–75 character measure.
 - Existing Markdown coverage checks headings, links, code, blockquotes, tables, and table of contents behavior.
-- Supported widths 390, 430, 768, 1024, and 1440 px are covered by responsive E2E checks or live inspection.
+- Supported widths 390, 430, 768, 1024, and 1440 px are covered by responsive E2E checks and automated rendered assertions with screenshot captures.
 - At 390 px the document width equals the viewport width, the GitHub dialog fits vertically, and source labels do not truncate.
 - Desktop and mobile expose the same Shelf, Edit, Read, Split, create, import, refresh, and export commands.
 - Long document and repository names use constrained flex layouts and truncation where space is finite.
@@ -92,9 +92,9 @@ Resolution:
 
 | Reviewed issue | Resolution evidence |
 |---|---|
-| 768px Split breakpoint cliff | Tablet Split test and rendered 768×1024 inspection |
+| 768px Split breakpoint cliff | Tablet Split test and automated 768×1024 capture assertions |
 | Mobile separator rejected touch | Mobile pointer-resize Playwright test |
-| Nested cards flattened hierarchy | Surface-shadow contract and rendered Shelf/Read inspection |
+| Nested cards flattened hierarchy | Surface-shadow contract and automated Shelf/Read capture assertions |
 | Repeated document identity | Single-H1 Read contract |
 | Mobile toolbar targets and hidden exports | 44px target and viewport-containment tests |
 | Typography token drift | Computed Shippori reader-family test |
