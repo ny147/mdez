@@ -1,16 +1,14 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
 
 import { renameDocument, updateDocumentBody } from "@/lib/repository";
 import type { ViewMode } from "@/types/content";
 import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
-import { EditorPane } from "@/components/mdez/EditorPane";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
-import { ImportDialog } from "@/components/mdez/ImportDialog";
-import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
 import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
@@ -20,6 +18,19 @@ import { useDocumentDrafts } from "@/hooks/useDocumentDrafts";
 import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
+
+const EditorPane = dynamic(
+  () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
+  { ssr: false, loading: () => <p role="status">Loading editor…</p> }
+);
+const PreviewPane = dynamic(
+  () => import("@/components/mdez/PreviewPane").then((module) => module.PreviewPane),
+  { ssr: false, loading: () => <p role="status">Loading reader…</p> }
+);
+const ImportDialog = dynamic(
+  () => import("@/components/mdez/ImportDialog").then((module) => module.ImportDialog),
+  { ssr: false }
+);
 
 type OperationStatus = {
   message: string;

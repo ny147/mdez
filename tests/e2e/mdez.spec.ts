@@ -313,6 +313,7 @@ test("reader prose uses the reader token and only overlays receive elevation", a
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Read");
 
+  await expect(page.locator(".markdown-preview")).toBeVisible();
   const evidence = await page.evaluate(() => {
     const prose = document.querySelector(".markdown-preview");
     const surface = document.querySelector(".workspace-surface");

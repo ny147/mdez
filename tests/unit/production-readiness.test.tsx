@@ -114,4 +114,11 @@ describe("production readiness", () => {
     expect(editorPaneSource).not.toContain("const toolbarActions");
     expect(editorPaneSource).not.toContain('role="toolbar"');
   });
+
+  it("keeps editor, reader, and import features behind dynamic boundaries", () => {
+    const workspace = readFileSync(resolve(process.cwd(), "src/components/mdez/MdezWorkspace.tsx"), "utf8");
+    expect(workspace).toMatch(/dynamic\(\s*\(\) => import\("@\/components\/mdez\/EditorPane"\)/);
+    expect(workspace).toMatch(/dynamic\(\s*\(\) => import\("@\/components\/mdez\/PreviewPane"\)/);
+    expect(workspace).toMatch(/dynamic\(\s*\(\) => import\("@\/components\/mdez\/ImportDialog"\)/);
+  });
 });
