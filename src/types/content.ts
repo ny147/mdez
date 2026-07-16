@@ -1,6 +1,7 @@
 export type Folder = {
   id: string;
   name: string;
+  sourceId?: string;
   parentId: string | null;
   order: number;
   createdAt: string;
@@ -11,6 +12,7 @@ export type Document = {
   id: string;
   title: string;
   body: string;
+  sourceId?: string;
   folderId: string | null;
   order: number;
   createdAt: string;
@@ -19,6 +21,4 @@ export type Document = {
 
 export type SaveStatus = "Saved" | "Saving..." | "Unsaved";
 
-export type ViewMode = "split" | "editor" | "preview";
-
-export type MobileTab = "files" | "edit" | "read";
+export type ViewMode = "shelf" | "editor" | "preview" | "split";

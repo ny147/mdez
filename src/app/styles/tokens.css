@@ -1,0 +1,38 @@
+:root {
+  color-scheme: light;
+  --color-canvas: #fff7fc;
+  --color-panel: #fff0f8;
+  --color-paper: #fffdfd;
+  --color-lavender: #f6edff;
+  --color-ink: #2b2233;
+  --color-muted: #725f7c;
+  --color-rule: #ead8f0;
+  --color-edit: #8053c8;
+  --color-edit-hover: #7043b6;
+  --color-read: #177f71;
+  --color-shelf: #b8487a;
+  --color-on-accent: #fffdfd;
+  --color-warning: #c98622;
+  --color-error: #a93966;
+  --color-reader-muted: #3d3444;
+  --color-scrim: rgb(43 34 51 / 22%);
+  --shadow-focus: 0 0 0 5px rgb(128 83 200 / 16%);
+  --shadow-field-focus: 0 0 0 4px rgb(128 83 200 / 12%);
+  --shadow-floating: 0 18px 46px rgb(83 45 92 / 16%);
+  --font-display: var(--font-space-grotesk), "DM Sans", system-ui, sans-serif;
+  --font-ui: var(--font-inter), "DM Sans", system-ui, sans-serif;
+  --font-reader: var(--font-shippori), Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius-control: 0.5rem;
+  --radius-surface: 0.75rem;
+  --topbar-h: 3rem;
+  --status-h: 1.75rem;
+  --sidebar-w: 15rem;
+  --rail-w: 2.75rem;
+}

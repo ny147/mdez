@@ -1,0 +1,2346 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mdez workspace v1.7.3</title>
+  <style>
+    :root {
+      --bg: #fff7fc;
+      --panel: #fff0f8;
+      --surface: #fffdfd;
+      --surface-2: #f6edff;
+      --fg: #2b2233;
+      --muted: #725f7c;
+      --border: #ead8f0;
+      --accent: #8053c8; /* lavender */
+      --accent-read: #177f71; /* mint */
+      --accent-files: #b8487a; /* berry */
+      --accent-on: #fffdfd;
+      --danger: var(--accent);
+      --success: var(--accent-read);
+      --warn: #c98622;
+      --code-keyword: #b65387;
+      --code-string: #1d8978;
+      --code-function: #7c5fc4;
+      --code-comment: #8a7890;
+      --code-constant: #a36ad2;
+      --grid-line: rgba(128, 83, 200, 0.08);
+      --glow-edit: rgba(184, 72, 122, 0.18);
+      --glow-read: rgba(23, 127, 113, 0.14);
+      --glow-files: rgba(128, 83, 200, 0.16);
+      --font-display: "Space Grotesk", "DM Sans", -apple-system, system-ui, sans-serif;
+      --font-body: "Inter", "DM Sans", -apple-system, system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+      --font-reader: "Shippori Mincho B1", Georgia, serif;
+      --font-wordmark: "Space Grotesk", "DM Sans", system-ui, sans-serif;
+      --topbar-h: 32px;
+      --status-h: 24px;
+      --sidebar-w: 240px;
+      --rail-w: 44px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px color-mix(in oklch, var(--accent) 38%, transparent);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    svg { display: block; }
+    p { text-wrap: pretty; }
+    h1, h2, h3 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .app-shell {
+      position: relative;
+      display: grid;
+      grid-template-rows: var(--topbar-h) minmax(0, 1fr) var(--status-h);
+      width: 100vw;
+      height: 100vh;
+      background:
+        radial-gradient(circle at 16% 12%, rgba(223, 111, 159, 0.2), transparent 28%),
+        radial-gradient(circle at 78% 26%, rgba(141, 99, 216, 0.18), transparent 34%),
+        radial-gradient(circle at 68% 82%, var(--active-glow, var(--glow-read)), transparent 34%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(246, 237, 255, 0.58) 46%, rgba(255, 240, 248, 0.72)),
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        var(--bg);
+      background-size: auto, auto, auto, auto, 64px 64px, 64px 64px, auto;
+      transition: background 400ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .app-shell::before {
+      content: "";
+      position: absolute;
+      inset: var(--topbar-h) 0 var(--status-h);
+      pointer-events: none;
+      background:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle at 54% 34%, black 0 22%, transparent 68%);
+      opacity: 0.42;
+      z-index: 0;
+    }
+    .app-shell[data-mode="edit"] { --mode-accent: var(--accent); --active-glow: var(--glow-edit); }
+    .app-shell[data-mode="read"] { --mode-accent: var(--accent-read); --active-glow: var(--glow-read); }
+    .app-shell[data-mode="files"] { --mode-accent: var(--accent-files); --active-glow: var(--glow-files); }
+    .app-shell[data-mode="split"] { --mode-accent: color-mix(in oklch, var(--accent) 52%, var(--accent-read)); --active-glow: color-mix(in oklch, var(--glow-edit) 55%, var(--glow-read)); }
+
+    /* Sidebar Toggle Logic */
+    .app-shell[data-sidebar="hidden"] {
+      --sidebar-w: 0px;
+    }
+    .app-shell[data-sidebar="hidden"] .sidebar {
+      width: 0;
+      opacity: 0;
+      pointer-events: none;
+      border-right: 0;
+      overflow: hidden;
+    }
+    .app-shell[data-sidebar="hidden"] .topbar {
+      grid-template-columns: max-content 1fr max-content;
+    }
+    .app-shell[data-sidebar="hidden"] .brand-lockup {
+      border-right: 0;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(180px, var(--sidebar-w)) 1fr max-content;
+      align-items: center;
+      min-width: 0;
+      height: var(--topbar-h);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 0 color-mix(in srgb, var(--surface) 75%, transparent);
+      z-index: 8;
+      transition: grid-template-columns 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      height: 100%;
+      padding-inline: 10px;
+      border-right: 1px solid var(--border);
+      transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .sidebar-toggle {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin-left: -4px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      transition: all 150ms ease;
+    }
+    .sidebar-toggle:hover {
+      background: var(--surface);
+      color: var(--fg);
+    }
+    .sidebar-toggle svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .mascot {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 38%, var(--border));
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--surface), var(--surface-2));
+      box-shadow: 0 8px 20px color-mix(in srgb, var(--accent-files) 14%, transparent);
+    }
+    .mascot::before,
+    .mascot::after {
+      content: "";
+      position: absolute;
+      top: 6px;
+      width: 3px;
+      height: 3px;
+      background: var(--accent-read);
+      border-radius: 999px;
+      animation: blink 4.8s steps(1, end) infinite;
+    }
+    .mascot::before { left: 6px; }
+    .mascot::after { right: 6px; }
+    .mascot .ears {
+      position: absolute;
+      inset: -4px 3px auto;
+      display: flex;
+      justify-content: space-between;
+    }
+    .mascot .ears i {
+      width: 7px;
+      height: 7px;
+      transform: rotate(45deg);
+      border-left: 1px solid var(--accent-files);
+      border-top: 1px solid var(--accent-files);
+      background: var(--surface);
+    }
+    .wordmark {
+      font-family: var(--font-wordmark);
+      color: var(--accent);
+      font-size: 18px;
+      line-height: 1;
+      letter-spacing: 0;
+      text-shadow: none;
+    }
+    .spark { color: var(--accent-files); }
+    .mode-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      padding-inline: 10px;
+    }
+    .mode-tab {
+      min-width: 58px;
+      height: 24px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-wordmark);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0;
+      transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .mode-tab[aria-selected="true"] {
+      color: var(--fg);
+      border-color: color-mix(in srgb, var(--mode-accent) 60%, var(--border));
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--mode-accent) 18%, var(--surface)), color-mix(in srgb, var(--mode-accent) 9%, var(--surface)));
+      box-shadow:
+        0 8px 22px color-mix(in srgb, var(--mode-accent) 15%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--surface) 88%, transparent);
+    }
+    .mode-tab:hover {
+      color: var(--fg);
+      background: color-mix(in srgb, var(--mode-accent, var(--accent)) 10%, transparent);
+    }
+    .mode-tab:focus-visible,
+    .sidebar-toggle:focus-visible,
+    .drawer-toggle:focus-visible,
+    .back-edit:focus-visible,
+    .icon-button:focus-visible,
+    .tree-row:focus-visible,
+    .tree-note button:focus-visible,
+    .import-zone:focus-visible,
+    .folder-card:focus-visible,
+    .ghost-action:focus-visible,
+    .action-button:focus-visible,
+    .export-button:focus-visible,
+    .toc-button:focus-visible,
+    .toc-close:focus-visible,
+    .split-divider:focus-visible,
+    .bottom-tab:focus-visible,
+    .editor-textarea:focus-visible,
+    .split-pane.editor-preview:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+    .storage {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      height: 100%;
+      padding-inline: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      border-left: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .storage-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent-read);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-read) 18%, transparent);
+    }
+    .storage-scope {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 2px 7px;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 36%, var(--border));
+      border-radius: 999px;
+      color: var(--fg);
+      background: color-mix(in srgb, var(--accent-files) 8%, transparent);
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+    .workspace {
+      position: relative;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+      min-height: 0;
+      z-index: 1;
+      transition: grid-template-columns 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--surface-2) 34%, var(--bg))),
+        var(--panel);
+      border-right: 1px solid var(--border);
+      transition: width 200ms cubic-bezier(0.2, 0, 0, 1), transform 200ms cubic-bezier(0.2, 0, 0, 1), opacity 200ms ease;
+    }
+    .tree {
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 8px;
+    }
+    .tree-section-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 6px 8px 8px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .tree-section-actions {
+      display: flex;
+      gap: 2px;
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+    .tree-section-label:hover .tree-section-actions {
+      opacity: 1;
+    }
+    .tree-section-actions .icon-button {
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
+    }
+    .action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 34px;
+      padding-inline: 16px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .action-button:active { transform: translateY(1px); }
+    .action-primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-files));
+      color: var(--accent-on);
+      box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 15%, transparent);
+    }
+    .action-primary:hover { filter: brightness(1.08); }
+    .secondary-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .action-secondary {
+      background: transparent;
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+      color: color-mix(in srgb, var(--accent) 72%, var(--fg));
+    }
+    .action-secondary:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .action-secondary[disabled],
+    .export-button[disabled] {
+      cursor: not-allowed;
+      opacity: 0.48;
+      box-shadow: none;
+    }
+    .ghost-action {
+      height: 30px;
+      border: 1px solid color-mix(in oklch, var(--accent-read) 35%, var(--border));
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--accent-read);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .ghost-action:hover { background: color-mix(in oklch, var(--accent-read) 8%, transparent); }
+    .tree-row {
+      display: grid;
+      grid-template-columns: 14px 18px minmax(0, 1fr);
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      height: 28px;
+      padding: 0 8px 0 var(--indent, 8px);
+      border: 0;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--fg);
+      text-align: left;
+      font-size: 12px;
+    }
+    .tree-row:hover { background: color-mix(in srgb, var(--surface) 76%, var(--surface-2)); }
+    .tree-row.active {
+      border-color: color-mix(in srgb, var(--accent-files) 46%, var(--border));
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-files) 18%, transparent), color-mix(in srgb, var(--accent) 8%, transparent) 72%),
+        var(--surface);
+      box-shadow: 0 6px 18px color-mix(in srgb, var(--accent-files) 12%, transparent);
+    }
+    .chev { color: var(--muted); font-size: 11px; }
+    .tree-icon {
+      position: relative;
+      width: 13px;
+      height: 15px;
+      border: 1px solid currentColor;
+      border-radius: 3px 4px 4px 3px;
+      background:
+        linear-gradient(135deg, transparent 0 72%, color-mix(in srgb, var(--fg) 11%, transparent) 73% 100%),
+        color-mix(in srgb, var(--surface) 88%, var(--surface-2));
+      color: var(--muted);
+    }
+    .tree-icon::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: -1px;
+      width: 5px;
+      height: 5px;
+      border-left: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+      border-radius: 0 3px 0 2px;
+      background: color-mix(in srgb, var(--surface) 80%, var(--surface-2));
+    }
+    .tree-icon.folder {
+      width: 12px;
+      height: 17px;
+      color: var(--accent-files);
+      border-radius: 2px 4px 4px 2px;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--accent-files) 28%, var(--surface)) 0 25%, color-mix(in srgb, var(--accent-files) 12%, var(--surface)) 26% 100%),
+        var(--surface);
+    }
+    .tree-icon.folder::before {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 3px;
+      width: 1px;
+      height: 10px;
+      border: 0;
+      border-radius: 999px;
+      background: color-mix(in srgb, currentColor 56%, transparent);
+    }
+    .tree-icon.folder::after {
+      display: none;
+    }
+    .tree-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tree-note {
+      margin: 8px;
+      padding: 9px 10px;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 28%, var(--border));
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--accent-files) 10%, var(--surface));
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .tree-note button {
+      display: block;
+      margin-top: 7px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--accent-files);
+      font-weight: 600;
+      text-align: left;
+    }
+    .import-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      align-self: end;
+      gap: 6px;
+      width: calc(100% - 24px);
+      max-height: 108px;
+      min-height: 0;
+      margin: 8px 12px 12px;
+      padding: 10px;
+      border: 1px dashed color-mix(in srgb, var(--accent-files) 46%, var(--border));
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--accent-files) 7%, var(--surface));
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .import-zone:hover {
+      border-color: color-mix(in srgb, var(--accent-files) 60%, var(--border));
+      border-style: solid;
+      background: color-mix(in srgb, var(--accent-files) 14%, var(--surface));
+      color: var(--fg);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--accent-files) 14%, transparent);
+    }
+    .import-zone.is-dragging {
+      border-color: color-mix(in srgb, var(--accent-files) 72%, var(--border));
+      border-style: solid;
+      background: color-mix(in srgb, var(--accent-files) 16%, transparent);
+      color: var(--fg);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-files) 28%, transparent);
+    }
+    .import-zone svg {
+      color: var(--accent-files);
+      opacity: 0.6;
+      transition: all 200ms ease;
+    }
+    .import-zone:hover svg {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+    .import-zone strong {
+      display: block;
+      color: var(--fg);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .main-panel {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 72% 14%, color-mix(in srgb, var(--mode-accent) 14%, transparent), transparent 32%),
+        color-mix(in srgb, var(--surface) 86%, transparent);
+      border-left: 1px solid color-mix(in srgb, var(--mode-accent) 28%, var(--border));
+      box-shadow:
+        inset 10px 0 34px color-mix(in srgb, var(--mode-accent) 8%, transparent),
+        -24px 0 80px var(--active-glow);
+    }
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      min-width: 0;
+      min-height: 0;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 250ms cubic-bezier(0.2, 0, 0, 1), transform 250ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .screen.active {
+      display: grid;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .read-screen {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      padding: 16px clamp(16px, 4vw, 52px) 0;
+    }
+    .reader-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      height: 42px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      padding: 3px 9px;
+      border: 1px solid color-mix(in srgb, var(--mode-accent) 34%, var(--border));
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--mode-accent) 8%, transparent);
+      color: color-mix(in srgb, var(--fg) 88%, var(--muted));
+      font-family: var(--font-mono);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .reader-shell {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 26px 0 64px;
+    }
+    .doc-view {
+      display: contents;
+    }
+    .empty-workspace {
+      display: none;
+      align-content: center;
+      justify-items: center;
+      gap: 18px;
+      min-height: 0;
+      padding: clamp(24px, 7vw, 72px);
+      text-align: center;
+    }
+    .app-shell[data-doc="none"] .doc-view { display: none; }
+    .app-shell[data-doc="none"] .empty-workspace { display: grid; }
+    .empty-card {
+      width: min(460px, 100%);
+      padding: clamp(24px, 5vw, 40px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background:
+        radial-gradient(circle at 50% 0, color-mix(in srgb, var(--mode-accent) 18%, transparent), transparent 45%),
+        var(--surface);
+    }
+    .empty-mascot {
+      width: 48px;
+      height: 42px;
+      margin: 0 auto 18px;
+      border: 1px solid color-mix(in oklch, var(--accent-files) 50%, var(--border));
+      border-radius: 13px 13px 10px 10px;
+      background: var(--panel);
+      box-shadow: 0 12px 28px color-mix(in oklch, var(--mode-accent) 14%, transparent);
+    }
+    .empty-card h2 {
+      margin-bottom: 8px;
+      font-size: 22px;
+    }
+    .empty-card p {
+      margin: 0 auto 18px;
+      max-width: 34ch;
+      color: var(--muted);
+    }
+    .read-screen .empty-workspace,
+    .edit-screen .empty-workspace {
+      grid-row: 1 / -1;
+    }
+    .command-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .command-row .action-button {
+      min-width: 150px;
+      min-height: 38px;
+      padding-inline: 14px;
+    }
+    .reader-column {
+      width: min(680px, 100%);
+      max-width: 100%;
+      min-width: 0;
+      margin-inline: auto;
+      padding: clamp(24px, 5vw, 56px);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 14% 0, color-mix(in srgb, var(--accent-files) 10%, transparent), transparent 38%),
+        linear-gradient(180deg, color-mix(in srgb, var(--accent-read) 6%, transparent), transparent 34%),
+        var(--surface);
+      box-shadow: 0 22px 70px color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .reader-kicker {
+      margin-bottom: 18px;
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 4px 10px;
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 11%, transparent);
+      color: color-mix(in srgb, var(--accent) 80%, var(--fg));
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .reader-column h1 {
+      margin-bottom: 22px;
+      font-size: clamp(28px, 4vw, 36px);
+      color: var(--fg);
+      text-shadow: none;
+    }
+    .reader-column h1::after,
+    .library-head h1::after,
+    .split-note h1::after {
+      content: "";
+      display: block;
+      width: min(220px, 52%);
+      height: 3px;
+      margin-top: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-files), var(--accent-read));
+    }
+    .reader-column h2 {
+      margin: 34px 0 12px;
+      font-size: 22px;
+    }
+    .reader-column p,
+    .reader-column li {
+      color: color-mix(in oklch, var(--fg) 88%, var(--muted));
+      font-family: var(--font-reader);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .reader-column p { margin: 0 0 18px; }
+    .reader-column ul { margin: 0; padding-left: 22px; }
+    .back-edit {
+      border: 0;
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: transparent;
+      color: var(--accent-read);
+      font-size: 12px;
+      font-weight: 500;
+      transition: background 150ms ease, color 150ms ease, transform 100ms ease;
+    }
+    .back-edit:hover {
+      background: color-mix(in srgb, var(--accent-read) 9%, transparent);
+      color: color-mix(in srgb, var(--accent-read) 78%, var(--fg));
+    }
+    .back-edit:active { transform: translateY(1px); }
+    .toc-button {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      width: 42px;
+      height: 42px;
+      border: 1px solid color-mix(in srgb, var(--accent-read) 42%, var(--border));
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--surface-2), var(--surface));
+      color: var(--accent-read);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--accent-read) 14%, transparent);
+      z-index: 4;
+    }
+    .toc-panel {
+      position: absolute;
+      right: 20px;
+      bottom: 72px;
+      width: min(280px, calc(100vw - 40px));
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 48px color-mix(in srgb, var(--accent) 13%, transparent);
+      transform: scale(0.96) translateY(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
+      z-index: 4;
+    }
+    .toc-panel.open {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .toc-panel[inert] {
+      pointer-events: none;
+    }
+    .toc-panel h2 {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0;
+      color: var(--muted);
+    }
+    .toc-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .toc-close {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      transition: all 150ms ease;
+    }
+    .toc-close:hover {
+      background: var(--surface);
+      color: var(--fg);
+    }
+    .toc-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .toc-list li {
+      margin-bottom: 1px;
+    }
+    .toc-panel a {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--fg);
+      text-decoration: none;
+      font-size: 13px;
+      transition: all 150ms ease;
+    }
+    .toc-panel a:hover {
+      background: var(--surface);
+      color: var(--accent-read);
+    }
+    .toc-panel a:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+      background: var(--surface);
+      color: var(--fg);
+    }
+    .toc-panel a[aria-current="location"] {
+      color: var(--fg);
+      background: color-mix(in srgb, var(--accent-read) 12%, transparent);
+    }
+
+    .edit-screen {
+      grid-template-rows: 36px minmax(0, 1fr);
+      background: var(--bg);
+    }
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface) 86%, var(--surface-2));
+      overflow-x: auto;
+    }
+    .tool-sep {
+      width: 1px;
+      height: 18px;
+      margin-inline: 4px;
+      background: var(--border);
+      flex: 0 0 auto;
+    }
+    .export-sep { margin-left: auto; }
+    .icon-button {
+      display: grid;
+      place-items: center;
+      min-width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .icon-button:hover {
+      background: color-mix(in oklch, var(--fg) 7%, transparent);
+      color: var(--fg);
+    }
+    .export-button {
+      min-width: max-content;
+      height: 24px;
+      padding-inline: 12px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-files));
+      color: var(--accent-on);
+      font-size: 12px;
+      font-weight: 600;
+      transition: filter 150ms ease, transform 100ms ease, opacity 150ms ease;
+    }
+    .export-button:not([disabled]):hover { filter: brightness(1.06); }
+    .export-button:not([disabled]):active { transform: translateY(1px); }
+    .export-group {
+      display: flex;
+      align-items: center;
+      justify-content: end;
+      gap: 10px;
+      flex-wrap: wrap;
+      max-width: 380px;
+    }
+    .export-hint {
+      width: 100%;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: right;
+    }
+    .editor-canvas {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      min-height: 0;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.7;
+      background: var(--bg);
+    }
+    .line-numbers {
+      padding: 18px 10px;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface-2) 48%, var(--bg));
+      color: var(--code-comment);
+      text-align: right;
+      user-select: none;
+    }
+    .editor-textarea {
+      width: 100%;
+      min-height: 0;
+      padding: 18px 22px;
+      border: 0;
+      outline: 0;
+      resize: none;
+      background:
+        linear-gradient(to bottom, transparent 0, transparent 50px, color-mix(in srgb, var(--accent) 9%, transparent) 50px, color-mix(in srgb, var(--accent) 9%, transparent) 74px, transparent 74px),
+        var(--bg);
+      color: var(--fg);
+      caret-color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+    .editor-textarea::selection,
+    .split-pane.editor-preview::selection {
+      background: color-mix(in srgb, var(--accent-files) 32%, transparent);
+      color: var(--fg);
+    }
+    .icon-button[aria-label="Code"],
+    .icon-button[aria-label="Heading 1"],
+    .icon-button[aria-label="Heading 2"] {
+      color: var(--code-function);
+    }
+    .icon-button[aria-label="Bold"],
+    .icon-button[aria-label="Italic"] {
+      color: var(--code-keyword);
+    }
+
+    .files-screen {
+      grid-template-rows: auto minmax(0, 1fr);
+      padding: clamp(18px, 4vw, 42px);
+      overflow: auto;
+    }
+    .screen.files-screen.active {
+      display: block;
+    }
+    .library-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    .library-head h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      color: var(--fg);
+    }
+    .library-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+    .folder-grid {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      min-height: 252px;
+      margin-bottom: 24px;
+      padding: 18px 20px 34px;
+      overflow-x: auto;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 22%, var(--border));
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--panel) 72%, transparent)),
+        radial-gradient(circle at 24% 0, color-mix(in srgb, var(--accent-files) 10%, transparent), transparent 38%);
+      box-shadow: inset 0 -18px 0 color-mix(in srgb, var(--accent-files) 10%, var(--surface));
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--accent-files) 45%, var(--border)) transparent;
+    }
+    .folder-grid::before,
+    .folder-grid::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      pointer-events: none;
+      border-radius: 999px;
+    }
+    .folder-grid::before {
+      bottom: 25px;
+      height: 10px;
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-read) 14%, transparent)),
+        color-mix(in srgb, var(--surface) 84%, var(--panel));
+      border: 1px solid color-mix(in srgb, var(--accent-files) 20%, var(--border));
+    }
+    .folder-grid::after {
+      bottom: 8px;
+      height: 20px;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--accent-files) 18%, var(--surface)), color-mix(in srgb, var(--fg) 7%, var(--surface)));
+      box-shadow: 0 12px 24px color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+    .activation-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding: 16px;
+      border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+      border-radius: var(--radius-md);
+      background:
+        radial-gradient(circle at 88% 20%, color-mix(in srgb, var(--accent-files) 15%, transparent), transparent 42%),
+        color-mix(in srgb, var(--accent) 9%, var(--surface));
+    }
+    .activation-panel h2 {
+      font-size: 18px;
+    }
+    .activation-panel p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .split-note {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 52%, transparent), transparent),
+        var(--surface);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+    .folder-card {
+      --spine-width: clamp(82px, calc(58px + (var(--pages, 1) * 24px)), 164px);
+      position: relative;
+      z-index: 1;
+      flex: 0 0 var(--spine-width);
+      display: grid;
+      align-content: end;
+      min-width: var(--spine-width);
+      min-height: clamp(148px, calc(132px + (var(--pages, 1) * 10px)), 196px);
+      padding: 16px 12px 18px;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 28%, var(--border));
+      border-radius: 12px 12px 7px 7px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.5), transparent 18%, rgba(255,255,255,0.28) 42%, transparent 72%),
+        linear-gradient(180deg, color-mix(in srgb, var(--accent-files) 12%, var(--surface)), color-mix(in srgb, var(--accent) 10%, var(--surface-2)));
+      box-shadow:
+        inset 8px 0 0 color-mix(in srgb, var(--accent-files) 18%, transparent),
+        inset -1px 0 0 color-mix(in srgb, var(--fg) 10%, transparent),
+        0 14px 26px color-mix(in srgb, var(--accent) 9%, transparent);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 150ms ease, background 150ms ease, transform 100ms ease, box-shadow 150ms ease, min-height 150ms ease;
+    }
+    .folder-card[data-page-count="1"] { --pages: 1; }
+    .folder-card[data-page-count="3"] { --pages: 3; }
+    .folder-card:hover,
+    .folder-card[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--accent-files) 58%, var(--border));
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.62), transparent 18%, rgba(255,255,255,0.36) 42%, transparent 72%),
+        linear-gradient(180deg, color-mix(in srgb, var(--accent-files) 20%, var(--surface)), color-mix(in srgb, var(--accent) 14%, var(--surface-2)));
+      box-shadow:
+        inset 8px 0 0 color-mix(in srgb, var(--accent-files) 24%, transparent),
+        0 18px 34px color-mix(in srgb, var(--accent-files) 16%, transparent);
+      transform: translateY(-4px);
+    }
+    .folder-card[aria-pressed="true"] {
+      min-height: clamp(170px, calc(150px + (var(--pages, 1) * 12px)), 218px);
+    }
+    .folder-card:active {
+      transform: translateY(-2px);
+    }
+    .folder-mark {
+      position: absolute;
+      inset: 12px 10px auto auto;
+      width: 16px;
+      height: 48px;
+      color: color-mix(in srgb, var(--accent-files) 82%, var(--fg));
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, transparent 16px, currentColor 16px 17px, transparent 17px 34px, currentColor 34px 35px, transparent 35px),
+        color-mix(in srgb, var(--surface) 74%, transparent);
+      opacity: 0.78;
+    }
+    .folder-card h2 {
+      font-size: 18px;
+    }
+    .folder-card-title {
+      display: block;
+      max-width: 10ch;
+      padding-right: 18px;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    .folder-card-title::after {
+      content: attr(data-pages) " pages";
+      display: inline-flex;
+      margin-top: 8px;
+      padding: 2px 7px;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 34%, var(--border));
+      border-radius: 999px;
+      color: color-mix(in srgb, var(--accent-files) 78%, var(--fg));
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      vertical-align: 0;
+    }
+    .folder-card[aria-pressed="true"] .folder-card-title::after {
+      content: "Open";
+    }
+    .folder-card p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .recent-list {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(146px, 1fr));
+      gap: 10px;
+    }
+    .section-kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .section-kicker span:first-child {
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .recent-row[hidden] {
+      display: none;
+    }
+    .app-shell[data-doc="selected"] .activation-panel {
+      display: none;
+    }
+    .app-shell[data-folder-context]:not([data-folder-context=""]) .activation-panel {
+      display: none;
+    }
+    .folder-context-note {
+      display: none;
+      margin: -8px 0 12px;
+      padding: 10px 12px;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 24%, var(--border));
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--accent-files) 9%, var(--surface));
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .folder-context-note strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+    .app-shell[data-folder-context]:not([data-folder-context=""]) .folder-context-note {
+      display: block;
+    }
+    .recent-row {
+      position: relative;
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+      min-height: 112px;
+      padding: 14px 14px 12px;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--accent-files) 24%, var(--border));
+      border-radius: 14px 14px 10px 10px;
+      border-color: color-mix(in srgb, var(--accent-files) 24%, var(--border));
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--panel) 62%, transparent)),
+        var(--surface);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+    .recent-row::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 28px;
+      height: 28px;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-files) 34%, var(--surface)) 0 49%, color-mix(in srgb, var(--fg) 9%, transparent) 50%, transparent 52%);
+      border-bottom-left-radius: 8px;
+    }
+    .recent-row strong {
+      display: block;
+      font-weight: 500;
+      padding-right: 20px;
+      word-break: break-word;
+    }
+    .recent-row span {
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .split-screen {
+      grid-template-columns: minmax(0, 1fr) 8px minmax(0, 1fr);
+      min-height: 0;
+      background: var(--bg);
+    }
+    .split-pane {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 22px;
+    }
+    .split-pane.editor-preview {
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      outline: none;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 42%),
+        var(--bg);
+    }
+    .split-divider {
+      position: relative;
+      min-width: 8px;
+      min-height: 8px;
+      border: 0;
+      background: transparent;
+      opacity: 0.42;
+      cursor: col-resize;
+    }
+    .split-divider::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to bottom, var(--accent) 0 50%, var(--accent-read) 50% 100%);
+    }
+    .split-divider:hover,
+    .split-divider.dragging {
+      opacity: 0.72;
+      box-shadow:
+        0 0 18px color-mix(in oklch, var(--accent) 14%, transparent),
+        0 0 18px color-mix(in oklch, var(--accent-read) 12%, transparent);
+    }
+    .split-note {
+      width: min(680px, 100%);
+      margin-inline: auto;
+      padding: 28px;
+      border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+    }
+    .split-note h1 {
+      margin-bottom: 14px;
+      font-size: 26px;
+      color: var(--fg);
+    }
+    .split-note p {
+      color: color-mix(in oklch, var(--fg) 88%, var(--muted));
+      font-family: var(--font-reader);
+      font-size: 15px;
+      line-height: 1.85;
+    }
+
+    .statusbar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      height: var(--status-h);
+      padding-inline: 12px;
+      border-top: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 90%, transparent);
+      backdrop-filter: blur(8px);
+      color: var(--muted);
+      font-size: 11px;
+      z-index: 9;
+    }
+    .status-left,
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .status-right { justify-content: end; }
+    #save-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .saved-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent-read);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-read) 18%, transparent);
+    }
+    .saved-dot.error {
+      background: var(--danger);
+      box-shadow: 0 0 10px color-mix(in oklch, var(--danger) 45%, transparent);
+    }
+    .saved-dot.loading {
+      background: var(--accent-files);
+      animation: savePulse 900ms ease infinite;
+    }
+    .saved-dot.pulse { animation: savePulse 400ms ease; }
+    .filename {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+      max-width: 320px;
+      text-align: center;
+    }
+    .local-badge {
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      inset: auto 0 0;
+      height: 48px;
+      border-top: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      z-index: 10;
+    }
+    .bottom-tab {
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 10px;
+      transition: color 150ms ease, background 150ms ease;
+    }
+    .bottom-tab svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      fill: none;
+    }
+    .bottom-tab[aria-selected="true"] { color: var(--mode-accent); }
+    .bottom-tab:hover {
+      color: var(--fg);
+      background: color-mix(in srgb, var(--mode-accent, var(--accent)) 8%, transparent);
+    }
+    .drawer-toggle {
+      display: none;
+      position: fixed;
+      left: 12px;
+      bottom: 60px;
+      z-index: 11;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--accent-files);
+    }
+    .scrim {
+      display: none;
+      position: fixed;
+      inset: var(--topbar-h) 0 var(--status-h);
+      background: color-mix(in oklch, var(--fg) 18%, transparent);
+      z-index: 5;
+    }
+    .scrim.open { display: block; }
+
+    @keyframes blink {
+      0%, 94%, 100% { transform: scaleY(1); }
+      95%, 98% { transform: scaleY(0.1); }
+    }
+    .mascot:hover {
+      animation: wiggle 0.4s ease;
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0); }
+      25% { transform: rotate(-3deg); }
+      75% { transform: rotate(3deg); }
+    }
+    @keyframes savePulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    @media (max-width: 1023px) {
+      .topbar { grid-template-columns: var(--rail-w) 1fr max-content; }
+      .brand-lockup {
+        justify-content: center;
+        padding-inline: 0;
+      }
+      .wordmark,
+      .spark { display: none; }
+      .workspace { grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+      .sidebar-actions,
+      .tree-section-label,
+      .tree-name,
+      .import-zone { display: none; }
+      .tree { padding: 10px 4px; }
+      .tree-row {
+        grid-template-columns: 1fr;
+        place-items: center;
+        padding: 0;
+        border-left: 0;
+      }
+      .tree-row .chev { display: none; }
+      .tree-icon { width: 16px; height: 14px; }
+      .folder-grid {
+        min-height: 230px;
+        padding-inline: 16px;
+      }
+      .recent-list { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+    }
+
+    @media (max-width: 767px) {
+      body { overflow: hidden; }
+      .app-shell {
+        grid-template-rows: var(--topbar-h) minmax(0, 1fr) calc(var(--status-h) + 48px);
+      }
+      .topbar { grid-template-columns: auto 1fr auto; }
+      .brand-lockup {
+        width: 118px;
+        justify-content: start;
+        padding-inline: 10px;
+      }
+      .wordmark,
+      .spark { display: inline; }
+      .mode-tabs { display: none; }
+      .storage { gap: 6px; }
+      .storage > span:nth-child(2) { display: none; }
+      .storage-scope {
+        max-width: 82px;
+        font-size: 10px;
+      }
+      .workspace { grid-template-columns: minmax(0, 1fr); }
+      .sidebar {
+        position: fixed;
+        top: var(--topbar-h);
+        bottom: calc(var(--status-h) + 48px);
+        left: 0;
+        width: min(320px, 88vw);
+        transform: translateX(-105%);
+        z-index: 6;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .tree-section-label,
+      .tree-name,
+      .import-zone { display: flex; }
+      .tree-row {
+        grid-template-columns: 14px 18px minmax(0, 1fr);
+        place-items: initial;
+        padding: 0 8px 0 var(--indent, 8px);
+        border: 1px solid transparent;
+      }
+      .tree-row .chev { display: inline; }
+      .main-panel { border-left: 0; }
+      .read-screen { padding: 10px 12px 0; }
+      .reader-topline {
+        min-width: 0;
+      }
+      .meta-pill {
+        max-width: 50vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .reader-shell {
+        overflow-x: hidden;
+      }
+      .reader-column {
+        width: 100%;
+        max-width: 100%;
+        padding: 22px 18px;
+        border-radius: 10px;
+      }
+      .reader-column h1,
+      .reader-column p,
+      .reader-column li {
+        overflow-wrap: break-word;
+      }
+      .reader-column p,
+      .reader-column li {
+        font-size: 15px;
+      }
+      .folder-grid {
+        min-height: 220px;
+        margin-inline: -2px;
+        padding: 14px 14px 30px;
+      }
+      .recent-list { grid-template-columns: 1fr; }
+      .library-head {
+        display: block;
+      }
+      .activation-panel,
+      .export-group {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+      }
+      .export-group {
+        display: grid;
+        margin-top: 14px;
+        max-width: none;
+      }
+      .export-hint { text-align: left; }
+      .split-screen {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) 32px minmax(0, 1fr);
+      }
+      .split-divider { cursor: row-resize; }
+      .split-divider::before {
+        inset: 13px 0;
+        background: linear-gradient(to right, var(--accent) 0 50%, var(--accent-read) 50% 100%);
+      }
+      .bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .drawer-toggle { display: grid; place-items: center; }
+      .statusbar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 48px;
+        grid-template-columns: minmax(64px, 0.74fr) minmax(0, 1fr) auto;
+        gap: 8px;
+        padding-inline: 12px;
+        background: color-mix(in srgb, var(--panel) 94%, transparent);
+        backdrop-filter: blur(10px);
+        z-index: 10;
+        box-shadow: 0 -1px 0 var(--border);
+      }
+      .status-left { gap: 7px; }
+      .status-right { gap: 6px; }
+      .filename {
+        width: 100%;
+        max-width: none;
+        margin-inline: auto;
+        text-align: center;
+        opacity: 0.9;
+      }
+      .status-right span:first-child { display: none; }
+    }
+
+    @media (max-width: 430px) {
+      .statusbar {
+        grid-template-columns: minmax(68px, 0.8fr) minmax(0, 1fr) auto;
+        padding-inline: 10px;
+      }
+      .local-badge { padding-inline: 5px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" data-mode="read" data-doc="selected" data-sidebar="visible">
+    <header class="topbar" data-od-id="topbar">
+      <div class="brand-lockup" aria-label="Mdez">
+        <button class="sidebar-toggle" type="button" aria-label="Toggle sidebar" aria-controls="file-tree-panel" aria-expanded="true" id="sidebar-toggle">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <span class="mascot" aria-hidden="true"><span class="ears"><i></i><i></i></span></span>
+        <span class="wordmark">Mdez</span>
+        <span class="spark" aria-hidden="true">&#10047;</span>
+      </div>
+      <nav class="mode-tabs" aria-label="Workspace modes">
+        <button class="mode-tab" type="button" data-mode-target="files" aria-selected="false">Shelf</button>
+        <button class="mode-tab" type="button" data-mode-target="edit" aria-selected="false">Edit</button>
+        <button class="mode-tab" type="button" data-mode-target="read" aria-selected="true">Read</button>
+        <button class="mode-tab" type="button" data-mode-target="split" aria-selected="false">Split</button>
+      </nav>
+      <div class="storage"><span class="storage-dot" aria-hidden="true"></span><span>Saved locally</span><span class="storage-scope">This device</span></div>
+    </header>
+
+    <section class="workspace" data-od-id="workspace" aria-label="Mdez workspace prototype">
+      <aside class="sidebar" id="file-tree-panel" aria-label="Library shelf">
+        <div class="tree" role="tree" aria-label="Books and pages">
+          <div class="tree-section-label">
+            <span>Library shelf</span>
+            <div class="tree-section-actions">
+              <button class="icon-button" type="button" data-create-doc title="New page" aria-label="Create new page">
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+              </button>
+              <button class="icon-button" type="button" data-create-folder title="New book" aria-label="Create new book">
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+              </button>
+            </div>
+          </div>
+          <button class="tree-row" type="button" role="treeitem" aria-expanded="true" data-select-root style="--indent: 8px">
+            <span class="chev">▾</span><span class="tree-icon folder" aria-hidden="true"></span><span class="tree-name">Root</span>
+          </button>
+          <div class="tree-note">
+            Start a new book when this library grows.
+            <button type="button" data-create-folder>New book on shelf</button>
+          </div>
+          <button class="tree-row" type="button" role="treeitem" aria-expanded="true" data-folder-row="Writing" style="--indent: 8px">
+            <span class="chev">▾</span><span class="tree-icon folder" aria-hidden="true"></span><span class="tree-name">Writing</span>
+          </button>
+          <button class="tree-row" type="button" role="treeitem" aria-expanded="true" style="--indent: 20px">
+            <span class="chev">▾</span><span class="tree-icon folder" aria-hidden="true"></span><span class="tree-name">Drafts</span>
+          </button>
+          <button class="tree-row active" type="button" role="treeitem" aria-selected="true" data-open-doc style="--indent: 34px">
+            <span class="chev"></span><span class="tree-icon" aria-hidden="true"></span><span class="tree-name">essay.md</span>
+          </button>
+          <button class="tree-row" type="button" role="treeitem" data-open-doc style="--indent: 34px">
+            <span class="chev"></span><span class="tree-icon" aria-hidden="true"></span><span class="tree-name">notes.md</span>
+          </button>
+          <button class="tree-row" type="button" role="treeitem" data-open-doc style="--indent: 20px">
+            <span class="chev"></span><span class="tree-icon" aria-hidden="true"></span><span class="tree-name">ideas.md</span>
+          </button>
+          <button class="tree-row" type="button" role="treeitem" aria-expanded="false" data-folder-row="Code Docs" style="--indent: 8px">
+            <span class="chev">▸</span><span class="tree-icon folder" aria-hidden="true"></span><span class="tree-name">Code Docs</span>
+          </button>
+          <button class="tree-row" type="button" role="treeitem" aria-expanded="false" data-folder-row="Personal" style="--indent: 8px">
+            <span class="chev">▸</span><span class="tree-icon folder" aria-hidden="true"></span><span class="tree-name">Personal</span>
+          </button>
+          <button class="tree-row" type="button" role="treeitem" data-open-doc style="--indent: 8px">
+            <span class="chev"></span><span class="tree-icon" aria-hidden="true"></span><span class="tree-name">readme.md</span>
+          </button>
+        </div>
+        <button class="import-zone" type="button" data-import-md aria-label="Import markdown file">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <strong>Import markdown</strong>
+          <span>Drop .md here or paste</span>
+        </button>
+      </aside>
+
+      <main class="main-panel" aria-live="polite">
+        <button class="drawer-toggle" type="button" aria-label="Open library shelf" aria-controls="file-tree-panel" aria-expanded="false">☰</button>
+        <div class="scrim" aria-hidden="true"></div>
+
+        <div class="screen read-screen active" data-screen="read">
+          <div class="doc-view">
+            <div class="reader-topline">
+              <button class="back-edit" type="button" data-mode-target="edit">← Back to Edit</button>
+              <span class="meta-pill"><span data-active-file>essay.md</span> / Read mode</span>
+            </div>
+            <div class="reader-shell">
+              <article class="reader-column">
+                <div class="reader-kicker">Local draft · writing comfort pass</div>
+                <h1 id="top">Designing a workspace that opens quietly</h1>
+                <p>Mdez should not greet writers with ceremony. It should open where the work is, keep the document stable, and make every surrounding control feel close without becoming loud.</p>
+                <p>The reader keeps a narrow column, long line height, and no controls inside the text. Navigation stays available at the edges so the writing remains the center of gravity.</p>
+                <h2 id="shell">What the shell protects</h2>
+                <p>The soft surface keeps contrast steady without turning the workspace into plain white chrome. The gradient is present, but it behaves like stationery paper rather than decoration.</p>
+                <h2 id="mode">Mode behavior</h2>
+                <ul>
+                  <li>Read mode uses a mint cue and a centered 680px column.</li>
+                  <li>Edit mode switches to a lavender writing surface with a monospace rhythm.</li>
+                  <li>Shelf view keeps books discoverable without covering the writing state.</li>
+                </ul>
+              </article>
+            </div>
+            <button class="toc-button" type="button" aria-label="Open table of contents" aria-expanded="false" aria-controls="toc-panel">☷</button>
+          </div>
+          <div class="empty-workspace" aria-label="No page selected">
+            <div class="empty-card">
+              <div class="empty-mascot" aria-hidden="true"></div>
+              <h2>No page selected</h2>
+              <p>Create a page on the shelf or import markdown to start reading.</p>
+              <div class="command-row">
+                <button class="action-button action-primary" type="button" data-create-doc>Create page</button>
+                <button class="action-button action-secondary" type="button" data-import-md>Import markdown</button>
+                <button class="action-button action-secondary" type="button" data-create-folder>New book</button>
+              </div>
+            </div>
+          </div>
+          <nav class="toc-panel" id="toc-panel" aria-labelledby="toc-title" aria-hidden="true" inert>
+            <div class="toc-head">
+              <h2 id="toc-title">Outline</h2>
+              <button class="toc-close" type="button" aria-label="Close table of contents">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <ul class="toc-list">
+              <li><a href="#top" aria-current="location">Designing a workspace</a></li>
+              <li><a href="#shell">What the shell protects</a></li>
+              <li><a href="#mode">Mode behavior</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="screen edit-screen" data-screen="edit">
+          <div class="doc-view">
+            <div class="editor-toolbar" aria-label="Markdown toolbar">
+              <button class="icon-button" type="button" aria-label="Bold"><strong>B</strong></button>
+              <button class="icon-button" type="button" aria-label="Italic"><em>I</em></button>
+              <button class="icon-button" type="button" aria-label="Insert link">⌁</button>
+              <button class="icon-button" type="button" aria-label="Insert image">□</button>
+              <span class="tool-sep" aria-hidden="true"></span>
+              <button class="icon-button" type="button" aria-label="Code">&lt;/&gt;</button>
+              <button class="icon-button" type="button" aria-label="Heading 1">H1</button>
+              <button class="icon-button" type="button" aria-label="Heading 2">H2</button>
+              <button class="icon-button" type="button" aria-label="Divider">─</button>
+              <span class="tool-sep export-sep" aria-hidden="true"></span>
+              <button class="export-button" type="button" data-export-doc>Export .md ↓</button>
+            </div>
+            <div class="editor-canvas">
+              <pre class="line-numbers" aria-hidden="true">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11</pre>
+              <textarea class="editor-textarea" aria-label="Markdown editor" spellcheck="false"># Designing a workspace that opens quietly
+
+Mdez should not greet writers with ceremony. It should open where the work is, keep the document stable, and make every surrounding control feel close without becoming loud.
+
+## What the shell protects
+
+The soft surface keeps contrast steady without turning the workspace into plain white chrome. The gradient is present, but it behaves like stationery paper rather than decoration.
+
+- Read mode uses a mint cue and a centered 680px column.
+- Edit mode switches to a lavender writing surface with a monospace rhythm.
+- Shelf view keeps books discoverable without covering the writing state.</textarea>
+            </div>
+          </div>
+          <div class="empty-workspace" aria-label="No page selected">
+            <div class="empty-card">
+              <div class="empty-mascot" aria-hidden="true"></div>
+              <h2>No page selected</h2>
+              <p>Create a page on the shelf or import markdown before editing.</p>
+              <div class="command-row">
+                <button class="action-button action-primary" type="button" data-create-doc>Create page</button>
+                <button class="action-button action-secondary" type="button" data-import-md>Import markdown</button>
+                <button class="action-button action-secondary" type="button" data-create-folder>New book</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen files-screen" data-screen="files">
+          <div class="library-head">
+            <div>
+              <h1>Bookshelf</h1>
+              <p data-library-summary>3 books · 5 pages · saved locally on this device</p>
+            </div>
+            <div class="export-group" aria-label="Export commands">
+              <button class="action-button action-primary" type="button" data-create-doc>Create page</button>
+              <button class="action-button action-secondary" type="button" data-create-folder>New book</button>
+              <button class="export-button" type="button" data-export-folder disabled aria-disabled="true" title="Open a book before exporting its folder ZIP">Book ZIP ↓</button>
+              <div class="export-hint" data-export-hint>Open Writing, Code Docs, or Personal to export a book ZIP. Root export is not available in V1.</div>
+            </div>
+          </div>
+          <section class="activation-panel" data-od-id="files-empty-book-actions" aria-label="Bookshelf actions">
+            <div>
+              <h2>Choose a book spine or start a new page</h2>
+              <p>Each book maps to a local folder. Markdown files become pages inside the open book.</p>
+            </div>
+            <div class="command-row">
+              <button class="action-button action-primary" type="button" data-create-doc>Create page</button>
+              <button class="action-button action-secondary" type="button" data-import-md>Import markdown</button>
+              <button class="action-button action-secondary" type="button" data-create-folder>New book</button>
+            </div>
+          </section>
+          <div class="folder-grid" role="list" aria-label="Bookshelf books">
+            <button class="folder-card" type="button" role="listitem" data-folder-card="Writing" data-page-count="3" aria-pressed="false" aria-expanded="false" aria-label="Writing book, 3 pages, closed" title="Open Writing">
+              <div class="folder-mark" aria-hidden="true"></div>
+              <span class="folder-card-title" data-pages="3">Writing</span>
+              <p>Drafts, notes, and loose ideas</p>
+            </button>
+            <button class="folder-card" type="button" role="listitem" data-folder-card="Code Docs" data-page-count="1" aria-pressed="false" aria-expanded="false" aria-label="Code Docs book, 1 page, closed" title="Open Code Docs">
+              <div class="folder-mark" aria-hidden="true"></div>
+              <span class="folder-card-title" data-pages="1">Code Docs</span>
+              <p>Reference files and snippets</p>
+            </button>
+            <button class="folder-card" type="button" role="listitem" data-folder-card="Personal" data-page-count="1" aria-pressed="false" aria-expanded="false" aria-label="Personal book, 1 page, closed" title="Open Personal">
+              <div class="folder-mark" aria-hidden="true"></div>
+              <span class="folder-card-title" data-pages="1">Personal</span>
+              <p>Private local documents</p>
+            </button>
+          </div>
+          <div class="section-kicker">
+            <span data-folder-focus>Bookmarked pages</span>
+            <span data-folder-count>5 visible</span>
+          </div>
+          <div class="folder-context-note" data-folder-note aria-live="polite"></div>
+          <div class="recent-list" role="list" aria-label="Bookmarked pages">
+            <div class="recent-row" role="listitem" aria-label="essay.md page in Writing, updated 2 hours ago" data-folder="Writing"><strong>essay.md</strong><span>Writing · 2h ago</span></div>
+            <div class="recent-row" role="listitem" aria-label="notes.md page in Writing, updated yesterday" data-folder="Writing"><strong>notes.md</strong><span>Writing · yesterday</span></div>
+            <div class="recent-row" role="listitem" aria-label="ideas.md page in Writing, updated Monday" data-folder="Writing"><strong>ideas.md</strong><span>Writing · Mon</span></div>
+            <div class="recent-row" role="listitem" aria-label="markdown-api.md page in Code Docs, updated Tuesday" data-folder="Code Docs"><strong>markdown-api.md</strong><span>Code Docs · Tue</span></div>
+            <div class="recent-row" role="listitem" aria-label="reading-list.md page in Personal, updated Friday" data-folder="Personal"><strong>reading-list.md</strong><span>Personal · Fri</span></div>
+          </div>
+        </div>
+
+        <div class="screen split-screen" data-screen="split">
+          <pre class="split-pane editor-preview" contenteditable="plaintext-only" role="textbox" aria-label="Split editor markdown" aria-multiline="true" spellcheck="true" tabindex="0" title="Edit markdown in Split mode"># Designing a workspace that opens quietly
+
+Mdez should not greet writers with ceremony.
+
+## What the shell protects
+
+- A stable editor
+- A calm reader
+- A discoverable shelf</pre>
+          <button class="split-divider" type="button" role="separator" aria-orientation="vertical" aria-label="Resize editor and reader panes" aria-valuemin="30" aria-valuemax="70" aria-valuenow="50"></button>
+          <article class="split-pane">
+            <div class="split-note">
+              <h1>Designing a workspace that opens quietly</h1>
+              <p>Mdez should not greet writers with ceremony. It should open where the work is, keep the document stable, and make every surrounding control feel close without becoming loud.</p>
+              <p>The split view previews the document beside the editor, with the divider carrying both edit and read accents at reduced intensity.</p>
+            </div>
+          </article>
+        </div>
+      </main>
+    </section>
+
+    <footer class="statusbar" data-od-id="statusbar" aria-label="Workspace status">
+      <div class="status-left"><span class="saved-dot" aria-hidden="true"></span><span id="save-label" role="status" aria-live="polite">Saved</span></div>
+      <div class="status-center filename" data-active-file>essay.md</div>
+      <div class="status-right"><span>UTF-8</span><span class="local-badge">Local</span></div>
+    </footer>
+
+    <nav class="bottom-nav" aria-label="Mobile workspace modes">
+      <button class="bottom-tab" type="button" data-mode-target="files" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 6h3v10H6zM11 4h3v12h-3zM16 8h3v8h-3z"/></svg><span>Shelf</span>
+      </button>
+      <button class="bottom-tab" type="button" data-mode-target="edit" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l4-1 9-9-3-3-9 9z"/></svg><span>Edit</span>
+      </button>
+      <button class="bottom-tab" type="button" data-mode-target="read" aria-selected="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h10a4 4 0 0 1 4 4v10H9a4 4 0 0 0-4-4z"/></svg><span>Read</span>
+      </button>
+      <button class="bottom-tab" type="button" data-mode-target="split" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 6h16v12H4z"/></svg><span>Split</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    const app = document.querySelector(".app-shell");
+    const screens = Array.from(document.querySelectorAll("[data-screen]"));
+    const modeButtons = Array.from(document.querySelectorAll("[data-mode-target]"));
+    const drawer = document.querySelector(".sidebar");
+    const drawerToggle = document.querySelector(".drawer-toggle");
+    const sidebarToggle = document.querySelector("#sidebar-toggle");
+    const scrim = document.querySelector(".scrim");
+    const mainPanel = document.querySelector(".main-panel");
+    const bottomNav = document.querySelector(".bottom-nav");
+    const statusbar = document.querySelector(".statusbar");
+    const tocButton = document.querySelector(".toc-button");
+    const tocPanel = document.querySelector(".toc-panel");
+    const tocClose = document.querySelector(".toc-close");
+    const tocLinks = Array.from(document.querySelectorAll(".toc-panel a"));
+    const editor = document.querySelector(".editor-textarea");
+    const lineNumbers = document.querySelector(".line-numbers");
+    const saveDot = document.querySelector(".saved-dot");
+    const saveLabel = document.querySelector("#save-label");
+    const activeFileLabels = Array.from(document.querySelectorAll("[data-active-file]"));
+    const createButtons = Array.from(document.querySelectorAll("[data-create-doc]"));
+    const shelfCreateButtons = Array.from(document.querySelectorAll(".files-screen [data-create-doc]"));
+    const importButtons = Array.from(document.querySelectorAll("[data-import-md]"));
+    const importDropZones = Array.from(document.querySelectorAll(".import-zone"));
+    const folderButtons = Array.from(document.querySelectorAll("[data-create-folder]"));
+    const shelfFolderButtons = Array.from(document.querySelectorAll(".files-screen [data-create-folder]"));
+    const rootButton = document.querySelector("[data-select-root]");
+    const docRows = Array.from(document.querySelectorAll("[data-open-doc]"));
+    const folderRows = Array.from(document.querySelectorAll("[data-folder-row]"));
+    const folderCards = Array.from(document.querySelectorAll("[data-folder-card]"));
+    const exportFolderButton = document.querySelector("[data-export-folder]");
+    const exportHint = document.querySelector("[data-export-hint]");
+    const librarySummary = document.querySelector("[data-library-summary]");
+    const folderFocus = document.querySelector("[data-folder-focus]");
+    const folderCount = document.querySelector("[data-folder-count]");
+    const folderNote = document.querySelector("[data-folder-note]");
+    const recentRows = Array.from(document.querySelectorAll(".recent-row"));
+    const treeRows = Array.from(document.querySelectorAll(".tree-row"));
+    const splitScreen = document.querySelector(".split-screen");
+    const splitDivider = document.querySelector(".split-divider");
+    let statusTimer;
+    let splitValue = 50;
+    const modeSelectButtons = modeButtons.filter((button) => button.classList.contains("mode-tab") || button.classList.contains("bottom-tab"));
+
+    function closeToc(options = {}) {
+      const { restoreFocus = false } = options;
+      tocPanel.classList.remove("open");
+      tocButton.setAttribute("aria-expanded", "false");
+      tocPanel.setAttribute("aria-hidden", "true");
+      tocPanel.setAttribute("inert", "");
+      if (restoreFocus) tocButton.focus();
+    }
+
+    function openToc() {
+      tocPanel.classList.add("open");
+      tocButton.setAttribute("aria-expanded", "true");
+      tocPanel.setAttribute("aria-hidden", "false");
+      tocPanel.removeAttribute("inert");
+      const currentLink = tocPanel.querySelector('[aria-current="location"]');
+      window.setTimeout(() => (currentLink || tocLinks[0])?.focus(), 0);
+    }
+
+    function toggleToc() {
+      if (tocPanel.classList.contains("open")) {
+        closeToc();
+      } else {
+        openToc();
+      }
+    }
+
+    function updateLineNumbers() {
+      const count = editor.value.split("\n").length;
+      lineNumbers.textContent = Array.from({ length: count }, (_, index) => index + 1).join("\n");
+    }
+
+    function setMode(mode) {
+      app.dataset.mode = mode;
+      screens.forEach((screen) => {
+        const isActive = screen.dataset.screen === mode;
+        screen.classList.toggle("active", isActive);
+        screen.setAttribute("aria-hidden", isActive ? "false" : "true");
+        if (isActive) {
+          screen.removeAttribute("inert");
+        } else {
+          screen.setAttribute("inert", "");
+        }
+      });
+      modeSelectButtons.forEach((button) => {
+        button.setAttribute("aria-selected", button.dataset.modeTarget === mode ? "true" : "false");
+      });
+      setDrawer(false);
+      closeToc();
+    }
+
+    function setStatus(message, state = "saved", restore = true) {
+      window.clearTimeout(statusTimer);
+      saveLabel.textContent = message;
+      saveLabel.title = message;
+      saveDot.classList.remove("error", "loading", "pulse");
+      if (state !== "saved") saveDot.classList.add(state);
+      if (restore) {
+        statusTimer = window.setTimeout(() => {
+          saveLabel.textContent = "Saved";
+          saveLabel.title = "Saved";
+          saveDot.classList.remove("error", "loading");
+          saveDot.classList.add("pulse");
+        }, 1300);
+      }
+    }
+
+    function setActiveFile(name) {
+      activeFileLabels.forEach((label) => {
+        label.textContent = name;
+        label.title = name;
+      });
+    }
+
+    function setTocCurrent(link) {
+      tocLinks.forEach((item) => item.removeAttribute("aria-current"));
+      link.setAttribute("aria-current", "location");
+    }
+
+    function selectTreeRow(row) {
+      treeRows.forEach((item) => {
+        item.classList.toggle("active", item === row);
+        if (item === row) {
+          item.setAttribute("aria-selected", "true");
+        } else {
+          item.removeAttribute("aria-selected");
+        }
+      });
+    }
+
+    function setFolderExport(folderName) {
+      const canExport = Boolean(folderName);
+      exportFolderButton.disabled = !canExport;
+      exportFolderButton.setAttribute("aria-disabled", canExport ? "false" : "true");
+      exportFolderButton.title = canExport ? `Download ${folderName} as a book ZIP` : "Open a book before exporting its folder ZIP";
+      exportHint.textContent = canExport ? `${folderName} is open. Book ZIP will include its markdown pages and metadata.` : "Open Writing, Code Docs, or Personal to export a book ZIP. Root export is not available in V1.";
+    }
+
+    function updateShelfActions(folderName = "") {
+      shelfCreateButtons.forEach((button) => {
+        button.textContent = folderName ? `Create page in ${folderName}` : "Create page";
+      });
+      shelfFolderButtons.forEach((button) => {
+        button.textContent = folderName ? "New book on shelf" : "New book";
+      });
+    }
+
+    function closeOpenBook() {
+      folderCards.forEach((card) => {
+        card.setAttribute("aria-pressed", "false");
+        card.setAttribute("aria-expanded", "false");
+        const pageCount = card.dataset.pageCount || "0";
+        const pageLabel = pageCount === "1" ? "page" : "pages";
+        card.setAttribute("aria-label", `${card.dataset.folderCard} book, ${pageCount} ${pageLabel}, closed`);
+      });
+      updateShelfActions("");
+    }
+
+    function updateRecentList(folderName = "") {
+      let visibleCount = 0;
+      recentRows.forEach((row) => {
+        const show = !folderName || row.dataset.folder === folderName;
+        row.hidden = !show;
+        if (show) visibleCount += 1;
+      });
+      folderFocus.textContent = folderName ? `${folderName} pages` : "Bookmarked pages";
+      folderCount.textContent = `${visibleCount} visible`;
+      librarySummary.textContent = folderName
+        ? `${folderName} open · ${visibleCount} pages · ready for Book ZIP`
+        : "3 books · 5 pages · saved locally on this device";
+      updateShelfActions(folderName);
+    }
+
+    function selectFolder(folderName) {
+      app.dataset.folderContext = folderName;
+      folderNote.innerHTML = `<strong>${folderName}</strong> is the open book. Its markdown pages are shown below.`;
+      folderCards.forEach((card) => {
+        const isOpen = card.dataset.folderCard === folderName;
+        const pageCount = card.dataset.pageCount || "0";
+        const pageLabel = pageCount === "1" ? "page" : "pages";
+        card.setAttribute("aria-pressed", isOpen ? "true" : "false");
+        card.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        card.setAttribute("aria-label", `${card.dataset.folderCard} book, ${pageCount} ${pageLabel}, ${isOpen ? "open" : "closed"}`);
+      });
+      const matchingRow = folderRows.find((row) => row.dataset.folderRow === folderName);
+      if (matchingRow) selectTreeRow(matchingRow);
+      setFolderExport(folderName);
+      updateRecentList(folderName);
+      setMode("files");
+      setStatus(`${folderName} selected`);
+    }
+
+    function createDocument() {
+      const folderName = app.dataset.folderContext || "";
+      app.dataset.doc = "selected";
+      app.dataset.folderContext = "";
+      folderNote.innerHTML = "";
+      closeOpenBook();
+      setActiveFile("untitled.md");
+      editor.value = "# Untitled\n\nStart writing here.";
+      updateLineNumbers();
+      setMode("edit");
+      setStatus(folderName ? `Created page in ${folderName}` : "Created new page");
+    }
+
+    function finishMarkdownImport(name = "imported.md", content = "# Imported draft\n\nMarkdown content is ready to edit.") {
+      app.dataset.doc = "selected";
+      app.dataset.folderContext = "";
+      folderNote.innerHTML = "";
+      closeOpenBook();
+      setActiveFile(name);
+      editor.value = content;
+      updateLineNumbers();
+      setMode("edit");
+      setStatus(`Imported ${name}`);
+    }
+
+    function importMarkdown(file) {
+      setStatus("Indexing .md", "loading", false);
+      if (file) {
+        if (!/\.md$/i.test(file.name)) {
+          setStatus("Choose a .md file", "error");
+          return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          finishMarkdownImport(file.name, String(reader.result || ""));
+        });
+        reader.addEventListener("error", () => setStatus("Import failed", "error"));
+        reader.readAsText(file);
+        return;
+      }
+      window.setTimeout(() => {
+        finishMarkdownImport();
+      }, 700);
+    }
+
+    function setSplit(value) {
+      splitValue = Math.max(30, Math.min(70, value));
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      if (isMobile) {
+        splitScreen.style.gridTemplateColumns = "";
+        splitScreen.style.gridTemplateRows = `${splitValue}% 32px ${100 - splitValue}%`;
+      } else {
+        splitScreen.style.gridTemplateColumns = `${splitValue}% 8px ${100 - splitValue}%`;
+        splitScreen.style.gridTemplateRows = "";
+      }
+      splitDivider.setAttribute("aria-valuenow", String(Math.round(splitValue)));
+      splitDivider.setAttribute("aria-valuetext", isMobile ? `Editor ${Math.round(splitValue)} percent height` : `Editor ${Math.round(splitValue)} percent width`);
+      syncSplitOrientation();
+    }
+
+    function syncSplitOrientation() {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      splitDivider.setAttribute("aria-orientation", isMobile ? "horizontal" : "vertical");
+    }
+
+    function syncDrawerAccessibility() {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      const sidebarHidden = (app.dataset.sidebar || "visible") === "hidden";
+      const isOpen = drawer.classList.contains("open");
+      const shelfAvailable = !isMobile && !sidebarHidden;
+      const shelfActive = shelfAvailable || isOpen;
+
+      drawer.toggleAttribute("inert", !shelfActive);
+      drawer.setAttribute("aria-hidden", shelfActive ? "false" : "true");
+      [mainPanel, bottomNav, statusbar].forEach((region) => {
+        if (!region) return;
+        region.toggleAttribute("inert", isMobile && isOpen);
+      });
+    }
+
+    function setDrawer(open) {
+      drawer.classList.toggle("open", open);
+      scrim.classList.toggle("open", open);
+      drawerToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      syncDrawerAccessibility();
+      if (open) {
+        window.setTimeout(() => drawer.querySelector(".tree-row")?.focus(), 0);
+      }
+    }
+
+    function syncSidebarState() {
+      const isVisible = (app.dataset.sidebar || "visible") !== "hidden";
+      sidebarToggle.setAttribute("aria-expanded", isVisible ? "true" : "false");
+      syncDrawerAccessibility();
+    }
+
+    function toggleSidebar() {
+      const current = app.dataset.sidebar || "visible";
+      const next = current === "visible" ? "hidden" : "visible";
+      app.dataset.sidebar = next;
+      syncSidebarState();
+      setStatus(next === "hidden" ? "Sidebar hidden" : "Sidebar visible");
+      localStorage.setItem("mdez-sidebar-state", next);
+    }
+
+    // Restore sidebar state
+    const savedSidebar = localStorage.getItem("mdez-sidebar-state");
+    if (savedSidebar) {
+      app.dataset.sidebar = savedSidebar;
+    }
+    syncSidebarState();
+
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => setMode(button.dataset.modeTarget));
+    });
+
+    createButtons.forEach((button) => {
+      button.addEventListener("click", createDocument);
+    });
+
+    importButtons.forEach((button) => {
+      button.addEventListener("click", () => importMarkdown());
+    });
+
+    importDropZones.forEach((button) => {
+      ["dragenter", "dragover"].forEach((eventName) => {
+        button.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          button.classList.add("is-dragging");
+        });
+      });
+      ["dragleave", "dragend"].forEach((eventName) => {
+        button.addEventListener(eventName, () => button.classList.remove("is-dragging"));
+      });
+      button.addEventListener("drop", (event) => {
+        event.preventDefault();
+        button.classList.remove("is-dragging");
+        importMarkdown(event.dataTransfer.files[0]);
+      });
+    });
+
+    folderButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const folderName = app.dataset.folderContext || "";
+        setStatus(folderName ? `Created book beside ${folderName}` : "Created book on shelf");
+      });
+    });
+
+    rootButton.addEventListener("click", () => {
+      app.dataset.doc = "none";
+      app.dataset.folderContext = "";
+      folderNote.innerHTML = "";
+      setActiveFile("Root");
+      selectTreeRow(rootButton);
+      setFolderExport("");
+      updateRecentList();
+      closeOpenBook();
+      setStatus("Shelf root selected");
+    });
+
+    docRows.forEach((row) => {
+      row.addEventListener("click", () => {
+        app.dataset.doc = "selected";
+        app.dataset.folderContext = "";
+        folderNote.innerHTML = "";
+        setActiveFile(row.querySelector(".tree-name").textContent.trim());
+        selectTreeRow(row);
+        setFolderExport("");
+        updateRecentList();
+        closeOpenBook();
+        setMode("read");
+        setStatus("Opened page");
+      });
+    });
+
+    folderRows.forEach((row) => {
+      row.addEventListener("click", () => selectFolder(row.dataset.folderRow));
+    });
+
+    folderCards.forEach((card) => {
+      card.addEventListener("click", () => selectFolder(card.dataset.folderCard));
+    });
+
+    exportFolderButton.addEventListener("click", () => {
+      if (exportFolderButton.disabled) {
+        setStatus("Open a book first", "error");
+        return;
+      }
+      setStatus("Prepared book ZIP");
+    });
+
+    drawerToggle.addEventListener("click", () => {
+      setDrawer(true);
+    });
+    sidebarToggle.addEventListener("click", toggleSidebar);
+    scrim.addEventListener("click", () => {
+      setDrawer(false);
+    });
+    tocButton.addEventListener("click", toggleToc);
+    tocClose.addEventListener("click", () => closeToc({ restoreFocus: true }));
+    tocLinks.forEach((link) => {
+      link.addEventListener("click", () => {
+        setTocCurrent(link);
+        closeToc();
+      });
+    });
+    document.addEventListener("click", (event) => {
+      if (!tocPanel.classList.contains("open")) return;
+      if (tocPanel.contains(event.target) || tocButton.contains(event.target)) return;
+      closeToc();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeToc({ restoreFocus: tocPanel.classList.contains("open") });
+        setDrawer(false);
+      }
+    });
+    editor.addEventListener("input", () => {
+      updateLineNumbers();
+      saveLabel.textContent = "Saving";
+      saveLabel.title = "Saving";
+      saveDot.classList.remove("error", "pulse");
+      saveDot.classList.add("loading");
+      window.clearTimeout(editor.saveTimer);
+      editor.saveTimer = window.setTimeout(() => {
+        saveLabel.textContent = "Saved";
+        saveLabel.title = "Saved";
+        saveDot.classList.remove("loading", "pulse");
+        void saveDot.offsetWidth;
+        saveDot.classList.add("pulse");
+      }, 450);
+    });
+
+    splitDivider.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        setSplit(splitValue - 5);
+      }
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        event.preventDefault();
+        setSplit(splitValue + 5);
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        setSplit(30);
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        setSplit(70);
+      }
+    });
+
+    splitDivider.addEventListener("pointerdown", (event) => {
+      if (window.matchMedia("(max-width: 767px)").matches) return;
+      splitDivider.setPointerCapture(event.pointerId);
+      splitDivider.classList.add("dragging");
+    });
+
+    splitDivider.addEventListener("pointermove", (event) => {
+      if (!splitDivider.classList.contains("dragging")) return;
+      const rect = splitScreen.getBoundingClientRect();
+      const next = ((event.clientX - rect.left) / rect.width) * 100;
+      setSplit(next);
+    });
+
+    splitDivider.addEventListener("pointerup", (event) => {
+      splitDivider.releasePointerCapture(event.pointerId);
+      splitDivider.classList.remove("dragging");
+    });
+
+    window.addEventListener("resize", () => {
+      setSplit(splitValue);
+      syncDrawerAccessibility();
+    });
+    setMode(app.dataset.mode || "read");
+    setSplit(splitValue);
+    syncDrawerAccessibility();
+    updateLineNumbers();
+  </script>
+</body>
+</html>

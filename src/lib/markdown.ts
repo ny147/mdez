@@ -2,7 +2,7 @@ export const MAX_MARKDOWN_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_MARKDOWN_FILE_SLUG_LENGTH = 80;
 
 export function fileNameToTitle(fileName: string) {
-  return fileName.replace(/\.(md|markdown)$/i, "").trim() || "Untitled Document";
+  return fileName.replace(/\.(md|markdown)$/i, "").trim() || "untitled.md";
 }
 
 export function titleFromBody(body: string) {
@@ -11,7 +11,7 @@ export function titleFromBody(body: string) {
     .map((line) => line.trim())
     .find((line) => /^#{1,6}\s+/.test(line));
 
-  return heading?.replace(/^#{1,6}\s+/, "").trim() || "Untitled Document";
+  return heading?.replace(/^#{1,6}\s+/, "").trim() || "untitled.md";
 }
 
 export function slugifyTitle(title: string) {
@@ -22,7 +22,7 @@ export function slugifyTitle(title: string) {
     .slice(0, MAX_MARKDOWN_FILE_SLUG_LENGTH)
     .replace(/-+$/g, "");
 
-  return slug || "untitled-document";
+  return slug || "untitled";
 }
 
 export function makeMarkdownFileName(title: string) {
