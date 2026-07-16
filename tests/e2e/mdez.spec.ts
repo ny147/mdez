@@ -46,8 +46,28 @@ async function clickViewportModeTab(page: import("@playwright/test").Page, name:
   const navigation = page.locator(viewportWidth <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
   const control = navigation.getByRole("tab", { name, exact: true });
 
-  await control.click();
+  if ((await control.getAttribute("aria-selected")) !== "true") {
+    await control.click();
+  }
   await expect(control).toHaveAttribute("aria-selected", "true");
+}
+
+async function expectModeReady(page: import("@playwright/test").Page, mode: "Shelf" | "Edit" | "Read" | "Split") {
+  if (mode === "Edit") {
+    await expect(page.getByTestId("screen-editor")).toBeVisible();
+    await expect(page.locator(".cm-editor")).toBeVisible();
+  }
+
+  if (mode === "Read") {
+    await expect(page.getByTestId("screen-reader")).toBeVisible();
+    await expect(page.getByText("Reader", { exact: true })).toBeVisible();
+  }
+
+  if (mode === "Split") {
+    await expect(page.locator(".split-workspace")).toBeVisible();
+    await expect(page.locator(".cm-editor")).toBeVisible();
+    await expect(page.getByText("Reader", { exact: true })).toBeVisible();
+  }
 }
 
 async function expectInsideViewport(locator: Locator, viewportWidth: number) {
@@ -844,15 +864,23 @@ test("switches editor, split, and preview modes", async ({ page }) => {
 
 
 for (const width of [390, 430, 768, 1024, 1440]) {
-  test(`workspace has no horizontal overflow at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
-    await showShelfIfAvailable(page);
-    const size = await page.evaluate(() => [
-      document.documentElement.clientWidth,
-      document.documentElement.scrollWidth
-    ]);
-    expect(size[1]).toBe(size[0]);
-  });
+  for (const mode of ["Shelf", "Edit", "Read", "Split"] as const) {
+    test(`${mode} remains usable without document overflow at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      if (mode !== "Shelf") {
+        await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+      }
+      await clickViewportModeTab(page, mode);
+      await expectModeReady(page, mode);
+
+      const size = await page.evaluate(() => [
+        document.documentElement.clientWidth,
+        document.documentElement.scrollWidth
+      ]);
+      expect(size[1]).toBe(size[0]);
+      await expect(page.getByRole("main")).toBeVisible();
+    });
+  }
 }
 
 test("inactive workspace surfaces are removed from interaction", async ({ page }) => {

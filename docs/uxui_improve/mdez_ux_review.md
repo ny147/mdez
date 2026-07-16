@@ -87,3 +87,17 @@ Resolution:
 - Focused desktop/mobile tests cover active panels, arrow navigation, focus restoration, and the single live region.
 - Full E2E covers fresh/populated states, import, retry, refresh preservation, reader typography, navigation, export, persistence, and supported widths.
 - Lint, strict typecheck, unit tests, full E2E, and production build are the required final verification commands in `docs/implementation-plan.md`.
+
+## Workspace quality redesign resolution — 2026-07-14
+
+| Reviewed issue | Resolution evidence |
+|---|---|
+| 768px Split breakpoint cliff | Tablet Split test and rendered 768×1024 inspection |
+| Mobile separator rejected touch | Mobile pointer-resize Playwright test |
+| Nested cards flattened hierarchy | Surface-shadow contract and rendered Shelf/Read inspection |
+| Repeated document identity | Single-H1 Read contract |
+| Mobile toolbar targets and hidden exports | 44px target and viewport-containment tests |
+| Typography token drift | Computed Shippori reader-family test |
+| Oversized workspace coordinator | Draft and library hooks with focused unit tests |
+| Monolithic import dialog | Shell and source panels protected by import E2E coverage |
+| Heavy initial JavaScript | Production build comparison against 489 kB baseline |
