@@ -18,6 +18,7 @@ import { useDocumentDrafts } from "@/hooks/useDocumentDrafts";
 import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
+import { WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -408,9 +409,9 @@ export function MdezWorkspace() {
             <div className="workspace-context">
               <div className="min-w-0">
                 <p className="workspace-context-label">
-                  {library.selectedFolder ? `${library.selectedFolder.name} book` : "Shelf root"}
+                  {library.selectedFolder ? `${library.selectedFolder.name} book` : WORKSPACE_COPY.library}
                 </p>
-                {showShelf ? <h1 className="workspace-title truncate">Bookshelf</h1> : null}
+                {showShelf ? <h1 className="workspace-title truncate">{WORKSPACE_COPY.library}</h1> : null}
               </div>
               {!showShelf ? <p className="workspace-context-label">{readerViewOptions.find((option) => option.value === viewMode)?.label}</p> : null}
             </div>
@@ -448,7 +449,7 @@ export function MdezWorkspace() {
       <WorkspaceStatus
         message={statusMessage}
         state={statusState}
-        activePage={library.selectedDocument?.title ?? "Shelf root"}
+        activePage={library.selectedDocument?.title ?? WORKSPACE_COPY.library}
         isInert={isMobileLayout && isDrawerOpen}
       />
 

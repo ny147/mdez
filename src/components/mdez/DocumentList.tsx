@@ -4,6 +4,7 @@ import { FilePlus, Trash2 } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import { IconButton } from "@/components/ui/IconButton";
+import { WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 type DocumentListProps = {
   folders: Folder[];
@@ -62,7 +63,7 @@ export function DocumentList({
       {visibleDocuments.length === 0 ? (
         <div className="rounded border border-border bg-panel p-3">
           <p className="text-sm font-semibold leading-6 text-muted">
-            Create a page in {selectedBook ? selectedBook.name : "the shelf root"} or import markdown here.
+            Create a page in {selectedBook ? selectedBook.name : WORKSPACE_COPY.pagesWithoutBook} or import Markdown here.
           </p>
           <div className="mt-3 grid gap-2">
             <button
@@ -77,10 +78,10 @@ export function DocumentList({
             <button
               type="button"
               onClick={onOpenImport}
-              aria-label="Import markdown into page list"
+              aria-label="Import Markdown into page list"
               className="secondary-button w-full px-3 py-2 text-sm font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
             >
-              Import markdown
+              {WORKSPACE_COPY.importMarkdown}
             </button>
           </div>
         </div>
@@ -123,7 +124,7 @@ export function DocumentList({
                   title={`Move ${document.title} page`}
                   className="workspace-input min-w-0 flex-1 px-2 py-1 font-mono text-xs font-bold focus:ring-0"
                 >
-                  <option value="">Shelf root</option>
+                  <option value="">{WORKSPACE_COPY.pagesWithoutBook}</option>
                   {folders
                     .slice()
                     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))

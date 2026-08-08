@@ -5,6 +5,7 @@ import { BookOpen, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import type { Document, Folder } from "@/types/content";
 import { buildFolderTree, type FolderNode } from "@/lib/tree";
 import { IconButton } from "@/components/ui/IconButton";
+import { WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 type FolderTreeProps = {
   folders: Folder[];
@@ -34,15 +35,15 @@ export function FolderTree({
   return (
     <section className="min-h-0">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-display text-sm font-black text-ink">Books</h3>
+        <h3 className="font-display text-sm font-black text-ink">{WORKSPACE_COPY.books}</h3>
         <button
           type="button"
           onClick={() => onCreateFolder(null)}
-          aria-label="New book - create shelf book"
+          aria-label="Create book"
           className="secondary-button inline-flex min-h-9 items-center justify-center gap-2 px-3 py-1.5 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <BookOpen aria-hidden="true" className="h-4 w-4" />
-          New book
+          Create book
         </button>
       </div>
 
@@ -58,12 +59,12 @@ export function FolderTree({
               : "border-transparent text-muted hover:border-border hover:bg-panel hover:text-ink"
           }`}
         >
-          Shelf root
+          {WORKSPACE_COPY.pagesWithoutBook}
         </button>
 
         {tree.length === 0 ? (
           <p className="rounded border border-border bg-panel px-3 py-2 text-xs font-semibold leading-5 text-muted">
-            Create books when this shelf grows.
+            No books yet. Create a book to group related pages.
           </p>
         ) : null}
 

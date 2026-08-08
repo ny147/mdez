@@ -3,6 +3,7 @@
 import { BookOpen, Download, FilePlus, Upload } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
+import { WORKSPACE_COPY, formatRelativeTime, getBookExportCopy } from "@/lib/workspace-copy";
 
 type ShelfPaneProps = {
   folders: Folder[];
@@ -20,29 +21,6 @@ type ShelfPaneProps = {
 
 function getBookPageCount(documents: Document[], folderId: string) {
   return documents.filter((document) => document.folderId === folderId).length;
-}
-
-function formatRelativeTime(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "recently";
-  }
-
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} hr ago`;
-  }
-
-  return `${Math.round(diffHours / 24)} days ago`;
 }
 
 export function ShelfPane({
@@ -65,47 +43,51 @@ export function ShelfPane({
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 8);
   const createPageLabel = openBook ? `Create page in ${openBook.name}` : "Create page";
-  const createBookLabel = openBook ? "New book on shelf" : "New book";
+  const exportCopy = getBookExportCopy(openBook?.name ?? null);
 
   return (
     <div className="grid min-h-0 flex-1 gap-5 overflow-hidden">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm font-semibold leading-6 text-muted">
-            {openBook ? `${openBook.name} is open. Bookmarked pages are filtered to this book.` : "Open a book to focus the shelf."}
+          <p className="max-w-2xl text-sm font-semibold leading-6 text-muted">
+            {openBook
+              ? `Showing recent pages in ${openBook.name}. Return to Library to view recent pages from every book.`
+              : "Open a book to see its recent pages. Library shows recent pages from every book."}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
-            <FilePlus aria-hidden="true" className="h-4 w-4" />
-            {createPageLabel}
-          </button>
-          <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
-            <BookOpen aria-hidden="true" className="h-4 w-4" />
-            {createBookLabel}
-          </button>
-          <button type="button" onClick={onOpenImport} aria-label="Import markdown" className="secondary-button px-4 py-2 text-sm font-extrabold">
-            <Upload aria-hidden="true" className="h-4 w-4" />
-            Import markdown
-          </button>
-          <button
-            type="button"
-            onClick={onExportFolder}
-            disabled={!openBook}
-            aria-label="Book ZIP for open book in Shelf"
-            title={openBook ? `Download ${openBook.name} as a folder ZIP` : "Open a book before exporting its folder ZIP"}
-            className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
-          >
-            <Download aria-hidden="true" className="h-4 w-4" />
-            Book ZIP
-          </button>
+        <div className="grid gap-2 md:justify-items-end">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
+              <FilePlus aria-hidden="true" className="h-4 w-4" />
+              {createPageLabel}
+            </button>
+            <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
+              <BookOpen aria-hidden="true" className="h-4 w-4" />
+              Create book
+            </button>
+            <button type="button" onClick={onOpenImport} aria-label={WORKSPACE_COPY.importMarkdown} className="secondary-button px-4 py-2 text-sm font-extrabold">
+              <Upload aria-hidden="true" className="h-4 w-4" />
+              {WORKSPACE_COPY.importMarkdown}
+            </button>
+            <button
+              type="button"
+              onClick={onExportFolder}
+              disabled={exportCopy.disabled}
+              aria-label={exportCopy.label}
+              className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              <Download aria-hidden="true" className="h-4 w-4" />
+              {exportCopy.label}
+            </button>
+          </div>
+          <p className="max-w-md text-xs font-semibold leading-5 text-muted">{exportCopy.hint}</p>
         </div>
       </div>
 
       <section className="workspace-section min-w-0" aria-labelledby="bookshelf-title">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 id="bookshelf-title" className="font-display text-xl font-black text-ink">
-            Bookshelf
+            {WORKSPACE_COPY.books}
           </h2>
           <span className="rounded border border-border bg-panel px-3 py-1 text-xs font-bold text-muted">
             {sortedFolders.length} {sortedFolders.length === 1 ? "book" : "books"}
@@ -114,7 +96,7 @@ export function ShelfPane({
 
         {sortedFolders.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-panel p-6 text-center">
-            <p className="font-semibold text-muted">{isReady ? "Create books when this shelf grows." : "Indexing local library..."}</p>
+            <p className="font-semibold text-muted">{isReady ? "No books yet. Create a book to group related pages." : "Indexing local library..."}</p>
           </div>
         ) : (
           <div className="overflow-x-auto pb-3">
@@ -146,10 +128,10 @@ export function ShelfPane({
         )}
       </section>
 
-      <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="bookmarked-pages-title">
+      <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="recent-pages-title">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="bookmarked-pages-title" className="font-display text-xl font-black text-ink">
-            Bookmarked pages
+          <h2 id="recent-pages-title" className="font-display text-xl font-black text-ink">
+            {WORKSPACE_COPY.recentPages}
           </h2>
           {openBook ? <span className="text-sm font-semibold text-muted">{openBook.name}</span> : null}
         </div>
@@ -157,13 +139,15 @@ export function ShelfPane({
         {visiblePages.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-panel p-6 text-center">
             <p className="font-semibold text-muted">
-              {openBook ? "This book has no pages yet." : "Create a page or import markdown to start the local library."}
+              {openBook
+                ? "No pages in this book yet. Create a page or import Markdown here."
+                : "No pages yet. Create a page or import Markdown to begin."}
             </p>
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Bookmarked pages">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label={WORKSPACE_COPY.recentPages}>
             {visiblePages.map((document) => {
-              const parentBook = folders.find((folder) => folder.id === document.folderId)?.name ?? "Shelf root";
+              const parentBook = folders.find((folder) => folder.id === document.folderId)?.name ?? WORKSPACE_COPY.pagesWithoutBook;
               const updated = formatRelativeTime(document.updatedAt);
 
               return (

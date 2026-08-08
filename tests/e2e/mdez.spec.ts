@@ -181,18 +181,16 @@ test("mobile drawer makes the workspace inert", async ({ page }) => {
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
   await expect(trigger).toBeFocused();
 });
-test("fresh workspace exposes visible create and import actions", async ({ page }) => {
-  const createPage = page.getByRole("button", { name: "Create page", exact: true }).last();
-  const importMarkdown = page.getByRole("button", { name: "Import markdown", exact: true }).last();
-  const newBook = page.getByRole("button", { name: "New book", exact: true }).last();
+test("library copy explains page and book scope", async ({ page }) => {
+  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
+  await openShelfDrawerIfAvailable(page);
 
-  await expect(createPage).toBeVisible();
-  await expect(importMarkdown).toBeVisible();
-  await expect(page.getByText("Create books when this shelf grows.").last()).toBeVisible();
-  await expect(newBook).toBeVisible();
-
-  await createPage.click();
-  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("untitled.md");
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.getByRole("treeitem", { name: "Pages without a book" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
+  await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
+  await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Bookmarked pages", { exact: true })).toHaveCount(0);
 });
 
 test("no-document editor and reader states expose recovery actions", async ({ page }) => {
@@ -214,25 +212,22 @@ test("no-document editor and reader states expose recovery actions", async ({ pa
 });
 
 test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
-  const bookZipButton = page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).last();
+  const bookZipButton = page.getByRole("button", { name: "Export book (.zip)", exact: true }).last();
 
   await expect(bookZipButton).toBeVisible();
   await expect(bookZipButton).toBeDisabled();
 });
 
-test("one open book controls shelf context", async ({ page }) => {
+test("an open book explains filtering and export scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
-
   page.once("dialog", (dialog) => dialog.accept("Writing"));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
-  await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Writing", exact: true }).click();
+  await page.getByRole("button", { name: "Create book" }).first().click();
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await sidebar.getByRole("button", { name: "Create page in Writing", exact: true }).click();
   await showShelfIfAvailable(page);
 
-  await expect(page.getByRole("button", { name: "Writing book, 1 page, open", exact: true }).first())
-    .toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "New book on shelf", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).first()).toBeEnabled();
-  await expect(page.getByRole("list", { name: "Bookmarked pages" }).getByRole("listitem")).toHaveCount(1);
+  await expect(page.getByText("Showing recent pages in Writing. Return to Library to view recent pages from every book.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export Writing (.zip)" })).toBeEnabled();
 });
 
 
@@ -314,7 +309,7 @@ test("read mode exposes one workspace-level document heading", async ({ page }) 
 test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) => {
   const main = page.getByRole("main");
 
-  await expect(main.getByRole("heading", { level: 1, name: "Bookshelf" })).toBeVisible();
+  await expect(main.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
@@ -743,7 +738,7 @@ test("exports the selected document as markdown", async ({ page }) => {
 test("creates nested folders and blocks deleting non-empty folder", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
+  await page.getByRole("button", { name: "Create book", exact: true }).first().click();
   await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
@@ -762,7 +757,7 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
 test("exports a nested folder ZIP rooted at the selected folder", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
+  await page.getByRole("button", { name: "Create book", exact: true }).first().click();
   await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
@@ -779,7 +774,7 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await showShelfIfAvailable(page);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).last().click();
+  await page.getByRole("button", { name: "Export Launch (.zip)", exact: true }).click();
   const download = await downloadPromise;
   const zip = await JSZip.loadAsync(await readFile((await download.path())!));
 
