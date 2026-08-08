@@ -41,11 +41,11 @@ export function FileImportPanel({
         }}
       >
         <span className="text-sm font-black text-accent-read">Drop Markdown files here</span>
-        <span className="primary-button px-4 py-2">Choose .md files</span>
+        <span className="primary-button px-4 py-2">Choose Markdown files</span>
         <input
           className="sr-only"
           type="file"
-          aria-label="Choose markdown files"
+          aria-label="Choose Markdown files"
           accept=".md,.markdown,text/markdown"
           multiple
           disabled={busy}

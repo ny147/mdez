@@ -24,9 +24,9 @@ type ImportDialogProps = {
 };
 
 const sourceOptions: { value: ImportSource; label: string; icon: typeof ClipboardPaste }[] = [
-  { value: "paste", label: "Paste", icon: ClipboardPaste },
-  { value: "files", label: "Markdown files", icon: FileText },
-  { value: "github", label: "Public GitHub", icon: Github }
+  { value: "paste", label: "Paste text", icon: ClipboardPaste },
+  { value: "files", label: "Choose files", icon: FileText },
+  { value: "github", label: "GitHub repository", icon: Github }
 ];
 
 export function ImportDialog({
@@ -109,7 +109,7 @@ export function ImportDialog({
     }
 
     if (pasteBody.trim() === "") {
-      setMessage("Paste markdown content before importing.");
+      setMessage("Paste Markdown before importing.");
       return;
     }
 
@@ -120,7 +120,7 @@ export function ImportDialog({
       await onImport([{ title: titleFromBody(pasteBody), body: pasteBody }], targetFolderId);
       onClose();
     } catch {
-      setMessage("Mdez could not import markdown.");
+      setMessage("We could not import the Markdown. Your existing pages were not changed.");
       setBusyAction(null);
     }
   }
@@ -136,7 +136,7 @@ export function ImportDialog({
 
     for (const file of Array.from(files)) {
       if (!isMarkdownFile(file)) {
-        setMessage("Choose a .md file.");
+        setMessage("Choose Markdown files ending in .md or .markdown.");
         setBusyAction(null);
         return;
       }
@@ -155,7 +155,7 @@ export function ImportDialog({
         const body = await file.text();
         items.push({ title: fileNameToTitle(file.name), body });
       } catch {
-        setMessage("Mdez could not read " + file.name + ".");
+        setMessage(`We could not read ${file.name}. Choose the file again or try another file.`);
         setBusyAction(null);
         return;
       }
@@ -170,7 +170,7 @@ export function ImportDialog({
       await onImport(items, targetFolderId);
       onClose();
     } catch {
-      setMessage("Mdez could not import markdown.");
+      setMessage("We could not import the Markdown. Your existing pages were not changed.");
       setBusyAction(null);
     }
   }
@@ -246,7 +246,7 @@ export function ImportDialog({
 
         {source !== "github" ? (
           <label className="mt-5 grid gap-2 text-sm font-bold text-ink" htmlFor="import-target-folder">
-            Target book
+            Add pages to
             <select
               id="import-target-folder"
               value={targetFolderId ?? ""}
@@ -254,7 +254,7 @@ export function ImportDialog({
               disabled={busy}
               className="workspace-input px-4 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="">Shelf root</option>
+              <option value="">No book</option>
               {folders.map((folder) => (
                 <option key={folder.id} value={folder.id}>
                   {folder.name}
@@ -309,7 +309,7 @@ export function ImportDialog({
             disabled={busy}
             className="secondary-button px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancel
+            Close import
           </button>
 
           {source === "paste" ? (
@@ -319,7 +319,7 @@ export function ImportDialog({
               disabled={busy}
               className="primary-button px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busyAction === "local" ? "Importing..." : "Import Paste"}
+              {busyAction === "local" ? "Importing Markdown..." : "Import pasted text"}
             </button>
           ) : null}
 

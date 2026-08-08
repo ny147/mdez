@@ -89,13 +89,13 @@ export function EditorPane({
         <div className="mt-4 flex flex-1 items-center justify-center rounded border border-dashed border-border bg-surface p-6 text-center">
           <div className="max-w-sm">
             <h2 className="font-display text-xl font-bold text-ink">No page selected</h2>
-            <p className="mt-2 text-sm font-semibold leading-6 text-muted">Create a page or import markdown before editing.</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-muted">Create a page or import Markdown before editing.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <button type="button" onClick={onCreateDocument} className="primary-button px-3 py-2">
                 <FilePlus aria-hidden="true" className="h-4 w-4" /> Create page
               </button>
               <button type="button" onClick={onOpenImport} className="secondary-button px-3 py-2 text-sm font-extrabold">
-                <Upload aria-hidden="true" className="h-4 w-4" /> Import markdown
+                <Upload aria-hidden="true" className="h-4 w-4" /> Import Markdown
               </button>
             </div>
           </div>

@@ -117,6 +117,12 @@ export function MdezWorkspace() {
     persistBody: updateDocumentBody,
     persistTitle: renameDocument
   });
+
+  useEffect(() => {
+    if (saveStatus === "Saving...") {
+      setOperationStatus(null);
+    }
+  }, [saveStatus]);
   const activeSourceId = library.selectedFolder?.sourceId ?? library.selectedDocument?.sourceId;
   const activeGitHubSource = library.sources.find((source) => source.id === activeSourceId) ?? null;
   const liveSelectedDocument = library.selectedDocument
@@ -154,6 +160,11 @@ export function MdezWorkspace() {
     await library.importPages(items, folderId);
     setViewMode("editor");
     setIsDrawerOpen(false);
+    const count = items.length;
+    setOperationStatus({
+      message: `Imported ${count} ${count === 1 ? "page" : "pages"}`,
+      state: "saved"
+    });
   }
   async function handleRequestGitHubPreview(url: string) {
     library.setError(null);
@@ -248,8 +259,10 @@ export function MdezWorkspace() {
 
     try {
       const blob = await createFolderZipBlob(library.folders, liveDocuments, library.selectedFolderId);
-      downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
+      const fileName = makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip");
+      downloadBlob(blob, fileName);
       library.setError(null);
+      setOperationStatus({ message: `Downloaded ${fileName}`, state: "saved" });
     } catch {
       library.setError("Mdez could not prepare the book ZIP.");
     }
@@ -270,11 +283,15 @@ export function MdezWorkspace() {
   }
 
   const sidebarIsHidden = isTabletLayout ? !isDrawerOpen : !isSidebarVisible;
-  const statusMessage =
-    library.error ?? (saveStatus === "Saving..." ? "Saving" : operationStatus?.message ?? saveStatus);
+  const statusMessage = library.error
+    ?? (saveStatus === "Saving..."
+      ? "Saving changes..."
+      : saveStatus === "Unsaved"
+        ? "Unsaved changes"
+        : operationStatus?.message ?? "Saved in this browser");
   const statusState = library.error
     ? "error"
-    : saveStatus === "Saving..."
+    : saveStatus === "Saving..." || saveStatus === "Unsaved"
       ? "saving"
       : operationStatus?.state ?? "saved";
   const editorPane = (
@@ -286,11 +303,9 @@ export function MdezWorkspace() {
       viewMode={viewMode}
       rightSlot={
         <ExportControls
-          folders={library.folders}
-          documents={liveDocuments}
           selectedDocument={liveSelectedDocument}
-          selectedFolderId={library.selectedFolderId}
           onError={library.setError}
+          onSuccess={(message) => setOperationStatus({ message, state: "saved" })}
         />
       }
       onCreateDocument={handleCreateDocument}
@@ -358,7 +373,6 @@ export function MdezWorkspace() {
           >
             <Menu aria-hidden="true" className="h-4 w-4" />
           </button>
-          <span className="hidden font-mono text-xs text-muted sm:inline">Local</span>
         </div>
       </header>
 
@@ -386,8 +400,6 @@ export function MdezWorkspace() {
           onRenameDocument={handleRenameDocument}
           onMoveDocument={library.movePage}
           onDeleteDocument={library.deletePage}
-          onOpenImport={handleOpenImport}
-          onExportFolder={() => void handleSidebarFolderExport()}
           onRefreshGitHub={(source) => void handleRefreshGitHub(source)}
         />
 

@@ -201,14 +201,14 @@ test("no-document editor and reader states expose recovery actions", async ({ pa
   await expect(editor).toBeVisible();
   await expect(editor.getByText("No page selected", { exact: true })).toBeVisible();
   await expect(editor.getByRole("button", { name: "Create page", exact: true })).toBeVisible();
-  await expect(editor.getByRole("button", { name: "Import markdown", exact: true })).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Import Markdown", exact: true })).toBeVisible();
 
   await clickVisibleButtonIfAvailable(page, "Read");
 
   const reader = page.locator("article").filter({ hasText: "Reader" });
   await expect(reader).toBeVisible();
   await expect(reader.getByRole("button", { name: "Create page", exact: true })).toBeVisible();
-  await expect(reader.getByRole("button", { name: "Import markdown", exact: true })).toBeVisible();
+  await expect(reader.getByRole("button", { name: "Import Markdown", exact: true })).toBeVisible();
 });
 
 test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
@@ -216,6 +216,29 @@ test("root selection labels folder ZIP export but keeps it disabled", async ({ p
 
   await expect(bookZipButton).toBeVisible();
   await expect(bookZipButton).toBeDisabled();
+});
+
+test("global actions have one visible home", async ({ page }) => {
+  await expect(page.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^(Export book \(.zip\)|Book ZIP for open book in Shelf)$/ })).toHaveCount(1);
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(0);
+  await expect(sidebar.getByRole("button", { name: /Export .*\.zip|Book ZIP/ })).toHaveCount(0);
+});
+
+test("import dialog uses specific labels and recovery copy", async ({ page }) => {
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+
+  await expect(dialog.getByRole("tab", { name: "Paste text" })).toBeVisible();
+  await expect(dialog.getByRole("tab", { name: "Choose files" })).toBeVisible();
+  await expect(dialog.getByRole("tab", { name: "GitHub repository" })).toBeVisible();
+  await expect(dialog.getByLabel("Add pages to")).toHaveValue("");
+  await expect(dialog.getByRole("option", { name: "No book" })).toHaveCount(1);
+
+  await dialog.getByRole("button", { name: "Import pasted text" }).click();
+  await expect(dialog.getByText("Paste Markdown before importing.")).toBeVisible();
 });
 
 test("an open book explains filtering and export scope", async ({ page }) => {
@@ -253,11 +276,8 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
   }
 
   const exportMarkdown = toolbar.getByRole("button", { name: "Export .md" });
-  const exportBook = toolbar.getByRole("button", { name: "Book ZIP for open book in Shelf" });
   await expectInsideViewport(exportMarkdown, 390);
-  await expectInsideViewport(exportBook, 390);
   await expectMinimumTouchTarget(exportMarkdown);
-  await expectMinimumTouchTarget(exportBook);
 
   const formatBox = await toolbar.locator(".editor-format-actions").boundingBox();
   const documentBox = await toolbar.locator(".editor-document-actions").boundingBox();
@@ -358,8 +378,9 @@ test("drawer, table of contents, and dialog share floating elevation", async ({ 
   expect(tocShadow).not.toBe("none");
   await page.getByRole("button", { name: "Close table of contents" }).click();
 
-  await clickVisibleButtonIfAvailable(page, "Import markdown");
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
+  await showShelfIfAvailable(page);
+  await clickVisibleButtonIfAvailable(page, "Import Markdown");
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   const dialogShadow = await dialog.evaluate((node) => getComputedStyle(node).boxShadow);
   expect(dialogShadow).toBe(tocShadow);
   await dialog.getByRole("button", { name: "Close import dialog" }).click();
@@ -431,32 +452,34 @@ test("mobile workspace interactive targets are at least 44 by 44 pixels", async 
   await expect(sidebar).toHaveAttribute("aria-hidden", "false");
   await auditVisibleTargets("Open drawer");
 
-  await sidebar.getByRole("button", { name: "Import markdown", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Bring notes into Mdez" })).toBeVisible();
+  await sidebar.getByRole("button", { name: "Close library shelf" }).click();
+  await showShelfIfAvailable(page);
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Add Markdown to your library" })).toBeVisible();
   await auditVisibleTargets("Import dialog");
 
   expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
 });
 test("import source tabs expose only the active input", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
 
-  await expect(dialog.getByRole("textbox", { name: "Paste markdown" })).toBeVisible();
+  await expect(dialog.getByRole("textbox", { name: "Paste Markdown" })).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: "Public repository URL" })).toBeHidden();
 
-  await dialog.getByRole("tab", { name: "Public GitHub" }).click();
+  await dialog.getByRole("tab", { name: "GitHub repository" }).click();
 
-  await expect(dialog.getByRole("textbox", { name: "Paste markdown" })).toBeHidden();
+  await expect(dialog.getByRole("textbox", { name: "Paste Markdown" })).toBeHidden();
   await expect(dialog.getByRole("textbox", { name: "Public repository URL" })).toBeVisible();
 });
 
 test("import source tabs support arrows and the dialog restores focus", async ({ page }) => {
-  const trigger = page.getByRole("button", { name: "Import markdown", exact: true }).last();
+  const trigger = page.getByRole("button", { name: "Import Markdown", exact: true }).last();
   await trigger.click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
-  const pasteTab = dialog.getByRole("tab", { name: "Paste" });
-  const filesTab = dialog.getByRole("tab", { name: "Markdown files" });
-  const githubTab = dialog.getByRole("tab", { name: "Public GitHub" });
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  const pasteTab = dialog.getByRole("tab", { name: "Paste text" });
+  const filesTab = dialog.getByRole("tab", { name: "Choose files" });
+  const githubTab = dialog.getByRole("tab", { name: "GitHub repository" });
 
   await pasteTab.press("ArrowRight");
   await expect(filesTab).toHaveAttribute("aria-selected", "true");
@@ -474,23 +497,24 @@ test("import source tabs support arrows and the dialog restores focus", async ({
 });
 
 test("import dialog traps focus and returns it to its trigger", async ({ page }) => {
-  const trigger = page.getByRole("button", { name: "Import markdown", exact: true }).last();
+  const trigger = page.getByRole("button", { name: "Import Markdown", exact: true }).last();
   await trigger.click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await expect(dialog).toBeVisible();
 
   await dialog.getByRole("button", { name: "Close import dialog" }).focus();
   await page.keyboard.press("Shift+Tab");
-  await expect(dialog.getByRole("button", { name: "Import Paste" })).toBeFocused();
+  await expect(dialog.getByRole("button", { name: "Import pasted text" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
 });
 
 test("imports markdown by paste and previews it", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
 
-  await page.getByLabel("Paste markdown").fill("# Hello Mdez\n\n- [x] local");
-  await page.getByRole("button", { name: "Import Paste", exact: true }).click();
+  await page.getByLabel("Paste Markdown").fill("# Hello Mdez\n\n- [x] local");
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Imported 1 page" })).toBeVisible();
 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Hello Mdez");
   await page.getByRole("tab", { name: "Read" }).click();
@@ -498,9 +522,9 @@ test("imports markdown by paste and previews it", async ({ page }) => {
 });
 
 test("preview prose uses reader typography while markdown code stays monospaced", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  await page.getByLabel("Paste markdown").fill("# Typography\n\nReadable prose with `inlineCode`.\n\n```ts\nconst value = 1;\n```");
-  await page.getByRole("button", { name: "Import Paste", exact: true }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill("# Typography\n\nReadable prose with `inlineCode`.\n\n```ts\nconst value = 1;\n```");
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
   await page.getByRole("tab", { name: "Read" }).click();
 
   const preview = page.locator(".markdown-preview");
@@ -528,9 +552,9 @@ test("preview prose uses reader typography while markdown code stays monospaced"
 
 
 test("reader table of contents is inert when closed and keyboard safe when open", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  await page.getByLabel("Paste markdown").fill("# Quiet shell\n\n## Mode behavior\n\nReader copy.");
-  await page.getByRole("button", { name: "Import Paste", exact: true }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill("# Quiet shell\n\n## Mode behavior\n\nReader copy.");
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
   await clickVisibleButtonIfAvailable(page, "Read");
 
   const toc = page.locator('nav[aria-label="Table of contents"]');
@@ -542,8 +566,8 @@ test("reader table of contents is inert when closed and keyboard safe when open"
   await expect(toc).toHaveAttribute("inert", "");
 });
 test("imports markdown from a file", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  await page.getByLabel("Choose markdown files").setInputFiles({
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Choose Markdown files").setInputFiles({
     name: "Release Notes.md",
     mimeType: "text/markdown",
     buffer: Buffer.from("# File Import\n\nLoaded from disk.")
@@ -575,9 +599,9 @@ test("imports a public GitHub repository through preview and persists its source
     });
   });
 
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
-  await dialog.getByRole("tab", { name: "Public GitHub" }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
   await dialog.getByRole("button", { name: "Preview repository" }).click();
 
@@ -631,9 +655,9 @@ test("shows a typed GitHub error and lets the preview retry", async ({ page }) =
     });
   });
 
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
-  await dialog.getByRole("tab", { name: "Public GitHub" }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
   await dialog.getByRole("button", { name: "Preview repository" }).click();
 
@@ -646,9 +670,9 @@ test("shows a typed GitHub error and lets the preview retry", async ({ page }) =
 });
 
 test("routes malformed GitHub URLs through app validation", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
-  await dialog.getByRole("tab", { name: "Public GitHub" }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("not a repository");
   await dialog.getByRole("button", { name: "Preview repository" }).click();
 
@@ -690,9 +714,9 @@ test("confirms manual GitHub refresh before replacing source-owned pages", async
     });
   });
 
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
-  await dialog.getByRole("tab", { name: "Public GitHub" }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
   await dialog.getByRole("button", { name: "Preview repository" }).click();
   await dialog.getByRole("button", { name: "Import repository" }).click();
@@ -723,9 +747,9 @@ test("confirms manual GitHub refresh before replacing source-owned pages", async
 });
 
 test("exports the selected document as markdown", async ({ page }) => {
-  await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
-  await page.getByLabel("Paste markdown").fill("# Export Me\n\nSaved as markdown.");
-  await page.getByRole("button", { name: "Import Paste", exact: true }).click();
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill("# Export Me\n\nSaved as markdown.");
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export .md", exact: true }).click();
@@ -733,6 +757,7 @@ test("exports the selected document as markdown", async ({ page }) => {
 
   expect(download.suggestedFilename()).toBe("export-me.md");
   await expect(readFile((await download.path())!, "utf8")).resolves.toBe("# Export Me\n\nSaved as markdown.");
+  await expect(page.getByRole("status").filter({ hasText: "Downloaded export-me.md" })).toBeVisible();
 });
 
 test("creates nested folders and blocks deleting non-empty folder", async ({ page }) => {
@@ -764,8 +789,9 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
-  await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Import markdown", exact: true }).click();
-  await page.getByLabel("Choose markdown files").setInputFiles({
+  await showShelfIfAvailable(page);
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  await page.getByLabel("Choose Markdown files").setInputFiles({
     name: "Checklist.md",
     mimeType: "text/markdown",
     buffer: Buffer.from("# Checklist\n\n- [ ] Ship")
@@ -779,6 +805,7 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   const zip = await JSZip.loadAsync(await readFile((await download.path())!));
 
   expect(download.suggestedFilename()).toBe("launch.zip");
+  await expect(page.getByRole("status").filter({ hasText: "Downloaded launch.zip" })).toBeVisible();
   await expect(zip.file("launch/checklist.md")?.async("string")).resolves.toBe("# Checklist\n\n- [ ] Ship");
   expect(zip.file("projects/launch/checklist.md")).toBeNull();
 
@@ -794,7 +821,8 @@ test("edits a document and reloads with local persistence", async ({ page }) => 
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await page.locator(".cm-content").fill("# Persisted\n\nSaved locally.");
   await expect(page.locator(".cm-content")).toContainText("Persisted");
-  await expect(page.getByRole("status").filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 3000 });
+  await expect(page.getByRole("status").filter({ hasText: /^Unsaved changes$/ })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
 
   await page.reload();
   await clickVisibleButtonIfAvailable(page, "Edit");
@@ -807,7 +835,8 @@ test("content refresh keeps the selected page when it still exists", async ({ pa
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   const title = page.getByRole("textbox", { name: "Page title" });
   await title.fill("Selection survives refresh");
-  await expect(page.getByRole("status").filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 3000 });
+  await expect(page.getByRole("status").filter({ hasText: /^Unsaved changes$/ })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
 
   await page.reload();
   await clickVisibleButtonIfAvailable(page, "Edit");

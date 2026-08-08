@@ -13,7 +13,6 @@ type DocumentListProps = {
   selectedDocumentId: string | null;
   onSelectDocument: (documentId: string) => void;
   onCreateDocument: () => void;
-  onOpenImport: () => void;
   onRenameDocument: (documentId: string, title: string) => void;
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
@@ -26,7 +25,6 @@ export function DocumentList({
   selectedDocumentId,
   onSelectDocument,
   onCreateDocument,
-  onOpenImport,
   onRenameDocument,
   onMoveDocument,
   onDeleteDocument
@@ -74,14 +72,6 @@ export function DocumentList({
             >
               <FilePlus aria-hidden="true" className="h-4 w-4" />
               {createPageLabel}
-            </button>
-            <button
-              type="button"
-              onClick={onOpenImport}
-              aria-label="Import Markdown into page list"
-              className="secondary-button w-full px-3 py-2 text-sm font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              {WORKSPACE_COPY.importMarkdown}
             </button>
           </div>
         </div>

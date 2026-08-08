@@ -24,7 +24,7 @@ export const PasteImportPanel = forwardRef<HTMLTextAreaElement, PasteImportPanel
         }}
       >
         <label className="grid gap-2 text-sm font-bold text-ink" htmlFor="import-paste">
-          Paste markdown
+          Paste Markdown
           <textarea
             ref={ref}
             id="import-paste"

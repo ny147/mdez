@@ -15,9 +15,8 @@ export function WorkspaceStatus({ message, state, activePage, isInert = false }:
         <span role="status" aria-live="polite">{message}</span>
       </div>
       <span className="status-page" title={activePage}>{activePage}</span>
-      <div className="status-cluster status-meta" aria-label="Local UTF-8 document">
+      <div className="status-cluster status-meta" aria-label="UTF-8 document">
         <span>UTF-8</span>
-        <span className="local-badge">Local</span>
       </div>
     </footer>
   );

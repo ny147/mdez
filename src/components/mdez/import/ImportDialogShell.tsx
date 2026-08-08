@@ -80,9 +80,9 @@ export function ImportDialogShell({
       >
         <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
           <div>
-            <p className="field-label">Import markdown</p>
+            <p className="field-label">Import Markdown</p>
             <h2 id={labelledBy} className="mt-1 font-display text-2xl font-black text-ink sm:text-3xl">
-              Bring notes into Mdez
+              Add Markdown to your library
             </h2>
           </div>
           <IconButton label="Close import dialog" onClick={onClose} disabled={busy}>

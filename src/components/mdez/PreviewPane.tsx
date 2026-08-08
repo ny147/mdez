@@ -128,7 +128,7 @@ export function PreviewPane({ document, title, body, previewOnly, onCreateDocume
               <p className="mt-2 text-muted">Create a page or import markdown before reading.</p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button type="button" onClick={onCreateDocument} className="primary-button px-3 py-2"><FilePlus aria-hidden="true" className="h-4 w-4" /> Create page</button>
-                <button type="button" onClick={onOpenImport} className="secondary-button px-3 py-2 text-sm font-extrabold"><Upload aria-hidden="true" className="h-4 w-4" /> Import markdown</button>
+                <button type="button" onClick={onOpenImport} className="secondary-button px-3 py-2 text-sm font-extrabold"><Upload aria-hidden="true" className="h-4 w-4" /> Import Markdown</button>
               </div>
             </div>
           </div>
