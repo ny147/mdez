@@ -64,9 +64,14 @@ async function expectModeReady(page: import("@playwright/test").Page, mode: "She
   }
 
   if (mode === "Split") {
-    await expect(page.locator(".split-workspace")).toBeVisible();
+    const split = page.locator(".split-workspace");
+    await expect(split).toBeVisible();
     await expect(page.locator(".cm-editor")).toBeVisible();
-    await expect(page.getByText("Reader", { exact: true })).toBeVisible();
+    if ((page.viewportSize()?.width ?? 1280) <= 767) {
+      await expect(split.getByRole("tab", { name: "Edit" })).toHaveAttribute("aria-selected", "true");
+    } else {
+      await expect(page.getByText("Reader", { exact: true })).toBeVisible();
+    }
   }
 }
 
@@ -860,6 +865,7 @@ test("content refresh keeps the selected page when it still exists", async ({ pa
 });
 
 test("split separator resizes from 30 to 70 percent", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickVisibleButtonIfAvailable(page, "Split");
 
@@ -873,31 +879,24 @@ test("split separator resizes from 30 to 70 percent", async ({ page }) => {
   await page.keyboard.press("Home");
   await expect(separator).toHaveAttribute("aria-valuenow", "30");
 });
-test("mobile split separator resizes from vertical pointer movement", async ({ page }) => {
+test("mobile Split switches between editor and preview without a separator", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Split");
 
   const split = page.locator(".split-workspace");
-  const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
-  await expect(separator).toHaveAttribute("aria-orientation", "horizontal");
-  await expect(separator).toHaveAttribute("aria-valuenow", "50");
-  await expect(separator).toHaveCSS("touch-action", "none");
+  const editorPanel = split.locator("#compact-split-editor-panel");
+  const previewPanel = split.locator("#compact-split-reader-panel");
+  await expect(split.getByRole("tab", { name: "Edit" })).toHaveAttribute("aria-selected", "true");
+  await expect(editorPanel).toBeVisible();
+  await expect(previewPanel).toBeHidden();
+  await expect(split.getByRole("separator", { name: "Resize editor and reader panes" })).toHaveCount(0);
 
-  const splitBox = await split.boundingBox();
-  const separatorBox = await separator.boundingBox();
-  expect(splitBox).not.toBeNull();
-  expect(separatorBox).not.toBeNull();
-
-  await page.mouse.move(
-    separatorBox!.x + separatorBox!.width / 2,
-    separatorBox!.y + separatorBox!.height / 2
-  );
-  await page.mouse.down();
-  await page.mouse.move(splitBox!.x + splitBox!.width / 2, splitBox!.y + splitBox!.height * 0.35);
-  await page.mouse.up();
-
-  await expect(separator).not.toHaveAttribute("aria-valuenow", "50");
+  await split.getByRole("tab", { name: "Preview" }).click();
+  await expect(split.getByRole("tab", { name: "Preview" })).toHaveAttribute("aria-selected", "true");
+  await expect(previewPanel).toBeVisible();
+  await expect(editorPanel).toBeHidden();
+  await expect(page.locator(".markdown-preview")).toBeVisible();
 });
 test("tablet drawer keeps its close control below the desktop breakpoint", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 1024 });

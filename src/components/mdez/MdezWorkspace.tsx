@@ -447,6 +447,7 @@ export function MdezWorkspace() {
                 editor={editorPane}
                 reader={readerPane}
                 orientation={isTabletLayout ? "horizontal" : "vertical"}
+                compact={isMobileLayout}
               />
             ) : (
               <div className="grid min-h-0 gap-4">
