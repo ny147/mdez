@@ -276,13 +276,30 @@ test("an open book explains filtering and export scope", async ({ page }) => {
 
 
 
-test("editor exposes the renewed markdown toolbar", async ({ page }) => {
+test("editor keeps primary formatting visible and discloses secondary actions", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
 
-  for (const name of ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider", "Export .md"]) {
+  for (const name of ["Bold", "Italic", "Insert link", "More formatting", "Export .md"]) {
     await expect(toolbar.getByRole("button", { name })).toBeVisible();
   }
+  for (const name of ["Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
+    await expect(toolbar.getByRole("button", { name })).toBeHidden();
+  }
+
+  await toolbar.getByRole("button", { name: "More formatting" }).click();
+  for (const name of ["Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
+    await expect(toolbar.getByRole("button", { name })).toBeVisible();
+  }
+});
+
+test("editor formatting shortcuts apply Markdown", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  const editor = page.locator(".cm-content");
+  await editor.fill("Shortcut text");
+  await editor.press("Control+A");
+  await editor.press("Control+B");
+  await expect(editor).toContainText("**Shortcut text**");
 });
 
 test("mobile editor follows visual toolbar focus order and keeps actions visible", async ({ page }) => {
@@ -291,7 +308,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
   await clickViewportModeTab(page, "Edit");
 
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
-  const formatNames = ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider"];
+  const formatNames = ["Bold", "Italic", "Insert link", "More formatting"];
   for (const name of formatNames) {
     await expectMinimumTouchTarget(toolbar.getByRole("button", { name }));
   }
@@ -314,7 +331,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
       pageScrollWidth: document.documentElement.scrollWidth
     };
   });
-  expect(geometry.formatScrolls).toBe(true);
+  expect(geometry.formatScrolls).toBe(false);
   expect(geometry.pageScrollWidth).toBe(geometry.pageClientWidth);
 
   const focusOrder = [...formatNames, "Export .md"];

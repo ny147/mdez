@@ -2,8 +2,9 @@
 
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
+import { keymap } from "@codemirror/view";
 import { FilePlus, Upload } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
@@ -40,7 +41,7 @@ export function EditorPane({
   void viewMode;
   void onViewModeChange;
 
-  function applyFormat(action: FormatAction) {
+  const applyFormat = useCallback((action: FormatAction) => {
     const view = editorRef.current?.view;
     if (!view) return;
 
@@ -80,7 +81,16 @@ export function EditorPane({
 
     view.dispatch({ changes: { from, to, insert }, selection: { anchor } });
     view.focus();
-  }
+  }, []);
+
+  const formattingShortcuts = useMemo(
+    () => keymap.of([
+      { key: "Mod-b", run: () => { applyFormat("bold"); return true; } },
+      { key: "Mod-i", run: () => { applyFormat("italic"); return true; } },
+      { key: "Mod-k", run: () => { applyFormat("link"); return true; } }
+    ]),
+    [applyFormat]
+  );
 
   if (!document) {
     return (
@@ -125,7 +135,7 @@ export function EditorPane({
           value={body}
           height="100%"
           minHeight="60vh"
-          extensions={[markdown()]}
+          extensions={[markdown(), formattingShortcuts]}
           basicSetup={{ lineNumbers: true, foldGutter: true }}
           onChange={onBodyChange}
         />
