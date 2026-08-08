@@ -732,6 +732,20 @@ body {
   gap: var(--space-1);
 }
 
+.recovery-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: clamp(1.5rem, 6vw, 5rem);
+  background: var(--color-canvas);
+}
+
+.recovery-content {
+  width: min(100%, 48rem);
+  border-top: 1px solid var(--color-rule);
+  padding-top: clamp(2rem, 8vw, 6rem);
+}
+
 @media (max-width: 767px) {
   .workspace-shell button,
   .workspace-shell a[href],

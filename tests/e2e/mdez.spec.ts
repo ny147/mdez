@@ -3,6 +3,13 @@ import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 
 async function showShelfIfAvailable(page: import("@playwright/test").Page) {
+  const sidebar = page.locator('aside[aria-label="Library shelf"]');
+  const closeDrawer = sidebar.getByRole("button", { name: "Close library shelf" });
+  if (await closeDrawer.isVisible().catch(() => false)) {
+    await closeDrawer.click();
+    await expect(sidebar).toHaveAttribute("aria-hidden", "true");
+  }
+
   const shelfTabs = page.getByRole("tab", { name: "Shelf", exact: true });
   const shelfTabCount = await shelfTabs.count();
 
@@ -10,7 +17,10 @@ async function showShelfIfAvailable(page: import("@playwright/test").Page) {
     const shelfTab = shelfTabs.nth(index);
 
     if (await shelfTab.isVisible().catch(() => false)) {
-      await shelfTab.evaluate((element) => (element as HTMLElement).click());
+      if ((await shelfTab.getAttribute("aria-selected")) !== "true") {
+        await shelfTab.evaluate((element) => (element as HTMLElement).click());
+      }
+      await expect(shelfTab).toHaveAttribute("aria-selected", "true");
       return;
     }
   }
@@ -216,6 +226,15 @@ test("no-document editor and reader states expose recovery actions", async ({ pa
   await expect(reader.getByRole("button", { name: "Import Markdown", exact: true })).toBeVisible();
 });
 
+test("missing routes use the quiet Library recovery surface", async ({ page }) => {
+  await page.goto("/missing-page");
+
+  await expect(page.getByRole("heading", { name: "This page is not in your Library" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Return to Library" })).toHaveAttribute("href", "/");
+  await expect(page.locator(".recovery-content")).toHaveCSS("box-shadow", "none");
+  await expect(page.locator(".recovery-content")).toHaveCSS("border-top-width", "1px");
+});
+
 test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
   const bookZipButton = page.getByRole("button", { name: "Export book (.zip)", exact: true }).last();
 
@@ -248,6 +267,7 @@ test("import dialog uses specific labels and recovery copy", async ({ page }) =>
 
 test("sidebar page rows reveal management actions on demand", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
   await openShelfDrawerIfAvailable(page);
 
@@ -268,6 +288,7 @@ test("an open book explains filtering and export scope", async ({ page }) => {
   await page.getByRole("button", { name: "Create book" }).first().click();
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await sidebar.getByRole("button", { name: "Create page in Writing", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
 
   await expect(page.getByText("Showing recent pages in Writing. Return to Library to view recent pages from every book.")).toBeVisible();
@@ -296,7 +317,12 @@ test("editor keeps primary formatting visible and discloses secondary actions", 
 test("editor formatting shortcuts apply Markdown", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   const editor = page.locator(".cm-content");
-  await editor.fill("Shortcut text");
+  await editor.click();
+  await editor.press("Control+A");
+  await page.keyboard.insertText("Shortcut text");
+  await expect(editor).toHaveText("Shortcut text");
+  await expect(page.getByRole("status").filter({ hasText: /^Unsaved changes$/ })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
   await editor.press("Control+A");
   await editor.press("Control+B");
   await expect(editor).toContainText("**Shortcut text**");
@@ -381,6 +407,9 @@ test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) =
 
   await clickViewportModeTab(page, "Split");
   await expect(main.getByRole("heading", { level: 1, name: "Edit untitled.md", includeHidden: true })).toHaveClass(/sr-only/);
+  if ((page.viewportSize()?.width ?? 1280) <= 767) {
+    await page.locator(".split-workspace").getByRole("tab", { name: "Preview" }).click();
+  }
   await expect(main.getByRole("heading", { level: 1, name: "Untitled Document" })).toBeVisible();
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
 });
@@ -809,6 +838,7 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
   await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Launch", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
   await openShelfDrawerIfAvailable(page);
   await page.getByRole("button", { name: "Delete Projects" }).click();
@@ -997,6 +1027,9 @@ test("switches editor, split, and preview modes", async ({ page }) => {
   if (await splitButton.isVisible().catch(() => false)) {
     await splitButton.click();
     await expect(page.locator(".cm-editor")).toBeVisible();
+    if ((page.viewportSize()?.width ?? 1280) <= 767) {
+      await page.locator(".split-workspace").getByRole("tab", { name: "Preview" }).click();
+    }
     await expect(page.getByText("Reader", { exact: true })).toBeVisible();
   }
 });

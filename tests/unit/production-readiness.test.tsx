@@ -31,11 +31,11 @@ describe("production readiness", () => {
     const reset = vi.fn();
     render(<ErrorPage error={new Error("boom")} reset={reset} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    fireEvent.click(screen.getByRole("button", { name: "Try opening Mdez again" }));
     expect(reset).toHaveBeenCalledOnce();
 
     render(<NotFound />);
-    expect(screen.getByRole("link", { name: "Return to Mdez" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Return to Library" })).toHaveAttribute("href", "/");
   });
 
   it("sets safe browser headers and a hosting duration above the route timeout", async () => {
