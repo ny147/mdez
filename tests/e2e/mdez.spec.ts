@@ -241,6 +241,22 @@ test("import dialog uses specific labels and recovery copy", async ({ page }) =>
   await expect(dialog.getByText("Paste Markdown before importing.")).toBeVisible();
 });
 
+test("sidebar page rows reveal management actions on demand", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await showShelfIfAvailable(page);
+  await openShelfDrawerIfAvailable(page);
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const pageRow = sidebar.getByRole("article").filter({ hasText: "untitled.md" });
+  await expect(pageRow.getByText(/minute ago|Recently updated/)).toBeVisible();
+  await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeHidden();
+
+  await pageRow.getByRole("button", { name: "Manage untitled.md" }).click();
+  await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeVisible();
+  await expect(pageRow.getByRole("combobox", { name: "Move untitled.md page" })).toBeVisible();
+  await expect(pageRow.getByRole("button", { name: "Delete untitled.md" })).toBeVisible();
+});
+
 test("an open book explains filtering and export scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Writing"));

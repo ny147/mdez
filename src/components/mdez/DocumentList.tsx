@@ -1,10 +1,10 @@
 "use client";
 
-import { FilePlus, Trash2 } from "lucide-react";
+import { FilePlus } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
-import { IconButton } from "@/components/ui/IconButton";
-import { WORKSPACE_COPY } from "@/lib/workspace-copy";
+import { DocumentActions } from "@/components/mdez/DocumentActions";
+import { formatRelativeTime, WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 type DocumentListProps = {
   folders: Folder[];
@@ -93,42 +93,18 @@ export function DocumentList({
                 }`}
               >
                 <span className="block truncate font-display text-sm font-black">{document.title}</span>
-                <span className="mt-1 block truncate text-xs font-semibold opacity-70">{document.updatedAt}</span>
+                <span className="mt-1 block truncate text-xs font-semibold opacity-70">
+                  Updated {formatRelativeTime(document.updatedAt)}
+                </span>
               </button>
 
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => renameDocument(document)}
-                  className="rounded px-2 py-1 text-xs font-black text-muted transition hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files"
-                  aria-label={`Rename ${document.title}`}
-                  title={`Rename ${document.title}`}
-                >
-                  Rename
-                </button>
-
-                <select
-                  value={document.folderId ?? ""}
-                  onChange={(event) => onMoveDocument(document.id, event.target.value || null)}
-                  aria-label={`Move ${document.title} page`}
-                  title={`Move ${document.title} page`}
-                  className="workspace-input min-w-0 flex-1 px-2 py-1 font-mono text-xs font-bold focus:ring-0"
-                >
-                  <option value="">{WORKSPACE_COPY.pagesWithoutBook}</option>
-                  {folders
-                    .slice()
-                    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-                    .map((folder) => (
-                      <option key={folder.id} value={folder.id}>
-                        {folder.name}
-                      </option>
-                    ))}
-                </select>
-
-                <IconButton label={`Delete ${document.title}`} onClick={() => onDeleteDocument(document.id)} className="h-8 w-8 border-accent/30">
-                  <Trash2 aria-hidden="true" className="h-4 w-4" />
-                </IconButton>
-              </div>
+              <DocumentActions
+                document={document}
+                folders={folders}
+                onRename={() => renameDocument(document)}
+                onMove={(folderId) => onMoveDocument(document.id, folderId)}
+                onDelete={() => onDeleteDocument(document.id)}
+              />
             </article>
           ))}
         </div>
