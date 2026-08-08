@@ -1,9 +1,10 @@
 "use client";
 
-import { FilePlus, Trash2 } from "lucide-react";
+import { FilePlus } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
-import { IconButton } from "@/components/ui/IconButton";
+import { DocumentActions } from "@/components/mdez/DocumentActions";
+import { formatRelativeTime, WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 type DocumentListProps = {
   folders: Folder[];
@@ -31,9 +32,11 @@ export function DocumentList({
   const visibleDocuments = documents
     .filter((document) => document.folderId === selectedFolderId)
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+  const selectedBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
+  const createPageLabel = selectedBook ? `Create page in ${selectedBook.name}` : "Create page";
 
   function renameDocument(document: Document) {
-    const nextTitle = window.prompt("Rename document", document.title);
+    const nextTitle = window.prompt("Rename page", document.title);
 
     if (nextTitle !== null) {
       onRenameDocument(document.id, nextTitle);
@@ -43,63 +46,65 @@ export function DocumentList({
   return (
     <section className="min-h-0">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-cream/75">Documents</h3>
-        <IconButton label="Create document" onClick={onCreateDocument} className="h-9 w-9">
+        <h3 className="font-display text-sm font-black text-ink">Pages</h3>
+        <button
+          type="button"
+          onClick={onCreateDocument}
+          aria-label={`${createPageLabel} from page list`}
+          className="primary-button min-h-9 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+        >
           <FilePlus aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
+          {createPageLabel}
+        </button>
       </div>
 
       {visibleDocuments.length === 0 ? (
-        <p className="rounded-2xl bg-white/10 p-3 text-sm leading-6 text-cream/70">No documents in this folder yet.</p>
+        <div className="rounded border border-border bg-panel p-3">
+          <p className="text-sm font-semibold leading-6 text-muted">
+            Create a page in {selectedBook ? selectedBook.name : WORKSPACE_COPY.pagesWithoutBook} or import Markdown here.
+          </p>
+          <div className="mt-3 grid gap-2">
+            <button
+              type="button"
+              onClick={onCreateDocument}
+              aria-label={createPageLabel}
+              className="primary-button w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <FilePlus aria-hidden="true" className="h-4 w-4" />
+              {createPageLabel}
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-2">
           {visibleDocuments.map((document) => (
-            <article key={document.id} className="rounded-2xl border-2 border-white/30 bg-white/5 p-2 transition hover:border-white/60">
+            <article
+              key={document.id}
+              className="dogear-card rounded border border-border bg-surface p-2 shadow-soft transition hover:border-accent-files"
+            >
               <button
                 type="button"
                 onClick={() => onSelectDocument(document.id)}
                 aria-pressed={selectedDocumentId === document.id}
-                className={`w-full rounded-xl px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-ice ${
-                  selectedDocumentId === document.id ? "bg-bubble text-abyss" : "text-cream/85 hover:bg-white/10 hover:text-cream"
+                className={`w-full rounded border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-accent ${
+                  selectedDocumentId === document.id
+                    ? "border-accent bg-panel text-ink shadow-soft"
+                    : "border-transparent text-ink hover:bg-panel"
                 }`}
               >
-                <span className="block truncate text-sm font-black">{document.title}</span>
-                <span className="mt-1 block truncate text-xs font-semibold opacity-70">{document.updatedAt}</span>
+                <span className="block truncate font-display text-sm font-black">{document.title}</span>
+                <span className="mt-1 block truncate text-xs font-semibold opacity-70">
+                  Updated {formatRelativeTime(document.updatedAt)}
+                </span>
               </button>
 
-              <div className="mt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => renameDocument(document)}
-                  className="rounded-full px-2 py-1 text-xs font-black text-cream/70 transition hover:bg-white/10 hover:text-cream focus:outline-none focus:ring-2 focus:ring-ice"
-                  aria-label={`Rename ${document.title}`}
-                  title={`Rename ${document.title}`}
-                >
-                  Rename
-                </button>
-
-                <select
-                  value={document.folderId ?? ""}
-                  onChange={(event) => onMoveDocument(document.id, event.target.value || null)}
-                  aria-label={`Move ${document.title}`}
-                  title={`Move ${document.title}`}
-                  className="min-w-0 flex-1 rounded-full border-2 border-white/50 bg-abyss px-2 py-1 text-xs font-bold text-cream focus:outline-none focus:ring-2 focus:ring-ice"
-                >
-                  <option value="">Root</option>
-                  {folders
-                    .slice()
-                    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-                    .map((folder) => (
-                      <option key={folder.id} value={folder.id}>
-                        {folder.name}
-                      </option>
-                    ))}
-                </select>
-
-                <IconButton label={`Delete ${document.title}`} onClick={() => onDeleteDocument(document.id)} className="h-8 w-8 border-white/50">
-                  <Trash2 aria-hidden="true" className="h-4 w-4" />
-                </IconButton>
-              </div>
+              <DocumentActions
+                document={document}
+                folders={folders}
+                onRename={() => renameDocument(document)}
+                onMove={(folderId) => onMoveDocument(document.id, folderId)}
+                onDelete={() => onDeleteDocument(document.id)}
+              />
             </article>
           ))}
         </div>

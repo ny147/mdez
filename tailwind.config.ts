@@ -5,21 +5,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        lagoon: "#07292f",
-        abyss: "#071827",
-        ice: "#9feaff",
-        mint: "#8cffd7",
-        lavender: "#c8a8ff",
-        bubble: "#ff80cc",
-        cream: "#fff8fb"
+        blush: "var(--color-canvas)",
+        panel: "var(--color-panel)",
+        surface: "var(--color-paper)",
+        "surface-2": "var(--color-lavender)",
+        ink: "var(--color-ink)",
+        muted: "var(--color-muted)",
+        border: "var(--color-rule)",
+        accent: "var(--color-edit)",
+        "accent-read": "var(--color-read)",
+        "accent-files": "var(--color-shelf)",
+        "accent-on": "var(--color-on-accent)",
+        success: "var(--color-read)",
+        warning: "var(--color-warning)",
+        error: "var(--color-error)",
+        "ink-muted": "var(--color-muted)",
+        "markdown-gray": "var(--color-muted)"
       },
       boxShadow: {
-        glow: "0 0 26px rgba(159, 234, 255, 0.38)",
-        sticker: "0 16px 50px rgba(0, 0, 0, 0.35)"
+        soft: "none"
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Arial", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "Consolas", "monospace"]
+        sans: ["var(--font-ui)"],
+        display: ["var(--font-display)"],
+        mono: ["var(--font-mono)"],
+        reader: ["var(--font-reader)"]
       }
     }
   },

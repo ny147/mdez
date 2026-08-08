@@ -1,12 +1,13 @@
 "use client";
 
-import { Download, Upload } from "lucide-react";
+import type { RefObject } from "react";
+import { X } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
+import type { GitHubSource } from "@/types/github";
 import { DocumentList } from "@/components/mdez/DocumentList";
 import { FolderTree } from "@/components/mdez/FolderTree";
-import { Mascot } from "@/components/mdez/Mascot";
-import { IconButton } from "@/components/ui/IconButton";
+import { GitHubSourcePanel } from "@/components/mdez/GitHubSourcePanel";
 
 type SidebarProps = {
   folders: Folder[];
@@ -15,6 +16,12 @@ type SidebarProps = {
   selectedDocumentId: string | null;
   expandedFolderIds: Set<string>;
   error: string | null;
+  githubSource: GitHubSource | null;
+  refreshingSourceId: string | null;
+  isHidden: boolean;
+  isOverlay: boolean;
+  sidebarRef: RefObject<HTMLElement | null>;
+  onClose: () => void;
   onSelectFolder: (folderId: string | null) => void;
   onToggleFolder: (folderId: string) => void;
   onCreateFolder: (parentId: string | null) => void;
@@ -25,8 +32,7 @@ type SidebarProps = {
   onRenameDocument: (documentId: string, title: string) => void;
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
-  onOpenImport: () => void;
-  onExportFolder: () => void;
+  onRefreshGitHub: (source: GitHubSource) => void;
 };
 
 export function Sidebar({
@@ -36,6 +42,12 @@ export function Sidebar({
   selectedDocumentId,
   expandedFolderIds,
   error,
+  githubSource,
+  refreshingSourceId,
+  isHidden,
+  isOverlay,
+  sidebarRef,
+  onClose,
   onSelectFolder,
   onToggleFolder,
   onCreateFolder,
@@ -46,42 +58,44 @@ export function Sidebar({
   onRenameDocument,
   onMoveDocument,
   onDeleteDocument,
-  onOpenImport,
-  onExportFolder
+  onRefreshGitHub
 }: SidebarProps) {
   return (
-    <aside className="min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker">
-      <div className="flex h-full min-h-[calc(100vh-8rem)] flex-col gap-5 lg:min-h-0">
-        <div className="text-center">
-          <Mascot />
-          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-ice">Markdown Easy Reader</p>
-          <h2 className="mt-1 text-4xl font-black text-bubble drop-shadow-[0_3px_0_rgba(255,255,255,0.95)]">Mdez</h2>
+    <aside
+      id="library-shelf"
+      ref={sidebarRef}
+      className={isOverlay ? "workspace-sidebar floating-surface" : "workspace-sidebar"}
+      aria-label="Library shelf"
+      aria-hidden={isHidden}
+      inert={isHidden}
+    >
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 lg:hidden">
+          <strong className="font-display text-base text-ink">Library shelf</strong>
+          <button type="button" onClick={onClose} aria-label="Close library shelf" className="workspace-icon-button">
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onOpenImport}
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border-2 border-white/80 bg-white/10 px-3 py-2 text-sm font-black text-cream shadow-glow transition hover:border-white hover:bg-ice/20 focus:outline-none focus:ring-2 focus:ring-ice"
-          >
-            <Upload aria-hidden="true" className="h-4 w-4" />
-            Import
-          </button>
-          <IconButton label="Export selected folder" onClick={onExportFolder}>
-            <Download aria-hidden="true" className="h-4 w-4" />
-          </IconButton>
-        </div>
+        {githubSource ? (
+          <GitHubSourcePanel
+            source={githubSource}
+            isRefreshing={refreshingSourceId === githubSource.id}
+            onRefresh={onRefreshGitHub}
+          />
+        ) : null}
 
         {error ? (
-          <p className="rounded-3xl border-2 border-bubble/70 bg-bubble/15 p-3 text-sm font-semibold leading-6 text-cream" role="alert">
+          <p className="rounded border border-accent-files/40 bg-panel p-3 text-sm font-semibold leading-6 text-ink">
             {error}
           </p>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-auto rounded-3xl border-2 border-white/60 bg-abyss/45 p-3">
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border bg-surface/80 p-3">
           <div className="space-y-5">
             <FolderTree
               folders={folders}
+              documents={documents}
               selectedFolderId={selectedFolderId}
               expandedFolderIds={expandedFolderIds}
               onSelectFolder={onSelectFolder}
@@ -90,7 +104,7 @@ export function Sidebar({
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
             />
-            <div className="border-t-2 border-white/30 pt-4">
+            <div className="border-t border-border pt-4">
               <DocumentList
                 folders={folders}
                 documents={documents}

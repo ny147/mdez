@@ -1,18 +1,13 @@
 "use client";
 
-import CodeMirror from "@uiw/react-codemirror";
+import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
-import { oneDark } from "@codemirror/theme-one-dark";
-import type { ReactNode } from "react";
+import { keymap } from "@codemirror/view";
+import { FilePlus, Upload } from "lucide-react";
+import { type ReactNode, useCallback, useMemo, useRef } from "react";
 
+import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-
-const viewOptions: { value: ViewMode; label: string }[] = [
-  { value: "split", label: "Split" },
-  { value: "editor", label: "Edit" },
-  { value: "preview", label: "Read" }
-];
 
 type EditorPaneProps = {
   document: Document | null;
@@ -21,6 +16,8 @@ type EditorPaneProps = {
   saveStatus: SaveStatus;
   viewMode: ViewMode;
   rightSlot?: ReactNode;
+  onCreateDocument: () => void;
+  onOpenImport: () => void;
   onViewModeChange: (viewMode: ViewMode) => void;
   onBodyChange: (body: string) => void;
   onRename: (title: string) => void;
@@ -33,20 +30,84 @@ export function EditorPane({
   saveStatus,
   viewMode,
   rightSlot,
+  onCreateDocument,
+  onOpenImport,
   onViewModeChange,
   onBodyChange,
   onRename
 }: EditorPaneProps) {
+  const editorRef = useRef<ReactCodeMirrorRef>(null);
+  void saveStatus;
+  void viewMode;
+  void onViewModeChange;
+
+  const applyFormat = useCallback((action: FormatAction) => {
+    const view = editorRef.current?.view;
+    if (!view) return;
+
+    const selection = view.state.selection.main;
+    const selected = view.state.sliceDoc(selection.from, selection.to);
+    let from = selection.from;
+    let to = selection.to;
+    let insert = selected;
+    let anchor = selection.from;
+
+    if (action === "h1" || action === "h2") {
+      const line = view.state.doc.lineAt(selection.from);
+      const text = line.text.replace(/^#{1,6}\s+/, "");
+      const prefix = action === "h1" ? "# " : "## ";
+      from = line.from;
+      to = line.to;
+      insert = prefix + text;
+      anchor = from + insert.length;
+    } else if (action === "divider") {
+      insert = "\n---\n";
+      anchor = from + insert.length;
+    } else {
+      const config = {
+        bold: { before: "**", after: "**", fallback: "bold text" },
+        italic: { before: "_", after: "_", fallback: "italic text" },
+        link: { before: "[", after: "](url)", fallback: "link text" },
+        image: { before: "![", after: "](url)", fallback: "image description" },
+        code: selected.includes("\n")
+          ? { before: "\n\`\`\`\n", after: "\n\`\`\`\n", fallback: "code" }
+          : { before: "`", after: "`", fallback: "code" }
+      }[action];
+
+      const value = selected || config.fallback;
+      insert = config.before + value + config.after;
+      anchor = selected ? from + insert.length : from + config.before.length;
+    }
+
+    view.dispatch({ changes: { from, to, insert }, selection: { anchor } });
+    view.focus();
+  }, []);
+
+  const formattingShortcuts = useMemo(
+    () => keymap.of([
+      { key: "Mod-b", run: () => { applyFormat("bold"); return true; } },
+      { key: "Mod-i", run: () => { applyFormat("italic"); return true; } },
+      { key: "Mod-k", run: () => { applyFormat("link"); return true; } }
+    ]),
+    [applyFormat]
+  );
+
   if (!document) {
     return (
-      <article className="flex min-h-[24rem] h-full flex-col rounded-3xl border-2 border-white/60 bg-abyss/55 p-4">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-mint">Editor</p>
-        <div className="mt-4 flex flex-1 items-center justify-center rounded-[1.5rem] border-2 border-dashed border-white/40 bg-white/5 p-6 text-center">
+      <article className="library-subpanel flex min-h-[24rem] h-full flex-col rounded-md p-4">
+        <p className="text-sm font-semibold text-accent">Editor</p>
+        <div className="mt-4 flex flex-1 items-center justify-center rounded border border-dashed border-border bg-surface p-6 text-center">
           <div className="max-w-sm">
-            <h3 className="text-xl font-black text-cream">No document selected</h3>
-            <p className="mt-2 text-sm font-semibold leading-6 text-cream/70">
-              Import markdown or create a document to start editing.
-            </p>
+            <h2 className="font-display text-xl font-bold text-ink">No page selected</h2>
+            <p className="mt-2 text-sm font-semibold leading-6 text-muted">Create a page or import Markdown before editing.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button type="button" onClick={onCreateDocument} className="primary-button px-3 py-2">
+                <FilePlus aria-hidden="true" className="h-4 w-4" /> Create page
+              </button>
+              <button type="button" onClick={onOpenImport} className="secondary-button px-3 py-2 text-sm font-extrabold">
+                <Upload aria-hidden="true" className="h-4 w-4" /> Import Markdown
+              </button>
+            </div>
           </div>
         </div>
       </article>
@@ -54,40 +115,27 @@ export function EditorPane({
   }
 
   return (
-    <article className="flex min-h-[24rem] h-full min-w-0 flex-col rounded-3xl border-2 border-white/60 bg-abyss/55 p-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <label className="min-w-0 flex-1">
-          <span className="text-xs font-black uppercase tracking-[0.16em] text-mint">Document title</span>
-          <input
-            value={title}
-            onChange={(event) => onRename(event.target.value)}
-            className="mt-2 w-full min-w-0 rounded-2xl border-2 border-white/60 bg-white/10 px-4 py-3 text-xl font-black text-cream outline-none transition placeholder:text-cream/45 focus:border-ice"
-          />
-        </label>
-        <div className="flex flex-wrap items-center gap-3">
-          <p
-            role="status"
-            aria-live="polite"
-            className="rounded-full border-2 border-white/60 bg-abyss/45 px-3 py-1.5 text-sm font-bold text-cream/80"
-          >
-            {saveStatus}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="hidden lg:block">
-              <SegmentedControl label="Workspace view" value={viewMode} options={viewOptions} onChange={onViewModeChange} />
-            </div>
-            {rightSlot}
-          </div>
-        </div>
-      </div>
+    <article className="library-subpanel flex min-h-[24rem] h-full min-w-0 flex-col rounded-md p-4">
+      <h1 className="sr-only">Edit {title}</h1>
+      <label className="min-w-0">
+        <span className="text-sm font-semibold text-accent">Page title</span>
+        <input
+          aria-label="Page title"
+          value={title}
+          onChange={(event) => onRename(event.target.value)}
+          className="workspace-input mt-2 w-full min-w-0 px-4 py-3 font-display text-xl font-bold placeholder:text-muted focus:ring-0"
+        />
+      </label>
 
-      <div className="mt-4 min-h-0 flex-1 overflow-hidden rounded-[1.5rem] border-2 border-white/50 bg-[#282c34]">
+      <EditorToolbar onFormat={applyFormat} documentActions={rightSlot} />
+
+      <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface shadow-soft">
         <CodeMirror
+          ref={editorRef}
           value={body}
           height="100%"
           minHeight="60vh"
-          extensions={[markdown()]}
-          theme={oneDark}
+          extensions={[markdown(), formattingShortcuts]}
           basicSetup={{ lineNumbers: true, foldGutter: true }}
           onChange={onBodyChange}
         />

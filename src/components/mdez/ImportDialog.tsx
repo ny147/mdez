@@ -1,38 +1,59 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { type KeyboardEvent, useCallback, useRef, useState } from "react";
+import { ClipboardPaste, FileText, Github } from "lucide-react";
 
 import type { Folder } from "@/types/content";
+import type { GitHubImportSession } from "@/types/github";
 import { fileNameToTitle, isMarkdownFile, MAX_MARKDOWN_FILE_BYTES, titleFromBody } from "@/lib/markdown";
-import { IconButton } from "@/components/ui/IconButton";
+import { FileImportPanel } from "@/components/mdez/import/FileImportPanel";
+import { GitHubImportPanel } from "@/components/mdez/import/GitHubImportPanel";
+import { ImportDialogBusyProvider, ImportDialogShell } from "@/components/mdez/import/ImportDialogShell";
+import { PasteImportPanel } from "@/components/mdez/import/PasteImportPanel";
 
 type ImportItem = { title: string; body: string };
+type ImportSource = "paste" | "files" | "github";
 
 type ImportDialogProps = {
   folders: Folder[];
   selectedFolderId: string | null;
   onClose: () => void;
   onImport: (items: ImportItem[], folderId: string | null) => Promise<void>;
+  onRequestGitHubPreview: (url: string) => Promise<GitHubImportSession>;
+  onImportGitHub: (session: GitHubImportSession) => Promise<void>;
 };
 
-export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: ImportDialogProps) {
+const sourceOptions: { value: ImportSource; label: string; icon: typeof ClipboardPaste }[] = [
+  { value: "paste", label: "Paste text", icon: ClipboardPaste },
+  { value: "files", label: "Choose files", icon: FileText },
+  { value: "github", label: "GitHub repository", icon: Github }
+];
+
+export function ImportDialog({
+  folders,
+  selectedFolderId,
+  onClose,
+  onImport,
+  onRequestGitHubPreview,
+  onImportGitHub
+}: ImportDialogProps) {
+  const [source, setSource] = useState<ImportSource>("paste");
   const [pasteBody, setPasteBody] = useState("");
   const [targetFolderId, setTargetFolderId] = useState<string | null>(selectedFolderId);
+  const [githubUrl, setGitHubUrl] = useState("");
+  const [githubPreview, setGitHubPreview] = useState<GitHubImportSession | null>(null);
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-  const dialogRef = useRef<HTMLElement>(null);
+  const [busyAction, setBusyAction] = useState<"local" | "preview" | "github" | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const previousElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-    pasteRef.current?.focus();
-
-    return () => {
-      previousElement?.focus();
-    };
-  }, []);
+  const githubRef = useRef<HTMLInputElement>(null);
+  const returnFocusElement = useRef<HTMLElement | null>(
+    typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+  );
+  const busy = busyAction !== null;
+  const returnFocus = useCallback(() => returnFocusElement.current?.focus(), []);
 
   function closeDialog() {
     if (!busy) {
@@ -40,40 +61,46 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
     }
   }
 
-  function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === "Escape") {
-      if (!busy) {
-        onClose();
-      }
-
+  function selectSource(nextSource: ImportSource) {
+    if (busy) {
       return;
     }
 
-    if (event.key !== "Tab") {
+    setSource(nextSource);
+    setMessage("");
+
+    if (nextSource === "github") {
+      window.setTimeout(() => githubRef.current?.focus(), 0);
+    } else if (nextSource === "paste") {
+      window.setTimeout(() => pasteRef.current?.focus(), 0);
+    }
+  }
+
+  function handleSourceTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentSource: ImportSource) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       return;
     }
 
-    const focusableElements = Array.from(
-      dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), select:not([disabled]), textarea:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-      ) ?? []
-    ).filter((element) => !element.hasAttribute("aria-hidden"));
+    event.preventDefault();
+    const currentIndex = sourceOptions.findIndex((option) => option.value === currentSource);
+    let nextIndex = currentIndex;
 
-    if (focusableElements.length === 0) {
-      event.preventDefault();
-      return;
+    if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = sourceOptions.length - 1;
+    } else if (event.key === "ArrowRight") {
+      nextIndex = (currentIndex + 1) % sourceOptions.length;
+    } else {
+      nextIndex = (currentIndex - 1 + sourceOptions.length) % sourceOptions.length;
     }
 
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
-
-    if (event.shiftKey && document.activeElement === firstElement) {
-      event.preventDefault();
-      lastElement.focus();
-    } else if (!event.shiftKey && document.activeElement === lastElement) {
-      event.preventDefault();
-      firstElement.focus();
-    }
+    const nextSource = sourceOptions[nextIndex].value;
+    selectSource(nextSource);
+    window.setTimeout(
+      () => document.getElementById("import-source-" + nextSource)?.focus(),
+      0
+    );
   }
 
   async function submitPaste() {
@@ -82,19 +109,19 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
     }
 
     if (pasteBody.trim() === "") {
-      setMessage("Paste markdown content before importing.");
+      setMessage("Paste Markdown before importing.");
       return;
     }
 
-    setBusy(true);
+    setBusyAction("local");
+    setMessage("");
 
     try {
       await onImport([{ title: titleFromBody(pasteBody), body: pasteBody }], targetFolderId);
-      setBusy(false);
       onClose();
     } catch {
-      setMessage("Mdez could not import markdown.");
-      setBusy(false);
+      setMessage("We could not import the Markdown. Your existing pages were not changed.");
+      setBusyAction(null);
     }
   }
 
@@ -103,23 +130,23 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
       return;
     }
 
-    setBusy(true);
+    setBusyAction("local");
+    setMessage("");
     const items: ImportItem[] = [];
 
     for (const file of Array.from(files)) {
       if (!isMarkdownFile(file)) {
-        setMessage(`${file.name} is not a supported markdown file.`);
-        setBusy(false);
+        setMessage("Choose Markdown files ending in .md or .markdown.");
+        setBusyAction(null);
         return;
       }
 
       if (file.size > MAX_MARKDOWN_FILE_BYTES) {
-        const warning = `${file.name} is larger than 5 MB. Import it only if your browser has enough memory.`;
-
+        const warning = file.name + " is larger than 5 MB. Import it only if your browser has enough memory.";
         setMessage(warning);
 
         if (!window.confirm(warning)) {
-          setBusy(false);
+          setBusyAction(null);
           return;
         }
       }
@@ -128,60 +155,106 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
         const body = await file.text();
         items.push({ title: fileNameToTitle(file.name), body });
       } catch {
-        setMessage(`Mdez could not read ${file.name}.`);
-        setBusy(false);
+        setMessage(`We could not read ${file.name}. Choose the file again or try another file.`);
+        setBusyAction(null);
         return;
       }
     }
 
     if (items.length === 0) {
-      setBusy(false);
+      setBusyAction(null);
       return;
     }
 
     try {
       await onImport(items, targetFolderId);
-      setBusy(false);
       onClose();
     } catch {
-      setMessage("Mdez could not import markdown.");
-      setBusy(false);
+      setMessage("We could not import the Markdown. Your existing pages were not changed.");
+      setBusyAction(null);
+    }
+  }
+
+  async function previewGitHubRepository() {
+    if (busy) {
+      return;
+    }
+
+    setBusyAction("preview");
+    setMessage("");
+    setGitHubPreview(null);
+
+    try {
+      const preview = await onRequestGitHubPreview(githubUrl);
+      setGitHubPreview(preview);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Mdez could not preview this repository.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function importGitHubRepository() {
+    if (!githubPreview || busy) {
+      return;
+    }
+
+    setBusyAction("github");
+    setMessage("");
+
+    try {
+      await onImportGitHub(githubPreview);
+      onClose();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Mdez could not import this repository.");
+      setBusyAction(null);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-abyss/80 px-4 py-6 backdrop-blur-sm">
-      <section
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="import-title"
-        onKeyDown={handleDialogKeyDown}
-        className="max-h-full w-full max-w-2xl overflow-y-auto rounded-[2rem] border-2 border-white/80 bg-abyss p-5 text-cream shadow-sticker sm:p-6"
+    <ImportDialogBusyProvider busy={busy}>
+      <ImportDialogShell
+        labelledBy="import-title"
+        initialFocusRef={pasteRef}
+        returnFocus={returnFocus}
+        onClose={closeDialog}
       >
-        <div className="flex items-start justify-between gap-4 border-b-2 border-white/30 pb-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-ice">Import markdown</p>
-            <h2 id="import-title" className="mt-1 text-3xl font-black text-bubble">
-              Bring notes into Mdez
-            </h2>
-          </div>
-          <IconButton label="Close import dialog" onClick={closeDialog} disabled={busy}>
-            <X aria-hidden="true" size={20} />
-          </IconButton>
+        <div className="mt-4 grid grid-cols-3 gap-1 rounded-md border border-border bg-panel p-1" role="tablist" aria-label="Import source">
+          {sourceOptions.map((option) => {
+            const Icon = option.icon;
+
+            return (
+              <button
+                key={option.value}
+                id={"import-source-" + option.value}
+                type="button"
+                role="tab"
+                aria-selected={source === option.value}
+                aria-controls={"import-panel-" + option.value}
+                disabled={busy}
+                tabIndex={source === option.value ? 0 : -1}
+                onKeyDown={(event) => handleSourceTabKeyDown(event, option.value)}
+                onClick={() => selectSource(option.value)}
+                className="flex min-h-12 min-w-0 items-center justify-center gap-2 rounded px-2 py-2 text-xs font-extrabold text-muted transition hover:bg-surface hover:text-ink aria-selected:bg-surface aria-selected:text-accent aria-selected:shadow-soft disabled:cursor-not-allowed disabled:opacity-55 sm:text-sm"
+              >
+                <Icon aria-hidden="true" className="hidden h-4 w-4 shrink-0 sm:block" />
+                <span className="text-center leading-tight sm:truncate">{option.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mt-5 grid gap-5">
-          <label className="grid gap-2 text-sm font-bold text-cream" htmlFor="import-target-folder">
-            Target folder
+        {source !== "github" ? (
+          <label className="mt-5 grid gap-2 text-sm font-bold text-ink" htmlFor="import-target-folder">
+            Add pages to
             <select
               id="import-target-folder"
               value={targetFolderId ?? ""}
               onChange={(event) => setTargetFolderId(event.currentTarget.value === "" ? null : event.currentTarget.value)}
               disabled={busy}
-              className="rounded-2xl border-2 border-white/60 bg-white px-4 py-3 text-sm font-bold text-abyss outline-none transition focus:border-ice focus:ring-4 focus:ring-ice/25 disabled:cursor-not-allowed disabled:opacity-60"
+              className="workspace-input px-4 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="">Root</option>
+              <option value="">No book</option>
               {folders.map((folder) => (
                 <option key={folder.id} value={folder.id}>
                   {folder.name}
@@ -189,77 +262,81 @@ export function ImportDialog({ folders, selectedFolderId, onClose, onImport }: I
               ))}
             </select>
           </label>
+        ) : null}
 
-          <label className="grid gap-2 text-sm font-bold text-cream" htmlFor="import-paste">
-            Paste markdown
-            <textarea
-              ref={pasteRef}
-              id="import-paste"
-              value={pasteBody}
-              onChange={(event) => setPasteBody(event.currentTarget.value)}
-              disabled={busy}
-              className="min-h-48 resize-y rounded-[1.5rem] border-2 border-white/60 bg-white p-4 font-mono text-sm leading-6 text-abyss outline-none transition placeholder:text-abyss/45 focus:border-ice focus:ring-4 focus:ring-ice/25 disabled:cursor-not-allowed disabled:opacity-60"
-              placeholder="# Meeting notes"
-            />
-          </label>
-
-          <label
-            className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[1.5rem] border-2 border-dashed border-white/50 bg-white/10 px-4 py-8 text-center transition hover:border-ice hover:bg-ice/10"
-            onDragOver={(event) => {
-              event.preventDefault();
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              void importFiles(event.dataTransfer.files);
-            }}
-          >
-            <span className="text-sm font-black uppercase tracking-[0.14em] text-mint">Drop markdown files here</span>
-            <span className="rounded-full border-2 border-white/70 bg-white px-4 py-2 text-sm font-black text-abyss shadow-glow">
-              Choose .md files
-            </span>
-            <input
-              className="sr-only"
-              type="file"
-              aria-label="Choose markdown files"
-              accept=".md,.markdown,text/markdown"
-              multiple
-              disabled={busy}
-              onChange={(event) => {
-                if (event.currentTarget.files) {
-                  void importFiles(event.currentTarget.files);
-                }
-
-                event.currentTarget.value = "";
-              }}
-            />
-          </label>
-
-          {message ? (
-            <p role="alert" className="rounded-2xl border-2 border-bubble/60 bg-bubble/15 px-4 py-3 text-sm font-bold text-cream">
-              {message}
-            </p>
-          ) : null}
+        <div hidden={source !== "paste"}>
+          <PasteImportPanel
+            ref={pasteRef}
+            body={pasteBody}
+            message={source === "paste" ? message : ""}
+            busy={busy}
+            onBodyChange={setPasteBody}
+            onSubmit={() => void submitPaste()}
+          />
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t-2 border-white/30 pt-4 sm:flex-row sm:justify-end">
+        <div hidden={source !== "files"}>
+          <FileImportPanel
+            dragging={isDragging}
+            message={source === "files" ? message : ""}
+            busy={busy}
+            onFiles={(files) => void importFiles(files)}
+            onDraggingChange={setIsDragging}
+          />
+        </div>
+
+        <div hidden={source !== "github"}>
+          <GitHubImportPanel
+            ref={githubRef}
+            url={githubUrl}
+            preview={githubPreview}
+            message={source === "github" ? message : ""}
+            busyAction={busyAction === "local" ? null : busyAction}
+            onUrlChange={(url) => {
+              setGitHubUrl(url);
+              setGitHubPreview(null);
+              setMessage("");
+            }}
+            onPreview={() => void previewGitHubRepository()}
+            onImport={() => void importGitHubRepository()}
+          />
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={closeDialog}
             disabled={busy}
-            className="rounded-full border-2 border-white/60 px-5 py-3 text-sm font-black text-cream transition hover:border-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="secondary-button px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancel
+            Close import
           </button>
-          <button
-            type="button"
-            onClick={() => void submitPaste()}
-            disabled={busy}
-            className="rounded-full border-2 border-mint bg-mint px-5 py-3 text-sm font-black text-abyss shadow-glow transition hover:bg-ice disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? "Importing..." : "Import Paste"}
-          </button>
+
+          {source === "paste" ? (
+            <button
+              type="button"
+              onClick={() => void submitPaste()}
+              disabled={busy}
+              className="primary-button px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busyAction === "local" ? "Importing Markdown..." : "Import pasted text"}
+            </button>
+          ) : null}
+
+          {source === "github" ? (
+            <button
+              type="button"
+              onClick={() => void (githubPreview ? importGitHubRepository() : previewGitHubRepository())}
+              disabled={busy || (!githubPreview && githubUrl.trim() === "")}
+              className="primary-button px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {githubPreview
+                ? busyAction === "github" ? "Importing repository..." : "Import repository"
+                : busyAction === "preview" ? "Checking repository..." : "Preview repository"}
+            </button>
+          ) : null}
         </div>
-      </section>
-    </div>
+      </ImportDialogShell>
+    </ImportDialogBusyProvider>
   );
 }

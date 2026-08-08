@@ -1,853 +1,501 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { BookOpen, Columns2, Library, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
 
-import { folderHasContent } from "@/lib/tree";
-import {
-  createDocument,
-  createDocuments,
-  createFolder,
-  deleteDocument,
-  deleteFolder,
-  listContent,
-  moveDocument,
-  renameDocument,
-  renameFolder,
-  updateDocumentBody
-} from "@/lib/repository";
-import type { Document, Folder, MobileTab, SaveStatus, ViewMode } from "@/types/content";
-import { EditorPane } from "@/components/mdez/EditorPane";
+import { renameDocument, updateDocumentBody } from "@/lib/repository";
+import type { ViewMode } from "@/types/content";
+import type { GitHubImportSession, GitHubSource } from "@/types/github";
+import { requestGitHubImportPreview } from "@/lib/github-import";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
-import { ImportDialog } from "@/components/mdez/ImportDialog";
-import { PreviewPane } from "@/components/mdez/PreviewPane";
 import { Sidebar } from "@/components/mdez/Sidebar";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { ShelfPane } from "@/components/mdez/ShelfPane";
+import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
+import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
+import { useDocumentDrafts } from "@/hooks/useDocumentDrafts";
+import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
+import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
+import { WORKSPACE_COPY } from "@/lib/workspace-copy";
 
-const SAVE_ERROR_MESSAGE = "Mdez could not save this document. Your current text remains visible in the editor.";
+const EditorPane = dynamic(
+  () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
+  { ssr: false, loading: () => <p role="status">Loading editor…</p> }
+);
+const PreviewPane = dynamic(
+  () => import("@/components/mdez/PreviewPane").then((module) => module.PreviewPane),
+  { ssr: false, loading: () => <p role="status">Loading reader…</p> }
+);
+const ImportDialog = dynamic(
+  () => import("@/components/mdez/ImportDialog").then((module) => module.ImportDialog),
+  { ssr: false }
+);
+
+type OperationStatus = {
+  message: string;
+  state: "saved" | "loading" | "error";
+};
 
 const readerViewOptions: { value: ViewMode; label: string }[] = [
-  { value: "split", label: "Split" },
+  { value: "shelf", label: "Shelf" },
   { value: "editor", label: "Edit" },
-  { value: "preview", label: "Read" }
+  { value: "preview", label: "Read" },
+  { value: "split", label: "Split" }
 ];
 
-const mobileOptions: { value: MobileTab; label: string }[] = [
-  { value: "files", label: "Files" },
-  { value: "edit", label: "Edit" },
-  { value: "read", label: "Read" }
+const mobileOptions: { value: ViewMode; label: string }[] = [
+  { value: "shelf", label: "Shelf" },
+  { value: "editor", label: "Edit" },
+  { value: "preview", label: "Read" },
+  { value: "split", label: "Split" }
 ];
 
-function byOrderThenTitle(a: Document, b: Document) {
-  return a.order - b.order || a.title.localeCompare(b.title);
-}
-
-function getAncestorFolderIds(folders: Folder[], folderId: string | null) {
-  const ancestors: string[] = [];
-  let currentFolder = folders.find((folder) => folder.id === folderId) ?? null;
-  const visited = new Set<string>();
-
-  while (currentFolder?.parentId && !visited.has(currentFolder.parentId)) {
-    ancestors.push(currentFolder.parentId);
-    visited.add(currentFolder.parentId);
-    currentFolder = folders.find((folder) => folder.id === currentFolder?.parentId) ?? null;
-  }
-
-  return ancestors;
-}
-
-function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | null) {
-  return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
-}
-
-function syncDraftMap(
-  currentDrafts: Record<string, string>,
-  documents: Document[],
-  persistedValues: Record<string, string>,
-  getValue: (document: Document) => string
-) {
-  const nextDrafts: Record<string, string> = {};
-  let changed = false;
-
-  for (const document of documents) {
-    const persistedValue = getValue(document);
-    const currentDraft = currentDrafts[document.id];
-    const previousPersistedValue = persistedValues[document.id];
-    const hasLocalDraft = currentDraft !== undefined && previousPersistedValue !== undefined && currentDraft !== previousPersistedValue;
-
-    nextDrafts[document.id] = hasLocalDraft ? currentDraft : persistedValue;
-
-    if (currentDraft !== nextDrafts[document.id]) {
-      changed = true;
-    }
-  }
-
-  return changed || Object.keys(currentDrafts).length !== documents.length ? nextDrafts : currentDrafts;
-}
-
-type SaveRequest = {
-  value: string;
-  version: number;
-  resolve: (document: Document | null) => void;
-  reject: (error: unknown) => void;
+const mobileIcons = {
+  shelf: Library,
+  editor: PencilLine,
+  preview: BookOpen,
+  split: Columns2
 };
 
-type SaveQueueEntry = {
-  isRunning: boolean;
-  latest: SaveRequest | null;
-};
-
-type SaveQueueRef = MutableRefObject<Record<string, SaveQueueEntry | undefined>>;
-
-function clearSavingDraft(
-  documentId: string,
-  value: string,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>
-) {
-  setSavingDrafts((current) => {
-    if (current[documentId] !== value) {
-      return current;
+export function MdezWorkspace() {
+  const library = useWorkspaceLibrary();
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("shelf");
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
+  const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
+  const sidebarRef = useRef<HTMLElement>(null);
+  const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
+    if (savedSidebar === "hidden") {
+      setIsSidebarVisible(false);
     }
+  }, []);
 
-    const next = { ...current };
-    delete next[documentId];
-    return next;
-  });
-}
-
-function enqueueDocumentValue(
-  documentId: string,
-  value: string,
-  persist: (id: string, value: string) => Promise<Document>,
-  saveVersions: MutableRefObject<Record<string, number>>,
-  drafts: MutableRefObject<Record<string, string>>,
-  saveQueues: SaveQueueRef,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
-  setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  canonicalizeDraft?: {
-    getValue: (document: Document) => string;
-    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
-  }
-) {
-  const version = (saveVersions.current[documentId] ?? 0) + 1;
-  saveVersions.current[documentId] = version;
-  setSavingDrafts((current) => ({ ...current, [documentId]: value }));
-
-  const entry = saveQueues.current[documentId] ?? { isRunning: false, latest: null };
-  saveQueues.current[documentId] = entry;
-
-  if (entry.latest) {
-    entry.latest.resolve(null);
-  }
-
-  const promise = new Promise<Document | null>((resolve, reject) => {
-    entry.latest = { value, version, resolve, reject };
-  });
-
-  if (!entry.isRunning) {
-    entry.isRunning = true;
-    void runSaveQueue(documentId, persist, saveVersions, drafts, saveQueues, setSavingDrafts, setDocuments, setError, canonicalizeDraft);
-  }
-
-  return promise;
-}
-
-async function runSaveQueue(
-  documentId: string,
-  persist: (id: string, value: string) => Promise<Document>,
-  saveVersions: MutableRefObject<Record<string, number>>,
-  drafts: MutableRefObject<Record<string, string>>,
-  saveQueues: SaveQueueRef,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
-  setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  canonicalizeDraft?: {
-    getValue: (document: Document) => string;
-    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
-  }
-) {
-  const entry = saveQueues.current[documentId];
-
-  if (!entry) {
-    return;
-  }
-
-  while (entry.latest) {
-    const request = entry.latest;
-    entry.latest = null;
-
-    try {
-      const updated = await persist(documentId, request.value);
-      const stillCurrent = saveVersions.current[documentId] === request.version && drafts.current[documentId] === request.value;
-
-      if (!stillCurrent) {
-        clearSavingDraft(documentId, request.value, setSavingDrafts);
-        request.resolve(null);
-        continue;
-      }
-
-      if (canonicalizeDraft) {
-        const canonicalValue = canonicalizeDraft.getValue(updated);
-
-        if (canonicalValue !== request.value) {
-          canonicalizeDraft.setDrafts((current) => {
-            if (current[updated.id] !== request.value) {
-              return current;
-            }
-
-            const next = { ...current, [updated.id]: canonicalValue };
-            drafts.current = next;
-            return next;
-          });
-        }
-      }
-
-      setDocuments((current) => current.map((document) => (document.id === updated.id ? updated : document)));
-      clearSavingDraft(updated.id, request.value, setSavingDrafts);
-      setError((current) => (current === SAVE_ERROR_MESSAGE ? null : current));
-      request.resolve(updated);
-    } catch (error) {
-      const stillCurrent = saveVersions.current[documentId] === request.version && drafts.current[documentId] === request.value;
-
-      clearSavingDraft(documentId, request.value, setSavingDrafts);
-
-      if (!stillCurrent) {
-        request.resolve(null);
-        continue;
-      }
-
-      setError(SAVE_ERROR_MESSAGE);
-      request.reject(error);
-    }
-  }
-
-  entry.isRunning = false;
-
-  if (entry.latest) {
-    entry.isRunning = true;
-    void runSaveQueue(documentId, persist, saveVersions, drafts, saveQueues, setSavingDrafts, setDocuments, setError, canonicalizeDraft);
-  } else {
-    delete saveQueues.current[documentId];
-  }
-}
-
-function persistDocumentValue(
-  documentId: string,
-  value: string,
-  persist: (id: string, value: string) => Promise<Document>,
-  saveVersions: MutableRefObject<Record<string, number>>,
-  drafts: MutableRefObject<Record<string, string>>,
-  saveQueues: SaveQueueRef,
-  setSavingDrafts: Dispatch<SetStateAction<Record<string, string>>>,
-  setDocuments: Dispatch<SetStateAction<Document[]>>,
-  setError: Dispatch<SetStateAction<string | null>>,
-  canonicalizeDraft?: {
-    getValue: (document: Document) => string;
-    setDrafts: Dispatch<SetStateAction<Record<string, string>>>;
-  }
-) {
-  const saveVersion = (saveVersions.current[documentId] ?? 0) + 1;
-  saveVersions.current[documentId] = saveVersion;
-
-  return window.setTimeout(() => {
-    if (saveVersions.current[documentId] !== saveVersion || drafts.current[documentId] !== value) {
+  useEffect(() => {
+    if (!isTabletLayout || !isDrawerOpen) {
       return;
     }
 
-    void enqueueDocumentValue(
-      documentId,
-      value,
-      persist,
-      saveVersions,
-      drafts,
-      saveQueues,
-      setSavingDrafts,
-      setDocuments,
-      setError,
-      canonicalizeDraft
-    ).catch(() => undefined);
-  }, 650);
-}
-
-export function MdezWorkspace() {
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
-  const [mobileTab, setMobileTab] = useState<MobileTab>("files");
-  const [draftBodiesById, setDraftBodiesById] = useState<Record<string, string>>({});
-  const [draftTitlesById, setDraftTitlesById] = useState<Record<string, string>>({});
-  const [savingBodiesById, setSavingBodiesById] = useState<Record<string, string>>({});
-  const [savingTitlesById, setSavingTitlesById] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const bodySaveVersionsRef = useRef<Record<string, number>>({});
-  const titleSaveVersionsRef = useRef<Record<string, number>>({});
-  const bodySaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
-  const titleSaveQueuesRef = useRef<Record<string, SaveQueueEntry | undefined>>({});
-  const draftBodiesRef = useRef<Record<string, string>>({});
-  const draftTitlesRef = useRef<Record<string, string>>({});
-  const persistedBodiesRef = useRef<Record<string, string>>({});
-  const persistedTitlesRef = useRef<Record<string, string>>({});
+    window.setTimeout(() => sidebarRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(), 0);
+  }, [isDrawerOpen, isTabletLayout]);
 
   useEffect(() => {
-    let alive = true;
+    function closeOverlays(event: KeyboardEvent) {
+      if (event.key !== "Escape" || !isDrawerOpen) {
+        return;
+      }
 
-    listContent()
-      .then((content) => {
-        if (!alive) {
-          return;
-        }
-
-        const firstDocument = content.documents[0] ?? null;
-
-        setFolders(content.folders);
-        setDocuments(content.documents);
-        setSelectedDocumentId(firstDocument?.id ?? null);
-        setSelectedFolderId(firstDocument?.folderId ?? null);
-        setExpandedFolderIds(new Set(getExpandedFolderIdsForSelection(content.folders, firstDocument?.folderId ?? null)));
-        setIsReady(true);
-      })
-      .catch(() => {
-        if (!alive) {
-          return;
-        }
-
-        setError("IndexedDB is unavailable. Mdez can show the workspace, but it cannot save local documents in this browser session.");
-        setIsReady(true);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const selectedDocument = useMemo(
-    () => documents.find((document) => document.id === selectedDocumentId) ?? null,
-    [documents, selectedDocumentId]
-  );
-
-  const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
-  const selectedDocumentKey = selectedDocument?.id ?? "";
-  const draftBody = selectedDocument ? draftBodiesById[selectedDocument.id] ?? selectedDocument.body : "";
-  const draftTitle = selectedDocument ? draftTitlesById[selectedDocument.id] ?? selectedDocument.title : "";
-  const liveDocuments = useMemo(
-    () =>
-      documents.map((document) => ({
-        ...document,
-        title: draftTitlesById[document.id] ?? document.title,
-        body: draftBodiesById[document.id] ?? document.body
-      })),
-    [documents, draftBodiesById, draftTitlesById]
-  );
-  const liveSelectedDocument = selectedDocument ? { ...selectedDocument, title: draftTitle, body: draftBody } : null;
-  const selectedBodyIsDirty = selectedDocument ? draftBody !== selectedDocument.body : false;
-  const selectedTitleIsDirty = selectedDocument ? draftTitle !== selectedDocument.title : false;
-  const selectedBodyIsSaving = selectedDocument ? savingBodiesById[selectedDocument.id] === draftBody : false;
-  const selectedTitleIsSaving = selectedDocument ? savingTitlesById[selectedDocument.id] === draftTitle : false;
-  const saveStatus: SaveStatus =
-    selectedBodyIsSaving || selectedTitleIsSaving ? "Saving..." : selectedBodyIsDirty || selectedTitleIsDirty ? "Unsaved" : "Saved";
-
-  useEffect(() => {
-    const previousPersistedBodies = persistedBodiesRef.current;
-    const previousPersistedTitles = persistedTitlesRef.current;
-
-    setDraftBodiesById((current) => {
-      const next = syncDraftMap(current, documents, previousPersistedBodies, (document) => document.body);
-      draftBodiesRef.current = next;
-      return next;
-    });
-    setDraftTitlesById((current) => {
-      const next = syncDraftMap(current, documents, previousPersistedTitles, (document) => document.title);
-      draftTitlesRef.current = next;
-      return next;
-    });
-
-    const documentIds = new Set(documents.map((document) => document.id));
-    bodySaveVersionsRef.current = Object.fromEntries(
-      Object.entries(bodySaveVersionsRef.current).filter(([documentId]) => documentIds.has(documentId))
-    );
-    titleSaveVersionsRef.current = Object.fromEntries(
-      Object.entries(titleSaveVersionsRef.current).filter(([documentId]) => documentIds.has(documentId))
-    );
-
-    persistedBodiesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.body]));
-    persistedTitlesRef.current = Object.fromEntries(documents.map((document) => [document.id, document.title]));
-  }, [documents]);
-
-  useEffect(() => {
-    const timeouts: number[] = [];
-
-    for (const document of documents) {
-      const draft = draftBodiesById[document.id];
-
-      if (draft !== undefined && draft !== document.body) {
-        timeouts.push(
-          persistDocumentValue(
-            document.id,
-            draft,
-            updateDocumentBody,
-            bodySaveVersionsRef,
-            draftBodiesRef,
-            bodySaveQueuesRef,
-            setSavingBodiesById,
-            setDocuments,
-            setError
-          )
-        );
+      setIsDrawerOpen(false);
+      if (isTabletLayout) {
+        window.setTimeout(() => drawerTriggerRef.current?.focus(), 0);
       }
     }
 
-    return () => {
-      for (const timeout of timeouts) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [documents, draftBodiesById]);
+    document.addEventListener("keydown", closeOverlays);
+    return () => document.removeEventListener("keydown", closeOverlays);
+  }, [isDrawerOpen, isTabletLayout]);
+
+  const {
+    liveDocuments,
+    draftBody,
+    draftTitle,
+    saveStatus,
+    changeBody: handleDraftBodyChange,
+    changeTitle: handleDraftTitleChange,
+    renameTitleById: renameDraftTitle
+  } = useDocumentDrafts({
+    documents: library.documents,
+    selectedDocumentId: library.selectedDocumentId,
+    setDocuments: library.setDocuments,
+    setError: library.setError,
+    persistBody: updateDocumentBody,
+    persistTitle: renameDocument
+  });
 
   useEffect(() => {
-    const timeouts: number[] = [];
-
-    for (const document of documents) {
-      const draft = draftTitlesById[document.id];
-
-      if (draft !== undefined && draft !== document.title) {
-        timeouts.push(
-          persistDocumentValue(
-            document.id,
-            draft,
-            renameDocument,
-            titleSaveVersionsRef,
-            draftTitlesRef,
-            titleSaveQueuesRef,
-            setSavingTitlesById,
-            setDocuments,
-            setError,
-            {
-              getValue: (document) => document.title,
-              setDrafts: setDraftTitlesById
-            }
-          )
-        );
-      }
+    if (saveStatus === "Saving...") {
+      setOperationStatus(null);
     }
+  }, [saveStatus]);
+  const activeSourceId = library.selectedFolder?.sourceId ?? library.selectedDocument?.sourceId;
+  const activeGitHubSource = library.sources.find((source) => source.id === activeSourceId) ?? null;
+  const liveSelectedDocument = library.selectedDocument
+    ? { ...library.selectedDocument, title: draftTitle, body: draftBody }
+    : null;
 
-    return () => {
-      for (const timeout of timeouts) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [documents, draftTitlesById]);
-
+  const showShelf = viewMode === "shelf";
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
-  const contentGridColumns = viewMode === "split" ? "lg:grid-cols-2" : "lg:grid-cols-1";
-
-  function expandFolderAncestors(folderId: string | null, sourceFolders = folders, includeFolder = false) {
-    setExpandedFolderIds((current) => {
-      const next = new Set(current);
-
-      for (const ancestorId of getAncestorFolderIds(sourceFolders, folderId)) {
-        next.add(ancestorId);
-      }
-
-      if (includeFolder && folderId !== null) {
-        next.add(folderId);
-      }
-
-      return next;
-    });
-  }
 
   function handleSelectFolder(folderId: string | null) {
-    const firstDocument = documents
-      .filter((document) => document.folderId === folderId)
-      .sort(byOrderThenTitle)[0];
-
-    setSelectedFolderId(folderId);
-    setSelectedDocumentId(firstDocument?.id ?? null);
-    expandFolderAncestors(folderId, folders, true);
+    library.selectFolder(folderId);
+    setViewMode("shelf");
+    setIsDrawerOpen(false);
   }
 
   function handleSelectDocument(documentId: string) {
-    const document = documents.find((item) => item.id === documentId);
-
-    if (!document) {
-      return;
-    }
-
-    setSelectedFolderId(document.folderId);
-    setSelectedDocumentId(document.id);
-    expandFolderAncestors(document.folderId, folders, true);
-    setMobileTab("edit");
-  }
-
-  async function refreshContent(nextSelectedDocumentId?: string | null) {
-    const content = await listContent();
-
-    setFolders(content.folders);
-    setDocuments(content.documents);
-
-    if (nextSelectedDocumentId !== undefined) {
-      setSelectedDocumentId(nextSelectedDocumentId);
-    }
-  }
-
-  function handleToggleFolder(folderId: string) {
-    setExpandedFolderIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
-
-      return next;
-    });
-  }
-
-  async function handleCreateFolder(parentId: string | null) {
-    const name = window.prompt("New folder name", "New Folder");
-
-    if (name === null) {
-      return;
-    }
-
-    try {
-      const folder = await createFolder(name, parentId);
-
-      setError(null);
-      setExpandedFolderIds((current) => {
-        const next = new Set(current);
-
-        for (const ancestorId of getAncestorFolderIds(folders, parentId)) {
-          next.add(ancestorId);
-        }
-
-        if (parentId !== null) {
-          next.add(parentId);
-        }
-
-        next.add(folder.id);
-        return next;
-      });
-      setSelectedFolderId(folder.id);
-      await refreshContent(null);
-    } catch {
-      setError("Could not create folder.");
-    }
-  }
-
-  async function handleRenameFolder(folderId: string, name: string) {
-    try {
-      await renameFolder(folderId, name);
-      setError(null);
-      await refreshContent();
-    } catch {
-      setError("Could not rename folder.");
-    }
-  }
-
-  async function handleDeleteFolder(folderId: string) {
-    if (folderHasContent(folders, documents, folderId)) {
-      setError("Move or delete nested folders and documents before deleting this folder.");
-      return;
-    }
-
-    if (!window.confirm("Delete this empty folder?")) {
-      return;
-    }
-
-    try {
-      await deleteFolder(folderId);
-      setError(null);
-      setExpandedFolderIds((current) => {
-        const next = new Set(current);
-        next.delete(folderId);
-        return next;
-      });
-
-      if (selectedFolderId === folderId) {
-        setSelectedFolderId(null);
-        await refreshContent(null);
-      } else {
-        await refreshContent();
-      }
-    } catch {
-      setError("Could not delete folder.");
-    }
+    if (!library.documents.some((document) => document.id === documentId)) return;
+    library.selectDocument(documentId);
+    setViewMode("editor");
+    setIsDrawerOpen(false);
   }
 
   async function handleCreateDocument() {
     try {
-      const document = await createDocument({
-        title: "Untitled Document",
-        body: "# Untitled Document\n",
-        folderId: selectedFolderId
-      });
-
-      setError(null);
-      setSelectedDocumentId(document.id);
-      await refreshContent(document.id);
-      setMobileTab("edit");
+      await library.createPage();
+      setViewMode("editor");
+      setIsDrawerOpen(false);
     } catch {
-      setError("Could not create document.");
+      // The controller owns the exact user-facing error.
     }
   }
 
   async function handleImport(items: { title: string; body: string }[], folderId: string | null) {
-    try {
-      const importedDocuments = await createDocuments(items, folderId);
-      const newestDocumentId = importedDocuments[importedDocuments.length - 1]?.id ?? null;
+    await library.importPages(items, folderId);
+    setViewMode("editor");
+    setIsDrawerOpen(false);
+    const count = items.length;
+    setOperationStatus({
+      message: `Imported ${count} ${count === 1 ? "page" : "pages"}`,
+      state: "saved"
+    });
+  }
+  async function handleRequestGitHubPreview(url: string) {
+    library.setError(null);
+    setOperationStatus({ message: "Checking GitHub repository", state: "loading" });
 
-      setError(null);
-      setSelectedFolderId(folderId);
-      expandFolderAncestors(folderId, folders, true);
-      await refreshContent(newestDocumentId);
-      setMobileTab("edit");
-    } catch {
-      setError("Could not import markdown.");
-      throw new Error("Could not import markdown.");
+    try {
+      const session = await requestGitHubImportPreview(url);
+      setOperationStatus({
+        message: "Previewed " + session.repository.owner + "/" + session.repository.repository,
+        state: "saved"
+      });
+      return session;
+    } catch (previewError) {
+      const message = previewError instanceof Error ? previewError.message : "Mdez could not preview this repository.";
+      library.setError(message);
+      setOperationStatus({ message: "GitHub import failed", state: "error" });
+      throw previewError;
+    }
+  }
+
+  async function handleImportGitHub(session: GitHubImportSession) {
+    library.setError(null);
+    setOperationStatus({ message: "Importing GitHub repository", state: "loading" });
+
+    try {
+      const result = await library.importGitHub(session);
+      setViewMode("editor");
+      setIsDrawerOpen(false);
+      setOperationStatus({
+        message: "Imported " + result.source.owner + "/" + result.source.repository + " from GitHub",
+        state: "saved"
+      });
+    } catch (importError) {
+      const message = importError instanceof Error ? importError.message : "Mdez could not import this repository.";
+      library.setError(message);
+      setOperationStatus({ message: "GitHub import failed", state: "error" });
+      throw importError;
+    }
+  }
+
+  async function handleRefreshGitHub(source: GitHubSource) {
+    if (refreshingSourceId) return;
+    const confirmed = window.confirm(
+      "Refresh " + source.owner + "/" + source.repository +
+      " from GitHub? This replaces local edits inside this imported book."
+    );
+    if (!confirmed) return;
+
+    setRefreshingSourceId(source.id);
+    library.setError(null);
+    setOperationStatus({ message: "Checking GitHub for changes", state: "loading" });
+
+    try {
+      const session = await handleRequestGitHubPreview(source.normalizedUrl);
+      setOperationStatus({ message: "Refreshing imported book", state: "loading" });
+      await library.refreshGitHub(source.id, session);
+      setViewMode("editor");
+      setIsDrawerOpen(false);
+      setOperationStatus({
+        message: "Refreshed " + source.owner + "/" + source.repository + " from GitHub",
+        state: "saved"
+      });
+    } catch (refreshError) {
+      const message = refreshError instanceof Error ? refreshError.message : "Mdez could not refresh this repository.";
+      library.setError(message);
+      setOperationStatus({ message: "GitHub refresh failed", state: "error" });
+    } finally {
+      setRefreshingSourceId(null);
     }
   }
 
   async function handleRenameDocument(documentId: string, title: string) {
     try {
-      draftTitlesRef.current = { ...draftTitlesRef.current, [documentId]: title };
-      setDraftTitlesById((current) => {
-        const next = { ...current, [documentId]: title };
-        draftTitlesRef.current = next;
-        return next;
-      });
-
-      const updated = await enqueueDocumentValue(
-        documentId,
-        title,
-        renameDocument,
-        titleSaveVersionsRef,
-        draftTitlesRef,
-        titleSaveQueuesRef,
-        setSavingTitlesById,
-        setDocuments,
-        setError,
-        {
-          getValue: (document) => document.title,
-          setDrafts: setDraftTitlesById
-        }
-      );
-
-      if (updated) {
-        persistedTitlesRef.current = { ...persistedTitlesRef.current, [documentId]: updated.title };
-        setError(null);
-        await refreshContent(selectedDocumentId === documentId ? documentId : undefined);
-      }
+      const updated = await renameDraftTitle(documentId, title);
+      if (!updated) return;
+      await library.renamePage(documentId, title);
     } catch {
-      setError("Could not rename document.");
-    }
-  }
-
-  async function handleMoveDocument(documentId: string, folderId: string | null) {
-    try {
-      await moveDocument(documentId, folderId);
-      setError(null);
-      setSelectedFolderId(folderId);
-      setSelectedDocumentId(documentId);
-      expandFolderAncestors(folderId, folders, true);
-      await refreshContent(documentId);
-    } catch {
-      setError("Could not move document.");
-    }
-  }
-
-  async function handleDeleteDocument(documentId: string) {
-    if (!window.confirm("Delete this document?")) {
-      return;
-    }
-
-    const document = documents.find((item) => item.id === documentId);
-
-    if (!document) {
-      setError("Document not found.");
-      return;
-    }
-
-    const nextDocument =
-      selectedDocumentId === documentId
-        ? documents
-            .filter((item) => item.id !== documentId && item.folderId === document.folderId)
-            .sort(byOrderThenTitle)[0] ?? null
-        : documents.find((item) => item.id === selectedDocumentId) ?? null;
-
-    try {
-      await deleteDocument(documentId);
-      setError(null);
-      await refreshContent(nextDocument?.id ?? null);
-    } catch {
-      setError("Could not delete document.");
+      library.setError("Could not rename page.");
     }
   }
 
   async function handleSidebarFolderExport() {
-    if (!selectedFolderId) {
-      setError("Select a folder before exporting a ZIP.");
+    if (!library.selectedFolderId) {
+      library.setError("Open a book before preparing a ZIP.");
       return;
     }
-
-    const folder = folders.find((item) => item.id === selectedFolderId);
-
+    const folder = library.folders.find((item) => item.id === library.selectedFolderId);
     if (!folder) {
-      setError("Mdez could not find that folder for export.");
+      library.setError("Mdez could not find that book for export.");
       return;
     }
 
     try {
-      const blob = await createFolderZipBlob(folders, liveDocuments, selectedFolderId);
-      downloadBlob(blob, makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip"));
-      setError(null);
+      const blob = await createFolderZipBlob(library.folders, liveDocuments, library.selectedFolderId);
+      const fileName = makeMarkdownFileName(folder.name).replace(/\.md$/, ".zip");
+      downloadBlob(blob, fileName);
+      library.setError(null);
+      setOperationStatus({ message: `Downloaded ${fileName}`, state: "saved" });
     } catch {
-      setError("Mdez could not generate the ZIP export.");
+      library.setError("Mdez could not prepare the book ZIP.");
     }
   }
-
-  function handleDraftBodyChange(body: string) {
-    if (!selectedDocumentKey) {
-      return;
-    }
-
-    setDraftBodiesById((current) => {
-      const next = { ...current, [selectedDocumentKey]: body };
-      draftBodiesRef.current = next;
-      return next;
-    });
+  function handleOpenImport() {
+    setIsImportOpen(true);
   }
 
-  function handleDraftTitleChange(title: string) {
-    if (!selectedDocumentKey) {
-      return;
-    }
-
-    setDraftTitlesById((current) => {
-      const next = { ...current, [selectedDocumentKey]: title };
-      draftTitlesRef.current = next;
-      return next;
-    });
+  function handleViewModeChange(nextMode: ViewMode) {
+    setViewMode(nextMode);
+    setIsDrawerOpen(false);
   }
 
+  function toggleDesktopSidebar() {
+    const nextVisible = !isSidebarVisible;
+    setIsSidebarVisible(nextVisible);
+    window.localStorage.setItem("mdez-sidebar-state", nextVisible ? "visible" : "hidden");
+  }
+
+  const sidebarIsHidden = isTabletLayout ? !isDrawerOpen : !isSidebarVisible;
+  const statusMessage = library.error
+    ?? (saveStatus === "Saving..."
+      ? "Saving changes..."
+      : saveStatus === "Unsaved"
+        ? "Unsaved changes"
+        : operationStatus?.message ?? "Saved in this browser");
+  const statusState = library.error
+    ? "error"
+    : saveStatus === "Saving..." || saveStatus === "Unsaved"
+      ? "saving"
+      : operationStatus?.state ?? "saved";
+  const editorPane = (
+    <EditorPane
+      document={library.selectedDocument}
+      title={draftTitle}
+      body={draftBody}
+      saveStatus={saveStatus}
+      viewMode={viewMode}
+      rightSlot={
+        <ExportControls
+          selectedDocument={liveSelectedDocument}
+          onError={library.setError}
+          onSuccess={(message) => setOperationStatus({ message, state: "saved" })}
+        />
+      }
+      onCreateDocument={handleCreateDocument}
+      onOpenImport={handleOpenImport}
+      onViewModeChange={handleViewModeChange}
+      onBodyChange={handleDraftBodyChange}
+      onRename={handleDraftTitleChange}
+    />
+  );
+  const readerPane = (
+    <PreviewPane
+      document={library.selectedDocument}
+      title={draftTitle}
+      body={draftBody}
+      previewOnly={viewMode === "preview"}
+      onCreateDocument={handleCreateDocument}
+      onOpenImport={handleOpenImport}
+    />
+  );
   return (
-    <main className="relative min-h-screen overflow-hidden bg-abyss text-cream">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_12%,rgba(159,234,255,0.24),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(200,168,255,0.18),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(255,128,204,0.16),transparent_30%)]" />
-
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-4 py-4 sm:px-5 lg:px-6">
-        <header className="mb-4 flex items-center justify-between gap-3 rounded-[2rem] border-2 border-white/70 bg-white/10 p-3 shadow-sticker lg:hidden">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ice">Mdez</p>
-            <h1 className="truncate text-2xl font-black text-bubble">Workspace</h1>
-          </div>
-          <SegmentedControl label="Mobile workspace view" value={mobileTab} options={mobileOptions} onChange={setMobileTab} />
-        </header>
-
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <div className={`min-h-0 lg:block ${mobileTab === "files" ? "block" : "hidden"}`}>
-            <Sidebar
-              folders={folders}
-              documents={documents}
-              selectedFolderId={selectedFolderId}
-              selectedDocumentId={selectedDocumentId}
-              expandedFolderIds={expandedFolderIds}
-              error={error}
-              onSelectFolder={handleSelectFolder}
-              onToggleFolder={handleToggleFolder}
-              onCreateFolder={handleCreateFolder}
-              onRenameFolder={handleRenameFolder}
-              onDeleteFolder={handleDeleteFolder}
-              onSelectDocument={handleSelectDocument}
-              onCreateDocument={handleCreateDocument}
-              onRenameDocument={handleRenameDocument}
-              onMoveDocument={handleMoveDocument}
-              onDeleteDocument={handleDeleteDocument}
-              onOpenImport={() => {
-                setIsImportOpen(true);
-              }}
-              onExportFolder={() => void handleSidebarFolderExport()}
-            />
-          </div>
-
-          <section
-            className={`min-h-0 rounded-[2rem] border-2 border-white/70 bg-white/10 p-4 shadow-sticker ${
-              mobileTab === "files" ? "hidden lg:block" : "block"
-            }`}
+    <div
+      className="workspace-shell"
+      data-testid="workspace-shell"
+      data-mode={viewMode}
+      data-sidebar={isSidebarVisible ? "visible" : "hidden"}
+    >
+      <header className="workspace-topbar">
+        <div className="workspace-brand">
+          <button
+            type="button"
+            onClick={toggleDesktopSidebar}
+            aria-label="Toggle sidebar"
+            aria-expanded={isSidebarVisible}
+            className="workspace-icon-button desktop-sidebar-toggle"
           >
-            <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4 lg:min-h-0 lg:h-full">
-              <div className="flex flex-col gap-3 border-b-2 border-white/40 pb-4 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-ice">
-                    {selectedFolder ? selectedFolder.name : "Root"}
-                  </p>
-                  <h2 className="mt-1 truncate text-3xl font-black text-cream">
-                    {selectedDocument?.title ?? (isReady ? "No document selected" : "Loading workspace...")}
-                  </h2>
-                </div>
-                {!showEditor ? (
-                  <div className="hidden lg:block">
-                    <SegmentedControl label="Workspace view" value={viewMode} options={readerViewOptions} onChange={setViewMode} />
-                  </div>
-                ) : null}
-              </div>
-
-              <div className={`grid min-h-0 flex-1 gap-4 ${contentGridColumns}`}>
-                <div
-                  className={`min-h-[24rem] min-w-0 ${mobileTab === "edit" ? "block" : "hidden"} ${
-                    showEditor ? "lg:block" : "lg:hidden"
-                  }`}
-                >
-                  <EditorPane
-                    document={selectedDocument}
-                    title={draftTitle}
-                    body={draftBody}
-                    saveStatus={saveStatus}
-                    viewMode={viewMode}
-                    rightSlot={
-                      <ExportControls
-                        folders={folders}
-                        documents={liveDocuments}
-                        selectedDocument={liveSelectedDocument}
-                        selectedFolderId={selectedFolderId}
-                        onError={setError}
-                      />
-                    }
-                    onViewModeChange={setViewMode}
-                    onBodyChange={handleDraftBodyChange}
-                    onRename={handleDraftTitleChange}
-                  />
-                </div>
-
-                <div
-                  className={`min-h-[24rem] min-w-0 ${mobileTab === "read" ? "block" : "hidden"} ${
-                    showReader ? "lg:block" : "lg:hidden"
-                  }`}
-                >
-                  <PreviewPane document={selectedDocument} title={draftTitle} body={draftBody} previewOnly={viewMode === "preview"} />
-                </div>
-              </div>
-            </div>
-          </section>
+            {isSidebarVisible ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}
+          </button>
+          <span className="workspace-wordmark">Mdez</span>
         </div>
-      </div>
+
+        <nav className="workspace-mode-nav" aria-label="Workspace modes">
+          {readerViewOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === option.value}
+              onClick={() => handleViewModeChange(option.value)}
+              className="workspace-mode-button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="workspace-actions">
+          <button
+            ref={drawerTriggerRef}
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            aria-label="Open library shelf"
+            aria-controls="library-shelf"
+            aria-expanded={isDrawerOpen}
+            className="workspace-icon-button mobile-drawer-trigger"
+          >
+            <Menu aria-hidden="true" className="h-4 w-4" />
+          </button>
+        </div>
+      </header>
+
+      <section className="workspace-content" aria-label="Mdez workspace">
+        <Sidebar
+          folders={library.folders}
+          documents={liveDocuments}
+          selectedFolderId={library.selectedFolderId}
+          selectedDocumentId={library.selectedDocumentId}
+          expandedFolderIds={library.expandedFolderIds}
+          error={library.error}
+          githubSource={activeGitHubSource}
+          refreshingSourceId={refreshingSourceId}
+          isHidden={sidebarIsHidden}
+          isOverlay={isTabletLayout}
+          sidebarRef={sidebarRef}
+          onClose={() => setIsDrawerOpen(false)}
+          onSelectFolder={handleSelectFolder}
+          onToggleFolder={library.toggleFolder}
+          onCreateFolder={library.createBook}
+          onRenameFolder={library.renameBook}
+          onDeleteFolder={library.deleteBook}
+          onSelectDocument={handleSelectDocument}
+          onCreateDocument={handleCreateDocument}
+          onRenameDocument={handleRenameDocument}
+          onMoveDocument={library.movePage}
+          onDeleteDocument={library.deletePage}
+          onRefreshGitHub={(source) => void handleRefreshGitHub(source)}
+        />
+
+        {isTabletLayout && isDrawerOpen ? (
+          <button
+            type="button"
+            className="workspace-scrim"
+            aria-label="Close library shelf"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+        ) : null}
+
+        <main
+          className="workspace-main"
+          data-testid="workspace-main"
+          inert={isTabletLayout && isDrawerOpen}
+        >
+          <section className="workspace-surface">
+            <div className="workspace-context">
+              <div className="min-w-0">
+                <p className="workspace-context-label">
+                  {library.selectedFolder ? `${library.selectedFolder.name} book` : WORKSPACE_COPY.library}
+                </p>
+                {showShelf ? <h1 className="workspace-title truncate">{WORKSPACE_COPY.library}</h1> : null}
+              </div>
+              {!showShelf ? <p className="workspace-context-label">{readerViewOptions.find((option) => option.value === viewMode)?.label}</p> : null}
+            </div>
+
+            {showShelf ? (
+              <ShelfPane
+                folders={library.folders}
+                documents={liveDocuments}
+                selectedFolderId={library.selectedFolderId}
+                selectedDocumentId={library.selectedDocumentId}
+                isReady={library.isReady}
+                onSelectFolder={handleSelectFolder}
+                onSelectDocument={handleSelectDocument}
+                onCreateDocument={handleCreateDocument}
+                onCreateFolder={library.createBook}
+                onOpenImport={handleOpenImport}
+                onExportFolder={() => void handleSidebarFolderExport()}
+              />
+            ) : viewMode === "split" ? (
+              <SplitWorkspace
+                editor={editorPane}
+                reader={readerPane}
+                orientation={isTabletLayout ? "horizontal" : "vertical"}
+                compact={isMobileLayout}
+              />
+            ) : (
+              <div className="grid min-h-0 gap-4">
+                {showEditor ? <div data-testid="screen-editor" className="min-h-[24rem] min-w-0">{editorPane}</div> : null}
+                {showReader ? <div data-testid="screen-reader" className="min-h-[24rem] min-w-0">{readerPane}</div> : null}
+              </div>
+            )}
+          </section>
+        </main>
+      </section>
+
+      <WorkspaceStatus
+        message={statusMessage}
+        state={statusState}
+        activePage={library.selectedDocument?.title ?? WORKSPACE_COPY.library}
+        isInert={isMobileLayout && isDrawerOpen}
+      />
+
+      <nav className="mobile-mode-nav" aria-label="Workspace modes" inert={isMobileLayout && isDrawerOpen}>
+        {mobileOptions.map((option) => {
+          const Icon = mobileIcons[option.value];
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === option.value}
+              onClick={() => handleViewModeChange(option.value)}
+              className="mobile-mode-button"
+            >
+              <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span className="truncate">{option.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
       {isImportOpen ? (
         <ImportDialog
-          folders={folders}
-          selectedFolderId={selectedFolderId}
+          folders={library.folders}
+          selectedFolderId={library.selectedFolderId}
           onClose={() => setIsImportOpen(false)}
           onImport={handleImport}
+          onRequestGitHubPreview={handleRequestGitHubPreview}
+          onImportGitHub={handleImportGitHub}
         />
       ) : null}
-    </main>
+    </div>
   );
+
 }
