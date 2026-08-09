@@ -265,7 +265,7 @@ test("fresh workspace exposes visible create and import actions", async ({ page 
 
   await expect(createPage).toBeVisible();
   await expect(importMarkdown).toBeVisible();
-  await expect(page.getByText("Create a book to group related pages.").last()).toBeVisible();
+  await expect(page.getByRole("main").getByRole("button", { name: /Shelf root, 0 pages, open/ })).toBeVisible();
   await expect(newBook).toBeVisible();
 
   await createPage.click();
@@ -293,7 +293,7 @@ test("sidebar uses human-readable page timestamps", async ({ page }) => {
     .getByRole("complementary", { name: "Library shelf" })
     .locator("article")
     .filter({ hasText: "untitled.md" });
-  const updatedLabel = pageCard.locator("button[aria-pressed] span").nth(1);
+  const updatedLabel = pageCard.locator(".document-updated-label");
 
   await expect(updatedLabel).toHaveText(/^Updated (recently|\d+ (min|hr|day|days) ago)$/);
   await expect(updatedLabel).not.toHaveText(/^\d{4}-\d{2}-\d{2}T/);
@@ -418,6 +418,28 @@ test("recent page cards expose title location and update time without nested car
   await expect(card.getByText(/^Updated (recently|\d+ (min|hr|day|days) ago)$/)).toBeVisible();
   await expect(card.getByRole("button")).toHaveCount(1);
   await expect(card.getByRole("button")).toHaveClass(/recent-page-card/);
+});
+
+test("compact explorer and Shelf commands remain comfortable at key widths", async ({ page }) => {
+  for (const width of [390, 430, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await showShelfIfAvailable(page);
+
+    const metrics = await page.evaluate(() => {
+      const commands = [...document.querySelectorAll<HTMLElement>(".shelf-section-actions button")];
+      const header = document.querySelector<HTMLElement>(".shelf-section-header")!;
+      return {
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        clippedCommands: commands.filter((button) => button.scrollWidth > button.clientWidth).length,
+        headerDisplay: getComputedStyle(header).display
+      };
+    });
+
+    expect(metrics.scrollWidth).toBe(metrics.clientWidth);
+    expect(metrics.clippedCommands).toBe(0);
+    expect(metrics.headerDisplay).toBe("flex");
+  }
 });
 
 
@@ -545,23 +567,30 @@ test("shelf uses a descending non-repeating heading hierarchy", async ({ page })
   expect(hierarchy.h1Weight).toBeGreaterThan(hierarchy.h2Weight);
 });
 
-test("tablet shelf actions form a readable two-by-two grid", async ({ page }) => {
+test("tablet Shelf commands stay grouped with their sections", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
-  const actions = page.locator(".shelf-primary-actions");
-  const buttons = actions.getByRole("button");
-  await expect(buttons).toHaveCount(4);
+  const actionGroups = page.locator(".shelf-section-actions");
+  await expect(actionGroups).toHaveCount(2);
 
-  const geometry = await buttons.evaluateAll((nodes) =>
-    nodes.map((node) => {
-      const rect = node.getBoundingClientRect();
-      const style = getComputedStyle(node);
-      return { x: Math.round(rect.x), y: Math.round(rect.y), whiteSpace: style.whiteSpace };
-    })
-  );
+  for (const actionGroup of await actionGroups.all()) {
+    const buttons = actionGroup.getByRole("button");
+    await expect(buttons).toHaveCount(2);
 
-  expect(new Set(geometry.map(({ x }) => x)).size).toBe(2);
-  expect(new Set(geometry.map(({ y }) => y)).size).toBe(2);
-  expect(geometry.every(({ whiteSpace }) => whiteSpace === "nowrap")).toBe(true);
+    const geometry = await buttons.evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return {
+          right: rect.right,
+          viewportWidth: document.documentElement.clientWidth,
+          whiteSpace: style.whiteSpace
+        };
+      })
+    );
+
+    expect(geometry.every(({ right, viewportWidth }) => right <= viewportWidth)).toBe(true);
+    expect(geometry.every(({ whiteSpace }) => whiteSpace === "nowrap")).toBe(true);
+  }
 });
 test("reader prose uses the reader token and only overlays receive elevation", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
@@ -595,7 +624,8 @@ test("drawer, table of contents, and dialog share floating elevation", async ({ 
   expect(tocShadow).not.toBe("none");
   await page.getByRole("button", { name: "Close table of contents" }).click();
 
-  await clickVisibleButtonIfAvailable(page, "Import markdown");
+  await closeShelfDrawerIfAvailable(page);
+  await clickShelfCommand(page, "Import markdown");
   const dialog = page.getByRole("dialog", { name: "Bring notes into Mdez" });
   const dialogShadow = await dialog.evaluate((node) => getComputedStyle(node).boxShadow);
   expect(dialogShadow).toBe(tocShadow);

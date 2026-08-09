@@ -903,31 +903,66 @@ body {
   outline-offset: 2px;
 }
 
-.shelf-command-bar {
+.shelf-section-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
 }
 
-.shelf-guidance {
-  max-width: 65ch;
-  text-wrap: pretty;
+.shelf-section-count {
+  display: block;
+  margin-top: var(--space-1);
 }
 
-.shelf-primary-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+.shelf-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
-.shelf-primary-actions > button {
-  width: 100%;
+.shelf-section-actions > button {
+  min-height: 2.5rem;
   white-space: nowrap;
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  .shelf-primary-actions {
+  .shelf-section-actions {
+    max-width: min(100%, 30rem);
+  }
+}
+
+@media (max-width: 1023px) {
+  .workspace-sidebar {
+    border-radius: 0 var(--radius-surface) var(--radius-surface) 0;
+    background: var(--color-paper);
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-shell { background: linear-gradient(135deg, var(--color-canvas), var(--color-lavender)); }
+  .workspace-surface { border-radius: var(--radius-control); padding: var(--space-3); }
+
+  .shelf-section-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shelf-section-actions {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+
+  .shelf-section-actions > button {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .shelf-book-grid,
+  .recent-page-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar-row-actions-trigger {
@@ -941,30 +976,10 @@ body {
   }
 }
 
-@media (min-width: 1200px) {
-  .shelf-command-bar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+@media (max-width: 420px) {
+  .shelf-section-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
-
-  .shelf-primary-actions {
-    grid-auto-flow: column;
-    grid-template-columns: repeat(4, max-content);
-  }
-}
-
-
-@media (max-width: 1023px) {
-  .workspace-sidebar {
-    border-radius: 0 var(--radius-surface) var(--radius-surface) 0;
-    background: var(--color-paper);
-  }
-}
-
-@media (max-width: 767px) {
-  .workspace-shell { background: linear-gradient(135deg, var(--color-canvas), var(--color-lavender)); }
-  .workspace-surface { border-radius: var(--radius-control); padding: var(--space-3); }
 }
 .editor-toolbar {
   display: grid;
