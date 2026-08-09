@@ -390,6 +390,36 @@ test("selected mobile explorer rows keep their More actions trigger available", 
   expect(box!.height).toBeGreaterThanOrEqual(44);
 });
 
+test("Shelf uses horizontal book tiles including Shelf root", async ({ page }) => {
+  page.once("dialog", (dialog) => dialog.accept("Writing"));
+  await clickShelfCommand(page, "New book");
+
+  const shelf = page.getByRole("main");
+  const root = shelf.getByRole("button", { name: /Shelf root, \d+ pages?, closed/ });
+  const writing = shelf.getByRole("button", { name: /Writing book, 0 pages, open/ });
+
+  await expect(root).toBeVisible();
+  await expect(writing).toBeVisible();
+  const geometry = await writing.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return { width: rect.width, height: rect.height, writingMode: getComputedStyle(node).writingMode };
+  });
+  expect(geometry.width).toBeGreaterThan(geometry.height);
+  expect(geometry.writingMode).toBe("horizontal-tb");
+});
+
+test("recent page cards expose title location and update time without nested card controls", async ({ page }) => {
+  await clickShelfCommand(page, "Create page");
+  await showShelfIfAvailable(page);
+
+  const recent = page.getByRole("list", { name: "Recent pages" });
+  const card = recent.getByRole("listitem").filter({ hasText: "untitled.md" });
+  await expect(card.getByText("Shelf root", { exact: true })).toBeVisible();
+  await expect(card.getByText(/^Updated (recently|\d+ (min|hr|day|days) ago)$/)).toBeVisible();
+  await expect(card.getByRole("button")).toHaveCount(1);
+  await expect(card.getByRole("button")).toHaveClass(/recent-page-card/);
+});
+
 
 
 test("editor exposes the renewed markdown toolbar", async ({ page }) => {

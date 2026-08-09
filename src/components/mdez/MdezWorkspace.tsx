@@ -421,7 +421,6 @@ export function MdezWorkspace() {
                 documents={liveDocuments}
                 selectedFolderId={library.selectedFolderId}
                 selectedDocumentId={library.selectedDocumentId}
-                isReady={library.isReady}
                 onSelectFolder={handleSelectFolder}
                 onSelectDocument={handleSelectDocument}
                 onCreateDocument={handleCreateDocument}
