@@ -56,7 +56,13 @@ async function mockShareApi(context: BrowserContext, deleteStatus = 204) {
         json: {
           publicId: "share-1",
           title: "Welcome",
-          markdown: "# Shared snapshot",
+          markdown: [
+            "# Shared snapshot",
+            ...Array.from(
+              { length: 120 },
+              (_, index) => `Paragraph ${index + 1}: a long shared page must keep normal browser scrolling.`
+            )
+          ].join("\n\n"),
           createdAt: "2026-08-09T00:00:00.000Z",
           expiresAt: null
         }
@@ -85,6 +91,11 @@ test("creates, opens, and deletes a view-only snapshot", async ({ page, context 
   await shared.goto("/share/share-1");
   await expect(shared.getByRole("heading", { name: "Shared snapshot" })).toBeVisible();
   await expect(shared.getByRole("textbox")).toHaveCount(0);
+  expect(await shared.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(
+    await shared.evaluate(() => document.documentElement.clientHeight)
+  );
+  await shared.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => shared.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await shared.close();
 
   await page.getByRole("button", { name: "Close", exact: true }).click();
