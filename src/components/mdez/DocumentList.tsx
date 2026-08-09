@@ -1,10 +1,10 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { FileText } from "lucide-react";
 
 import { formatRelativeTime } from "@/lib/relative-time";
 import type { Document, Folder } from "@/types/content";
-import { IconButton } from "@/components/ui/IconButton";
+import { RowActionsPopover } from "@/components/ui/RowActionsPopover";
 
 type DocumentListProps = {
   folders: Folder[];
@@ -40,9 +40,10 @@ export function DocumentList({
   }
 
   return (
-    <section className="min-h-0">
-      <div className="sidebar-group-heading mb-3 flex items-center justify-between gap-3">
+    <section className="sidebar-group min-h-0">
+      <div className="sidebar-group-heading">
         <h3 className="font-display text-sm font-black text-ink">Pages</h3>
+        <span>{visibleDocuments.length}</span>
       </div>
 
       {visibleDocuments.length === 0 ? (
@@ -50,61 +51,56 @@ export function DocumentList({
           {selectedBook ? `No pages in ${selectedBook.name}.` : "No loose pages on Shelf root."}
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="sidebar-group-list">
           {visibleDocuments.map((document) => (
             <article
               key={document.id}
-              className="dogear-card rounded border border-border bg-surface p-2 shadow-soft transition hover:border-accent-files"
+              className={`sidebar-row sidebar-page-row ${selectedDocumentId === document.id ? "is-selected" : ""}`}
             >
               <button
                 type="button"
                 onClick={() => onSelectDocument(document.id)}
                 aria-pressed={selectedDocumentId === document.id}
-                className={`w-full rounded border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-accent ${
-                  selectedDocumentId === document.id
-                    ? "border-accent bg-panel text-ink shadow-soft"
-                    : "border-transparent text-ink hover:bg-panel"
-                }`}
+                className="sidebar-row-main"
               >
-                <span className="block truncate font-display text-sm font-black">{document.title}</span>
-                <span className="document-updated-label mt-1 block truncate font-semibold opacity-70">
-                  Updated {formatRelativeTime(document.updatedAt)}
+                <FileText aria-hidden="true" className="sidebar-row-icon" />
+                <span className="sidebar-row-copy">
+                  <span className="sidebar-row-title">{document.title}</span>
+                  <span className="sidebar-row-meta document-updated-label">Updated {formatRelativeTime(document.updatedAt)}</span>
                 </span>
               </button>
 
-              <div className="mt-2 flex items-center gap-2">
+              <RowActionsPopover label={`More actions for ${document.title}`} selected={selectedDocumentId === document.id}>
                 <button
+                  data-row-action
                   type="button"
                   onClick={() => renameDocument(document)}
-                  className="rounded px-2 py-1 text-xs font-black text-muted transition hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files"
+                  className="row-actions-item"
                   aria-label={`Rename ${document.title}`}
-                  title={`Rename ${document.title}`}
                 >
-                  Rename
+                  Rename page
                 </button>
 
-                <select
-                  value={document.folderId ?? ""}
-                  onChange={(event) => onMoveDocument(document.id, event.target.value || null)}
-                  aria-label={`Move ${document.title} page`}
-                  title={`Move ${document.title} page`}
-                  className="workspace-input min-w-0 flex-1 px-2 py-1 font-mono text-xs font-bold focus:ring-0"
-                >
-                  <option value="">Shelf root</option>
-                  {folders
-                    .slice()
-                    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-                    .map((folder) => (
-                      <option key={folder.id} value={folder.id}>
-                        {folder.name}
-                      </option>
-                    ))}
-                </select>
+                <label className="row-actions-field">
+                  <span>Move page</span>
+                  <select
+                    value={document.folderId ?? ""}
+                    onChange={(event) => onMoveDocument(document.id, event.target.value || null)}
+                    aria-label={`Move ${document.title} page`}
+                    className="workspace-input"
+                  >
+                    <option value="">Shelf root</option>
+                    {folders
+                      .slice()
+                      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+                      .map((folder) => (
+                        <option key={folder.id} value={folder.id}>{folder.name}</option>
+                      ))}
+                  </select>
+                </label>
 
-                <IconButton label={`Delete ${document.title}`} onClick={() => onDeleteDocument(document.id)} className="h-8 w-8 border-accent/30">
-                  <Trash2 aria-hidden="true" className="h-4 w-4" />
-                </IconButton>
-              </div>
+                <button data-row-action type="button" onClick={() => onDeleteDocument(document.id)} aria-label={`Delete ${document.title}`} className="row-actions-item row-actions-item-destructive">Delete page</button>
+              </RowActionsPopover>
             </article>
           ))}
         </div>

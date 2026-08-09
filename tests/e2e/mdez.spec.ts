@@ -60,6 +60,12 @@ async function clickShelfCommand(page: import("@playwright/test").Page, name: st
   await control.evaluate((button: HTMLButtonElement) => button.click());
 }
 
+async function openRowActions(page: import("@playwright/test").Page, itemName: string) {
+  const trigger = page.getByRole("button", { name: `More actions for ${itemName}`, exact: true });
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+}
+
 async function expectModeReady(page: import("@playwright/test").Page, mode: "Shelf" | "Edit" | "Read" | "Split") {
   if (mode === "Edit") {
     await expect(page.getByTestId("screen-editor")).toBeVisible();
@@ -350,6 +356,38 @@ test("long book names do not overflow shelf actions", async ({ page }) => {
     expect(containment.buttonWidth).toBeLessThanOrEqual(containment.parentWidth);
     expect(containment.documentWidth).toBe(containment.viewportWidth);
   }
+});
+
+test("sidebar presents quiet explorer rows with disclosed management actions", async ({ page }) => {
+  page.once("dialog", (dialog) => dialog.accept("Writing"));
+  await clickShelfCommand(page, "New book");
+  await openShelfDrawerIfAvailable(page);
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const book = sidebar.getByRole("treeitem", { name: /Writing book/ });
+  const more = sidebar.getByRole("button", { name: "More actions for Writing" });
+
+  await expect(book).toBeVisible();
+  await expect(sidebar.locator(".sidebar-explorer")).toBeVisible();
+  await more.focus();
+  await more.click();
+  await expect(page.getByRole("button", { name: "Rename Writing" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create book inside Writing" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Writing" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+});
+
+test("selected mobile explorer rows keep their More actions trigger available", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await clickShelfCommand(page, "Create page");
+  await openShelfDrawerIfAvailable(page);
+  const more = page.getByRole("complementary", { name: "Library shelf" })
+    .getByRole("button", { name: "More actions for untitled.md" });
+  await expect(more).toBeVisible();
+  const box = await more.boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
+  expect(box!.height).toBeGreaterThanOrEqual(44);
 });
 
 
@@ -912,6 +950,7 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
   await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
+  await openRowActions(page, "Projects");
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
@@ -919,6 +958,7 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
   await clickShelfCommand(page, "Create page in Launch");
   await showShelfIfAvailable(page);
   await openShelfDrawerIfAvailable(page);
+  await openRowActions(page, "Projects");
   await page.getByRole("button", { name: "Delete Projects" }).click();
   await expect(
     page.getByRole("complementary", { name: "Library shelf" }).getByText("Move or delete nested books and pages", { exact: false })
@@ -932,6 +972,7 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
+  await openRowActions(page, "Projects");
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 

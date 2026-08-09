@@ -90,6 +90,10 @@ export function MdezWorkspace() {
         return;
       }
 
+      if (document.querySelector(":popover-open")) {
+        return;
+      }
+
       setIsDrawerOpen(false);
       if (isTabletLayout) {
         window.setTimeout(() => drawerTriggerRef.current?.focus(), 0);

@@ -94,31 +94,27 @@ export function Sidebar({
             <strong>Library</strong>
             <span>{documents.length} {documents.length === 1 ? "page" : "pages"}</span>
           </div>
-          <div className="space-y-5">
-            <FolderTree
-              folders={folders}
-              documents={documents}
-              selectedFolderId={selectedFolderId}
-              expandedFolderIds={expandedFolderIds}
-              onSelectFolder={onSelectFolder}
-              onToggleFolder={onToggleFolder}
-              onCreateFolder={onCreateFolder}
-              onRenameFolder={onRenameFolder}
-              onDeleteFolder={onDeleteFolder}
-            />
-            <div className="sidebar-group border-t border-border pt-4">
-              <DocumentList
-                folders={folders}
-                documents={documents}
-                selectedFolderId={selectedFolderId}
-                selectedDocumentId={selectedDocumentId}
-                onSelectDocument={onSelectDocument}
-                onRenameDocument={onRenameDocument}
-                onMoveDocument={onMoveDocument}
-                onDeleteDocument={onDeleteDocument}
-              />
-            </div>
-          </div>
+          <FolderTree
+            folders={folders}
+            documents={documents}
+            selectedFolderId={selectedFolderId}
+            expandedFolderIds={expandedFolderIds}
+            onSelectFolder={onSelectFolder}
+            onToggleFolder={onToggleFolder}
+            onCreateFolder={onCreateFolder}
+            onRenameFolder={onRenameFolder}
+            onDeleteFolder={onDeleteFolder}
+          />
+          <DocumentList
+            folders={folders}
+            documents={documents}
+            selectedFolderId={selectedFolderId}
+            selectedDocumentId={selectedDocumentId}
+            onSelectDocument={onSelectDocument}
+            onRenameDocument={onRenameDocument}
+            onMoveDocument={onMoveDocument}
+            onDeleteDocument={onDeleteDocument}
+          />
         </div>
       </div>
     </aside>

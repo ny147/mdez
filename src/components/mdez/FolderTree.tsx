@@ -1,10 +1,10 @@
 "use client";
 
-import { BookOpen, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, Library } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import { buildFolderTree, type FolderNode } from "@/lib/tree";
-import { IconButton } from "@/components/ui/IconButton";
+import { RowActionsPopover } from "@/components/ui/RowActionsPopover";
 
 type FolderTreeProps = {
   folders: Folder[];
@@ -32,24 +32,25 @@ export function FolderTree({
   const tree = buildFolderTree(folders);
 
   return (
-    <section className="min-h-0">
-      <div className="sidebar-group-heading mb-3 flex items-center justify-between gap-3">
+    <section className="sidebar-group min-h-0">
+      <div className="sidebar-group-heading">
         <h3 className="font-display text-sm font-black text-ink">Books</h3>
+        <span>{tree.length}</span>
       </div>
 
-      <div className="space-y-1" role="tree" aria-label="Books and pages">
+      <div className="sidebar-group-list" role="tree" aria-label="Books and pages">
         <button
           type="button"
           onClick={() => onSelectFolder(null)}
           role="treeitem"
           aria-selected={selectedFolderId === null}
-          className={`w-full rounded border px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
-            selectedFolderId === null
-              ? "border-accent-files bg-accent-files text-accent-on shadow-soft"
-              : "border-transparent text-muted hover:border-border hover:bg-panel hover:text-ink"
-          }`}
+          className={`sidebar-row sidebar-root-row ${selectedFolderId === null ? "is-selected" : ""}`}
         >
-          Shelf root
+          <Library aria-hidden="true" className="sidebar-row-icon" />
+          <span className="sidebar-row-copy">
+            <span className="sidebar-row-title">Shelf root</span>
+            <span className="sidebar-row-meta">{documents.filter((document) => document.folderId === null).length} loose pages</span>
+          </span>
         </button>
 
         {tree.map((node) => (
@@ -105,14 +106,14 @@ function FolderTreeRow({
 
   return (
     <div>
-      <div className="group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
+      <div className={`sidebar-row sidebar-book-row group ${isSelected ? "is-selected" : ""}`} style={{ marginLeft: `${depth * 0.75}rem` }}>
         <button
           type="button"
           onClick={() => hasChildren && onToggleFolder(folder.id)}
           disabled={!hasChildren}
           aria-label={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
           title={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
-          className="flex h-9 w-7 shrink-0 items-center justify-center rounded text-muted transition hover:bg-surface-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
+          className="sidebar-row-expand"
         >
           {hasChildren ? (
             isExpanded ? (
@@ -134,29 +135,20 @@ function FolderTreeRow({
           aria-selected={isSelected}
           aria-expanded={isSelected}
           title={`Open ${folder.name} book`}
-          className={`min-w-0 flex-1 rounded border px-2 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
-            isSelected ? "border-accent-files bg-accent-files text-accent-on shadow-soft" : "border-transparent text-muted hover:text-ink"
-          }`}
+          className="sidebar-row-main"
         >
-          <span className="block truncate">{folder.name}</span>
+          <BookOpen aria-hidden="true" className="sidebar-row-icon" />
+          <span className="sidebar-row-copy">
+            <span className="sidebar-row-title">{folder.name}</span>
+            <span className="sidebar-row-meta">{pageCount} {pageCount === 1 ? "page" : "pages"}</span>
+          </span>
         </button>
 
-        <button
-          type="button"
-          onClick={handleRename}
-          className="rounded px-2 py-1 text-xs font-black text-muted opacity-100 transition hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-          aria-label={`Rename ${folder.name}`}
-          title={`Rename ${folder.name}`}
-        >
-          Rename
-        </button>
-
-        <IconButton label={`Create book inside ${folder.name}`} onClick={() => onCreateFolder(folder.id)} className="h-8 w-8">
-          <BookOpen aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
-        <IconButton label={`Delete ${folder.name}`} onClick={() => onDeleteFolder(folder.id)} className="h-8 w-8">
-          <Trash2 aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
+        <RowActionsPopover label={`More actions for ${folder.name}`} selected={isSelected}>
+          <button data-row-action type="button" onClick={() => onCreateFolder(folder.id)} aria-label={`Create book inside ${folder.name}`} className="row-actions-item">Create nested book</button>
+          <button data-row-action type="button" onClick={handleRename} aria-label={`Rename ${folder.name}`} className="row-actions-item">Rename book</button>
+          <button data-row-action type="button" onClick={() => onDeleteFolder(folder.id)} aria-label={`Delete ${folder.name}`} className="row-actions-item row-actions-item-destructive">Delete book</button>
+        </RowActionsPopover>
       </div>
 
       {hasChildren && isExpanded ? (
