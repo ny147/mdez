@@ -54,7 +54,7 @@ export function ShelfPane({
         <div className="shelf-primary-actions">
           <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
             <FilePlus aria-hidden="true" className="h-4 w-4" />
-            {createPageLabel}
+            Create page
           </button>
           <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
             <BookOpen aria-hidden="true" className="h-4 w-4" />
@@ -155,7 +155,7 @@ export function ShelfPane({
                   >
                     <span className="block truncate font-display text-base font-black text-ink">{document.title}</span>
                     <span className="mt-2 block truncate text-sm font-semibold text-muted">{parentBook}</span>
-                    <span className="mt-3 block text-[0.8125rem] font-bold text-accent-files">Updated {updated}</span>
+                    <span className="recent-page-updated-label mt-3 block text-[0.8125rem] font-bold text-accent-files">Updated {updated}</span>
                   </button>
                 </li>
               );

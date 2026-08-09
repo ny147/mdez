@@ -5,18 +5,19 @@ export function formatRelativeTime(value: string, now = Date.now()) {
     return "recently";
   }
 
-  const diffMinutes = Math.max(1, Math.round((now - timestamp) / 60_000));
+  const elapsed = now - timestamp;
+  const diffMinutes = Math.max(1, Math.floor(elapsed / 60_000));
 
   if (diffMinutes < 60) {
     return `${diffMinutes} min ago`;
   }
 
-  const diffHours = Math.round(diffMinutes / 60);
+  const diffHours = Math.floor(elapsed / 3_600_000);
 
   if (diffHours < 24) {
     return `${diffHours} hr ago`;
   }
 
-  const diffDays = Math.round(diffHours / 24);
+  const diffDays = Math.floor(elapsed / 86_400_000);
   return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
 }

@@ -144,8 +144,17 @@ test("workspace modes use pressed button semantics", async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const navigation = page.locator(width <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
     const shelf = navigation.getByRole("button", { name: "Shelf", exact: true });
+    const modes = navigation.getByRole("button");
+    await expect(modes).toHaveCount(4);
+    for (const mode of await modes.all()) {
+      await expect(mode).toHaveAttribute("aria-pressed", /^(true|false)$/);
+    }
     await expect(shelf).toHaveAttribute("aria-pressed", "true");
     await expect(navigation.getByRole("tab")).toHaveCount(0);
+    await navigation.getByRole("button", { name: "Read", exact: true }).evaluate((button: HTMLButtonElement) => button.click());
+    await expect(shelf).toHaveAttribute("aria-pressed", "false");
+    await expect(navigation.getByRole("button", { name: "Read", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await navigation.getByRole("button", { name: "Shelf", exact: true }).evaluate((button: HTMLButtonElement) => button.click());
   }
 });
 
@@ -176,13 +185,21 @@ test("selected mobile mode text meets compact-text contrast", async ({ page }) =
 
 test("compact workspace labels remain at least 13 pixels", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await showShelfIfAvailable(page);
+  await expect(page.locator(".document-updated-label")).toHaveCount(1);
+  await expect(page.locator(".recent-page-updated-label")).toHaveCount(1);
   const sizes = await page.evaluate(() => ({
     status: Number.parseFloat(getComputedStyle(document.querySelector(".workspace-status")!).fontSize),
-    mode: Number.parseFloat(getComputedStyle(document.querySelector(".mobile-mode-button")!).fontSize)
+    mode: Number.parseFloat(getComputedStyle(document.querySelector(".mobile-mode-button")!).fontSize),
+    sidebarTimestamp: Number.parseFloat(getComputedStyle(document.querySelector(".document-updated-label")!).fontSize),
+    recentTimestamp: Number.parseFloat(getComputedStyle(document.querySelector(".recent-page-updated-label")!).fontSize)
   }));
 
   expect(sizes.status).toBeGreaterThanOrEqual(13);
   expect(sizes.mode).toBeGreaterThanOrEqual(13);
+  expect(sizes.sidebarTimestamp).toBeGreaterThanOrEqual(13);
+  expect(sizes.recentTimestamp).toBeGreaterThanOrEqual(13);
 });
 
 test("desktop sidebar can reopen and restores its state", async ({ page }) => {
@@ -287,6 +304,28 @@ test("one open book controls shelf context", async ({ page }) => {
   await expect(page.getByRole("button", { name: "New book on shelf", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).first()).toBeEnabled();
   await expect(page.getByRole("list", { name: "Recent pages" }).getByRole("listitem")).toHaveCount(1);
+});
+
+test("long book names do not overflow shelf actions", async ({ page }) => {
+  const bookName = "A".repeat(120);
+  await openShelfDrawerIfAvailable(page);
+  page.once("dialog", (dialog) => dialog.accept(bookName));
+  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
+  await showShelfIfAvailable(page);
+
+  for (const width of [390, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    const action = page.getByRole("button", { name: `Create page in ${bookName}`, exact: true }).last();
+    await expect(action).toContainText("Create page");
+    const containment = await action.evaluate((node) => ({
+      buttonWidth: node.getBoundingClientRect().width,
+      parentWidth: node.parentElement!.getBoundingClientRect().width,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth
+    }));
+    expect(containment.buttonWidth).toBeLessThanOrEqual(containment.parentWidth);
+    expect(containment.documentWidth).toBe(containment.viewportWidth);
+  }
 });
 
 
