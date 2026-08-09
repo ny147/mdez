@@ -3,14 +3,14 @@ import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 
 async function showShelfIfAvailable(page: import("@playwright/test").Page) {
-  const shelfTabs = page.getByRole("tab", { name: "Shelf", exact: true });
-  const shelfTabCount = await shelfTabs.count();
+  const navigations = page.getByRole("navigation", { name: "Workspace modes" });
 
-  for (let index = 0; index < shelfTabCount; index += 1) {
-    const shelfTab = shelfTabs.nth(index);
+  for (let index = 0; index < await navigations.count(); index += 1) {
+    const shelfButton = navigations.nth(index).getByRole("button", { name: "Shelf", exact: true });
 
-    if (await shelfTab.isVisible().catch(() => false)) {
-      await shelfTab.evaluate((element) => (element as HTMLElement).click());
+    if (await shelfButton.isVisible().catch(() => false)) {
+      await shelfButton.click();
+      await expect(shelfButton).toHaveAttribute("aria-pressed", "true");
       return;
     }
   }
@@ -24,32 +24,26 @@ async function openShelfDrawerIfAvailable(page: import("@playwright/test").Page)
   }
 }
 async function clickVisibleButtonIfAvailable(page: import("@playwright/test").Page, name: string) {
-  for (const role of ["tab", "button"] as const) {
-    const controls = page.getByRole(role, { name, exact: true });
-    const controlCount = await controls.count();
+  const controls = page.getByRole("button", { name, exact: true });
 
-    for (let index = 0; index < controlCount; index += 1) {
-      const control = controls.nth(index);
+  for (let index = 0; index < await controls.count(); index += 1) {
+    const control = controls.nth(index);
 
-      if (await control.isVisible().catch(() => false)) {
-        await control.click();
-        if (role === "tab") {
-          await expect(control).toHaveAttribute("aria-selected", "true");
-        }
-        return;
-      }
+    if (await control.isVisible().catch(() => false)) {
+      await control.click();
+      return;
     }
   }
 }
-async function clickViewportModeTab(page: import("@playwright/test").Page, name: string) {
+async function clickViewportModeButton(page: import("@playwright/test").Page, name: string) {
   const viewportWidth = page.viewportSize()?.width ?? 1280;
   const navigation = page.locator(viewportWidth <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
-  const control = navigation.getByRole("tab", { name, exact: true });
+  const control = navigation.getByRole("button", { name, exact: true });
 
-  if ((await control.getAttribute("aria-selected")) !== "true") {
+  if ((await control.getAttribute("aria-pressed")) !== "true") {
     await control.click();
   }
-  await expect(control).toHaveAttribute("aria-selected", "true");
+  await expect(control).toHaveAttribute("aria-pressed", "true");
 }
 
 async function expectModeReady(page: import("@playwright/test").Page, mode: "Shelf" | "Edit" | "Read" | "Split") {
@@ -143,6 +137,52 @@ test("uses the renewed light library shell and mode accents", async ({ page }) =
 
   expect(fonts.body).toContain("Inter");
   expect(fonts.heading).toContain("Space Grotesk");
+});
+
+test("workspace modes use pressed button semantics", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const navigation = page.locator(width <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
+    const shelf = navigation.getByRole("button", { name: "Shelf", exact: true });
+    await expect(shelf).toHaveAttribute("aria-pressed", "true");
+    await expect(navigation.getByRole("tab")).toHaveCount(0);
+  }
+});
+
+test("selected mobile mode text meets compact-text contrast", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const shelf = page.locator(".mobile-mode-button").filter({ hasText: "Shelf" });
+
+  const contrast = await shelf.evaluate((node) => {
+    const parse = (value: string) => {
+      const channels = value.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+      return value.startsWith("color(srgb") ? channels.map((channel) => channel * 255) : channels;
+    };
+    const luminance = ([red, green, blue]: number[]) => {
+      const channels = [red, green, blue].map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    const style = getComputedStyle(node);
+    const foreground = luminance(parse(style.color));
+    const background = luminance(parse(style.backgroundColor));
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+  });
+
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
+});
+
+test("compact workspace labels remain at least 13 pixels", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const sizes = await page.evaluate(() => ({
+    status: Number.parseFloat(getComputedStyle(document.querySelector(".workspace-status")!).fontSize),
+    mode: Number.parseFloat(getComputedStyle(document.querySelector(".mobile-mode-button")!).fontSize)
+  }));
+
+  expect(sizes.status).toBeGreaterThanOrEqual(13);
+  expect(sizes.mode).toBeGreaterThanOrEqual(13);
 });
 
 test("desktop sidebar can reopen and restores its state", async ({ page }) => {
@@ -263,7 +303,7 @@ test("editor exposes the renewed markdown toolbar", async ({ page }) => {
 test("mobile editor follows visual toolbar focus order and keeps actions visible", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Edit");
+  await clickViewportModeButton(page, "Edit");
 
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
   const formatNames = ["Bold", "Italic", "Insert link", "Insert image", "Code", "Heading 1", "Heading 2", "Divider"];
@@ -317,7 +357,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
 
 test("read mode exposes one workspace-level document heading", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Read");
+  await clickViewportModeButton(page, "Read");
 
   const main = page.getByRole("main");
   const identity = main.getByRole("heading", { name: "Untitled Document", exact: true });
@@ -332,22 +372,22 @@ test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) =
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Edit");
+  await clickViewportModeButton(page, "Edit");
   await expect(main.getByRole("heading", { level: 1, name: "Edit untitled.md", includeHidden: true })).toHaveClass(/sr-only/);
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(0);
 
-  await clickViewportModeTab(page, "Read");
+  await clickViewportModeButton(page, "Read");
   await expect(main.getByRole("heading", { level: 1, name: "Untitled Document" })).toBeVisible();
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
 
-  await clickViewportModeTab(page, "Split");
+  await clickViewportModeButton(page, "Split");
   await expect(main.getByRole("heading", { level: 1, name: "Edit untitled.md", includeHidden: true })).toHaveClass(/sr-only/);
   await expect(main.getByRole("heading", { level: 1, name: "Untitled Document" })).toBeVisible();
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
 });
 test("reader prose uses the reader token and only overlays receive elevation", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Read");
+  await clickViewportModeButton(page, "Read");
 
   await expect(page.locator(".markdown-preview")).toBeVisible();
   const evidence = await page.evaluate(() => {
@@ -369,7 +409,7 @@ test("reader prose uses the reader token and only overlays receive elevation", a
 test("drawer, table of contents, and dialog share floating elevation", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Read");
+  await clickViewportModeButton(page, "Read");
 
   await page.getByRole("button", { name: "Open table of contents" }).click();
   const toc = page.locator('nav[aria-label="Table of contents"]');
@@ -439,7 +479,7 @@ test("mobile workspace interactive targets are at least 44 by 44 pixels", async 
 
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   for (const mode of ["Edit", "Read", "Split"] as const) {
-    await clickViewportModeTab(page, mode);
+    await clickViewportModeButton(page, mode);
     await expectModeReady(page, mode);
     await auditVisibleTargets(mode);
   }
@@ -850,7 +890,7 @@ test("split separator resizes from 30 to 70 percent", async ({ page }) => {
 test("mobile split separator resizes from vertical pointer movement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Split");
+  await clickViewportModeButton(page, "Split");
 
   const split = page.locator(".split-workspace");
   const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
@@ -891,7 +931,7 @@ test("tablet drawer keeps its close control below the desktop breakpoint", async
 test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Split");
+  await clickViewportModeButton(page, "Split");
 
   const openShelf = page.getByRole("button", { name: "Open library shelf" });
   await expect(openShelf).toBeVisible();
@@ -909,7 +949,7 @@ test("tablet split stacks full-width panes and keeps the shelf in a drawer", asy
 test("responsive layout switches exactly between 1023 and 1024 pixels", async ({ page }) => {
   await page.setViewportSize({ width: 1023, height: 900 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await clickViewportModeTab(page, "Split");
+  await clickViewportModeButton(page, "Split");
   await expectModeReady(page, "Split");
 
   const drawerTrigger = page.getByRole("button", { name: "Open library shelf" });
@@ -983,7 +1023,7 @@ for (const width of [390, 430, 768, 1024, 1440]) {
       if (mode !== "Shelf") {
         await page.getByRole("button", { name: "Create page", exact: true }).last().click();
       }
-      await clickViewportModeTab(page, mode);
+      await clickViewportModeButton(page, mode);
       await expectModeReady(page, mode);
 
       const size = await page.evaluate(() => [

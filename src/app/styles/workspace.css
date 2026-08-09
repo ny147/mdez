@@ -283,11 +283,11 @@ body {
   font-weight: 700;
 }
 
-.workspace-mode-button[aria-selected="true"] {
+.workspace-mode-button[aria-pressed="true"] {
   border-color: transparent;
   border-bottom-color: var(--mode-accent);
   background: color-mix(in srgb, var(--mode-accent) 8%, transparent);
-  color: var(--mode-accent);
+  color: var(--color-ink);
 }
 
 .workspace-icon-button {
@@ -382,7 +382,12 @@ body {
   background: var(--color-panel);
   color: var(--color-muted);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+
+.document-updated-label {
+  font-size: 0.8125rem;
 }
 
 .status-cluster {
@@ -538,14 +543,15 @@ body {
     justify-content: center;
     gap: 0.35rem;
     padding: 0.25rem;
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 700;
+    line-height: 1.2;
   }
 
-  .mobile-mode-button[aria-selected="true"] {
+  .mobile-mode-button[aria-pressed="true"] {
     border-color: color-mix(in srgb, var(--mode-accent) 32%, var(--color-rule));
     background: color-mix(in srgb, var(--mode-accent) 10%, var(--color-paper));
-    color: var(--mode-accent);
+    color: var(--color-ink);
   }
 }
 
@@ -696,8 +702,7 @@ body {
   .workspace-shell select,
   .workspace-shell textarea,
   .workspace-shell summary,
-  .workspace-shell [role="button"],
-  .workspace-shell [role="tab"] {
+  .workspace-shell [role="button"] {
     min-width: 2.75rem;
     min-height: 2.75rem;
   }

@@ -335,8 +335,7 @@ export function MdezWorkspace() {
             <button
               key={option.value}
               type="button"
-              role="tab"
-              aria-selected={viewMode === option.value}
+              aria-pressed={viewMode === option.value}
               onClick={() => handleViewModeChange(option.value)}
               className="workspace-mode-button"
             >
@@ -459,8 +458,7 @@ export function MdezWorkspace() {
             <button
               key={option.value}
               type="button"
-              role="tab"
-              aria-selected={viewMode === option.value}
+              aria-pressed={viewMode === option.value}
               onClick={() => handleViewModeChange(option.value)}
               className="mobile-mode-button"
             >
