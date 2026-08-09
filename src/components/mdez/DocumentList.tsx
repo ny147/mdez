@@ -2,6 +2,7 @@
 
 import { FilePlus, Trash2 } from "lucide-react";
 
+import { formatRelativeTime } from "@/lib/relative-time";
 import type { Document, Folder } from "@/types/content";
 import { IconButton } from "@/components/ui/IconButton";
 
@@ -102,7 +103,9 @@ export function DocumentList({
                 }`}
               >
                 <span className="block truncate font-display text-sm font-black">{document.title}</span>
-                <span className="mt-1 block truncate text-xs font-semibold opacity-70">{document.updatedAt}</span>
+                <span className="document-updated-label mt-1 block truncate font-semibold opacity-70">
+                  Updated {formatRelativeTime(document.updatedAt)}
+                </span>
               </button>
 
               <div className="mt-2 flex items-center gap-2">

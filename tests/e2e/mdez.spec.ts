@@ -195,6 +195,20 @@ test("fresh workspace exposes visible create and import actions", async ({ page 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("untitled.md");
 });
 
+test("sidebar uses human-readable page timestamps", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await openShelfDrawerIfAvailable(page);
+
+  const pageCard = page
+    .getByRole("complementary", { name: "Library shelf" })
+    .locator("article")
+    .filter({ hasText: "untitled.md" });
+  const updatedLabel = pageCard.locator("button[aria-pressed] span").nth(1);
+
+  await expect(updatedLabel).toHaveText(/^Updated (recently|\d+ (min|hr|day|days) ago)$/);
+  await expect(updatedLabel).not.toHaveText(/^\d{4}-\d{2}-\d{2}T/);
+});
+
 test("no-document editor and reader states expose recovery actions", async ({ page }) => {
   await clickVisibleButtonIfAvailable(page, "Edit");
 

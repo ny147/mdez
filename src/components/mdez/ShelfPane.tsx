@@ -2,6 +2,7 @@
 
 import { BookOpen, Download, FilePlus, Upload } from "lucide-react";
 
+import { formatRelativeTime } from "@/lib/relative-time";
 import type { Document, Folder } from "@/types/content";
 
 type ShelfPaneProps = {
@@ -20,29 +21,6 @@ type ShelfPaneProps = {
 
 function getBookPageCount(documents: Document[], folderId: string) {
   return documents.filter((document) => document.folderId === folderId).length;
-}
-
-function formatRelativeTime(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "recently";
-  }
-
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.max(1, Math.round(diffMs / 60000));
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-
-  if (diffHours < 24) {
-    return `${diffHours} hr ago`;
-  }
-
-  return `${Math.round(diffHours / 24)} days ago`;
 }
 
 export function ShelfPane({
