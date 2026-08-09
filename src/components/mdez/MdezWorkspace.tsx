@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
+import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
 import { renameDocument, updateDocumentBody } from "@/lib/repository";
 import type { ViewMode } from "@/types/content";
@@ -14,11 +14,20 @@ import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
 import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
-import { useDocumentDrafts } from "@/hooks/useDocumentDrafts";
+import { useDocumentDrafts, type PersistedDraftConflict } from "@/hooks/useDocumentDrafts";
 import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
 import { WORKSPACE_COPY } from "@/lib/workspace-copy";
+import { CreateGroupDialog } from "@/components/mdez/CreateGroupDialog";
+import { JoinGroupDialog } from "@/components/mdez/JoinGroupDialog";
+import { WorkspaceSwitcher } from "@/components/mdez/WorkspaceSwitcher";
+import { useKeyGroupLibrary } from "@/hooks/useKeyGroupLibrary";
+import { forgetGroup, loadRememberedGroups } from "@/lib/key-group-repository";
+import type { RememberedGroup } from "@/lib/db";
+import type { GroupConflict } from "@/types/key-group";
+import { GroupConflictDialog } from "@/components/mdez/GroupConflictDialog";
+import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -68,7 +77,17 @@ const mobileIcons = {
 };
 
 export function MdezWorkspace() {
-  const library = useWorkspaceLibrary();
+  const localLibrary = useWorkspaceLibrary();
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const groupLibrary = useKeyGroupLibrary(activeGroupId);
+  const library = activeGroupId ? groupLibrary : localLibrary;
+  const [rememberedGroups, setRememberedGroups] = useState<RememberedGroup[]>([]);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
+  const [persistConflict, setPersistConflict] = useState<{ conflict: GroupConflict; draft: PersistedDraftConflict } | null>(null);
+  const [conflictBusy, setConflictBusy] = useState(false);
+  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
+  const [groupSettingsBusy, setGroupSettingsBusy] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
   const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
@@ -80,6 +99,8 @@ export function MdezWorkspace() {
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
+  useEffect(() => { void reloadRememberedGroups(); }, []);
   useEffect(() => {
     const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
     if (savedSidebar === "hidden") {
@@ -118,23 +139,51 @@ export function MdezWorkspace() {
     saveStatus,
     changeBody: handleDraftBodyChange,
     changeTitle: handleDraftTitleChange,
-    renameTitleById: renameDraftTitle
+    renameTitleById: renameDraftTitle,
+    discardDraft
   } = useDocumentDrafts({
     documents: library.documents,
     selectedDocumentId: library.selectedDocumentId,
     setDocuments: library.setDocuments,
     setError: library.setError,
-    persistBody: updateDocumentBody,
-    persistTitle: renameDocument
+    persistBody: groupLibrary.persistBody && activeGroupId ? groupLibrary.persistBody : updateDocumentBody,
+    persistTitle: groupLibrary.persistTitle && activeGroupId ? groupLibrary.persistTitle : renameDocument,
+    onPersistConflict: activeGroupId ? (conflict, draft) => setPersistConflict({ conflict, draft }) : undefined
   });
+
+  async function reloadConflict() {
+    if (!persistConflict || !groupLibrary.reloadConflictDocument) return;
+    setConflictBusy(true);
+    try { const shared = await groupLibrary.reloadConflictDocument(persistConflict.draft.id); discardDraft(persistConflict.draft.id, shared); setPersistConflict(null); }
+    catch (cause) { library.setError(cause instanceof Error ? cause.message : "Could not reload shared page"); }
+    finally { setConflictBusy(false); }
+  }
+
+  async function copyConflict() {
+    if (!persistConflict || !groupLibrary.copyConflictDraft) return;
+    setConflictBusy(true);
+    try { await groupLibrary.copyConflictDraft(persistConflict.draft); setPersistConflict(null); }
+    catch (cause) { library.setError(cause instanceof Error ? cause.message : "Could not copy draft"); }
+    finally { setConflictBusy(false); }
+  }
 
   useEffect(() => {
     if (saveStatus === "Saving...") {
       setOperationStatus(null);
     }
   }, [saveStatus]);
+  useEffect(() => { groupLibrary.setRefreshBlocked?.(saveStatus !== "Saved" || Boolean(persistConflict)); }, [groupLibrary, persistConflict, saveStatus]);
+
+  async function leaveGroup() {
+    if (!activeGroupId) return; setGroupSettingsBusy(true);
+    try { await forgetGroup(activeGroupId); setActiveGroupId(null); setIsGroupSettingsOpen(false); await reloadRememberedGroups(); }
+    finally { setGroupSettingsBusy(false); }
+  }
+  async function renameActiveGroup(name: string) { setGroupSettingsBusy(true); try { await groupLibrary.renameGroup?.(name); await reloadRememberedGroups(); } finally { setGroupSettingsBusy(false); } }
+  async function deleteActiveGroup() { if (!window.confirm("Delete this group for every key holder?")) return; setGroupSettingsBusy(true); try { await groupLibrary.deleteGroup?.(); } finally { setGroupSettingsBusy(false); } }
+  async function restoreActiveGroup() { setGroupSettingsBusy(true); try { await groupLibrary.restoreGroup?.(); } finally { setGroupSettingsBusy(false); } }
   const activeSourceId = library.selectedFolder?.sourceId ?? library.selectedDocument?.sourceId;
-  const activeGitHubSource = library.sources.find((source) => source.id === activeSourceId) ?? null;
+  const activeGitHubSource = activeGroupId ? null : library.sources.find((source) => source.id === activeSourceId) ?? null;
   const liveSelectedDocument = liveDocuments.find(
     (document) => document.id === library.selectedDocumentId
   ) ?? null;
@@ -355,6 +404,13 @@ export function MdezWorkspace() {
             {isSidebarVisible ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}
           </button>
           <span className="workspace-wordmark">Mdez</span>
+          <WorkspaceSwitcher
+            activeGroupId={activeGroupId}
+            groups={rememberedGroups}
+            onSelect={setActiveGroupId}
+            onCreate={() => setIsCreateGroupOpen(true)}
+            onJoin={() => setIsJoinGroupOpen(true)}
+          />
         </div>
 
         <nav className="workspace-mode-nav" aria-label="Workspace modes">
@@ -373,6 +429,8 @@ export function MdezWorkspace() {
         </nav>
 
         <div className="workspace-actions">
+          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
+          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
           <button
             type="button"
             onClick={() => setIsSharedLinksOpen(true)}
@@ -524,6 +582,20 @@ export function MdezWorkspace() {
       {isSharedLinksOpen ? (
         <SharedLinksDialog open onClose={() => setIsSharedLinksOpen(false)} />
       ) : null}
+      <CreateGroupDialog
+        open={isCreateGroupOpen}
+        folders={localLibrary.folders}
+        documents={localLibrary.documents}
+        onClose={() => setIsCreateGroupOpen(false)}
+        onCreated={(groupId) => { void reloadRememberedGroups(); setActiveGroupId(groupId); }}
+      />
+      <JoinGroupDialog
+        open={isJoinGroupOpen}
+        onClose={() => setIsJoinGroupOpen(false)}
+        onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); setActiveGroupId(groupId); }}
+      />
+      <GroupConflictDialog open={Boolean(persistConflict)} busy={conflictBusy} onReload={() => void reloadConflict()} onCopy={() => void copyConflict()} onClose={() => setPersistConflict(null)} />
+      {groupLibrary.group ? <GroupSettingsDialog open={isGroupSettingsOpen} group={groupLibrary.group} busy={groupSettingsBusy} onClose={() => setIsGroupSettingsOpen(false)} onRename={(name) => void renameActiveGroup(name)} onLeave={() => void leaveGroup()} onDelete={() => void deleteActiveGroup()} onRestore={() => void restoreActiveGroup()} /> : null}
     </div>
   );
 

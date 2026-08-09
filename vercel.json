@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/quick-shares",
       "schedule": "17 3 * * *"
+    },
+    {
+      "path": "/api/cron/key-groups",
+      "schedule": "43 3 * * *"
     }
   ]
 }

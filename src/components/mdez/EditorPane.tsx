@@ -2,7 +2,7 @@
 
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
-import { keymap } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
 import { FilePlus, Share2, Upload } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useRef } from "react";
 
@@ -147,10 +147,11 @@ export function EditorPane({
       <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface shadow-soft">
         <CodeMirror
           ref={editorRef}
+          aria-label="Markdown editor"
           value={body}
           height="100%"
           minHeight="60vh"
-          extensions={[markdown(), formattingShortcuts]}
+          extensions={[markdown(), formattingShortcuts, EditorView.contentAttributes.of({ "aria-label": "Markdown editor" })]}
           basicSetup={{ lineNumbers: true, foldGutter: true }}
           onChange={onBodyChange}
         />

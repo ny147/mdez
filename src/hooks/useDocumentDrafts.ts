@@ -4,11 +4,15 @@ import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { LatestSaveQueue } from "@/lib/latest-save-queue";
+import { KeyGroupConflictError } from "@/lib/key-group-client";
 import type { Document, SaveStatus } from "@/types/content";
+import type { GroupConflict } from "@/types/key-group";
 
 export const SAVE_ERROR_MESSAGE = "Mdez could not save this page. Your current text remains visible in the editor.";
 
 const SAVE_DELAY = 650;
+
+export type PersistedDraftConflict = { id: string; title: string; body: string; field: "title" | "body" };
 
 type Options = {
   documents: Document[];
@@ -17,6 +21,7 @@ type Options = {
   setError: Dispatch<SetStateAction<string | null>>;
   persistBody: (id: string, body: string) => Promise<Document>;
   persistTitle: (id: string, title: string) => Promise<Document>;
+  onPersistConflict?: (conflict: GroupConflict, draft: PersistedDraftConflict) => void;
 };
 
 export type DocumentDraftController = {
@@ -27,6 +32,7 @@ export type DocumentDraftController = {
   changeBody: (body: string) => void;
   changeTitle: (title: string) => void;
   renameTitleById: (id: string, title: string) => Promise<Document | null>;
+  discardDraft: (id: string, replacement?: Document) => void;
 };
 
 type Values = Record<string, string>;
@@ -124,7 +130,8 @@ export function useDocumentDrafts({
   setDocuments,
   setError,
   persistBody,
-  persistTitle
+  persistTitle,
+  onPersistConflict
 }: Options): DocumentDraftController {
   const initialBodies = () => valuesByDocument(documents, (document) => document.body);
   const initialTitles = () => valuesByDocument(documents, (document) => document.title);
@@ -152,6 +159,7 @@ export function useDocumentDrafts({
   const persistTitleRef = useRef(persistTitle);
   const setDocumentsRef = useRef(setDocuments);
   const setErrorRef = useRef(setError);
+  const onPersistConflictRef = useRef(onPersistConflict);
 
   documentsRef.current = documents;
   selectedDocumentIdRef.current = selectedDocumentId;
@@ -159,6 +167,7 @@ export function useDocumentDrafts({
   persistTitleRef.current = persistTitle;
   setDocumentsRef.current = setDocuments;
   setErrorRef.current = setError;
+  onPersistConflictRef.current = onPersistConflict;
 
   const bodyQueue = useMemo(
     () => new LatestSaveQueue<string, Document>((id, body) => persistBodyRef.current(id, body)),
@@ -206,6 +215,11 @@ export function useDocumentDrafts({
           bodyDraftsRef.current[id] === body &&
           documentsRef.current.some((document) => document.id === id);
         if (!stillCurrent) return null;
+        if (error instanceof KeyGroupConflictError && onPersistConflictRef.current) {
+          const document = documentsRef.current.find((item) => item.id === id);
+          if (document) onPersistConflictRef.current(error.conflict, { id, title: titleDraftsRef.current[id] ?? document.title, body, field: "body" });
+          return null;
+        }
         if (selectedDocumentIdRef.current === id) {
           setErrorRef.current(SAVE_ERROR_MESSAGE);
         }
@@ -253,6 +267,11 @@ export function useDocumentDrafts({
           titleDraftsRef.current[id] === title &&
           documentsRef.current.some((document) => document.id === id);
         if (!stillCurrent) return null;
+        if (error instanceof KeyGroupConflictError && onPersistConflictRef.current) {
+          const document = documentsRef.current.find((item) => item.id === id);
+          if (document) onPersistConflictRef.current(error.conflict, { id, title, body: bodyDraftsRef.current[id] ?? document.body, field: "title" });
+          return null;
+        }
         if (reportSaveError && selectedDocumentIdRef.current === id) {
           setErrorRef.current(SAVE_ERROR_MESSAGE);
         }
@@ -356,6 +375,23 @@ export function useDocumentDrafts({
     },
     [enqueueTitle]
   );
+
+  const discardDraft = useCallback((id: string, replacement?: Document) => {
+    const document = replacement ?? documentsRef.current.find((item) => item.id === id);
+    if (!document) return;
+    window.clearTimeout(bodyTimersRef.current[id]);
+    window.clearTimeout(titleTimersRef.current[id]);
+    delete bodyTimersRef.current[id];
+    delete titleTimersRef.current[id];
+    nextCounter(bodyVersionsRef, id);
+    nextCounter(titleVersionsRef, id);
+    bodyQueue.clear(id);
+    titleQueue.clear(id);
+    clearSavingDocument(id, setSavingBodies);
+    clearSavingDocument(id, setSavingTitles);
+    updateDraft(id, document.body, bodyDraftsRef, setBodyDrafts);
+    updateDraft(id, document.title, titleDraftsRef, setTitleDrafts);
+  }, [bodyQueue, titleQueue]);
 
   useEffect(() => {
     const activeIds = new Set(documentsRef.current.map((document) => document.id));
@@ -470,8 +506,9 @@ export function useDocumentDrafts({
       saveStatus,
       changeBody,
       changeTitle,
-      renameTitleById
+      renameTitleById,
+      discardDraft
     }),
-    [changeBody, changeTitle, draftBody, draftTitle, liveDocuments, renameTitleById, saveStatus]
+    [changeBody, changeTitle, discardDraft, draftBody, draftTitle, liveDocuments, renameTitleById, saveStatus]
   );
 }
