@@ -62,8 +62,8 @@ The workspace context strip owns the single page-level `h1` when Shelf is active
 Heading scale and weight descend consistently:
 
 - Page title: display family, `clamp(1.5rem, 2.2vw, 2rem)`, strongest weight.
-- Section heading: display family, `1.25rem`, weight `800`, lower weight than the page title.
-- Card or group label: body family, `0.875rem`, weight `700`.
+- Section heading: display family, `1.125rem`, weight `650`, lower in both size and weight than the page title.
+- Card or group label: body family, `0.875rem`, weight `600`.
 
 Use balanced wrapping on headings and pretty wrapping on guidance copy where supported.
 
