@@ -35,6 +35,13 @@ async function clickVisibleButtonIfAvailable(page: import("@playwright/test").Pa
     }
   }
 }
+
+async function closeShelfDrawerIfAvailable(page: import("@playwright/test").Page) {
+  const close = page.getByRole("button", { name: "Close library shelf", exact: true });
+  if (await close.isVisible().catch(() => false)) {
+    await close.click();
+  }
+}
 async function clickViewportModeButton(page: import("@playwright/test").Page, name: string) {
   const viewportWidth = page.viewportSize()?.width ?? 1280;
   const navigation = page.locator(viewportWidth <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
@@ -44,6 +51,13 @@ async function clickViewportModeButton(page: import("@playwright/test").Page, na
     await control.click();
   }
   await expect(control).toHaveAttribute("aria-pressed", "true");
+}
+
+async function clickShelfCommand(page: import("@playwright/test").Page, name: string) {
+  await showShelfIfAvailable(page);
+  const control = page.getByRole("main").getByRole("button", { name, exact: true });
+  await expect(control).toBeVisible();
+  await control.evaluate((button: HTMLButtonElement) => button.click());
 }
 
 async function expectModeReady(page: import("@playwright/test").Page, mode: "Shelf" | "Edit" | "Read" | "Split") {
@@ -252,6 +266,19 @@ test("fresh workspace exposes visible create and import actions", async ({ page 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("untitled.md");
 });
 
+test("Shelf owns each library command exactly once", async ({ page }) => {
+  const main = page.getByRole("main");
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+
+  for (const name of ["Create page", "New book", "Import markdown"]) {
+    await expect(main.getByRole("button", { name, exact: true })).toHaveCount(1);
+    await expect(sidebar.getByRole("button", { name, exact: true })).toHaveCount(0);
+  }
+
+  await expect(main.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true })).toHaveCount(1);
+  await expect(sidebar.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true })).toHaveCount(0);
+});
+
 test("sidebar uses human-readable page timestamps", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await openShelfDrawerIfAvailable(page);
@@ -292,25 +319,22 @@ test("root selection labels folder ZIP export but keeps it disabled", async ({ p
 });
 
 test("one open book controls shelf context", async ({ page }) => {
-  await openShelfDrawerIfAvailable(page);
-
   page.once("dialog", (dialog) => dialog.accept("Writing"));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
-  await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Writing", exact: true }).click();
+  await clickShelfCommand(page, "New book");
+  await clickShelfCommand(page, "Create page in Writing");
   await showShelfIfAvailable(page);
 
   await expect(page.getByRole("button", { name: "Writing book, 1 page, open", exact: true }).first())
     .toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "New book on shelf", exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("button", { name: "New book", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).first()).toBeEnabled();
   await expect(page.getByRole("list", { name: "Recent pages" }).getByRole("listitem")).toHaveCount(1);
 });
 
 test("long book names do not overflow shelf actions", async ({ page }) => {
   const bookName = "A".repeat(120);
-  await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept(bookName));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
+  await clickShelfCommand(page, "New book");
   await showShelfIfAvailable(page);
 
   for (const width of [390, 768]) {
@@ -576,7 +600,8 @@ test("mobile workspace interactive targets are at least 44 by 44 pixels", async 
   await expect(sidebar).toHaveAttribute("aria-hidden", "false");
   await auditVisibleTargets("Open drawer");
 
-  await sidebar.getByRole("button", { name: "Import markdown", exact: true }).click();
+  await closeShelfDrawerIfAvailable(page);
+  await clickShelfCommand(page, "Import markdown");
   await expect(page.getByRole("dialog", { name: "Bring notes into Mdez" })).toBeVisible();
   await auditVisibleTargets("Import dialog");
 
@@ -881,16 +906,17 @@ test("exports the selected document as markdown", async ({ page }) => {
 });
 
 test("creates nested folders and blocks deleting non-empty folder", async ({ page }) => {
-  await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
+  await clickShelfCommand(page, "New book");
+  await openShelfDrawerIfAvailable(page);
   await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
-  await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Launch", exact: true }).click();
+  await closeShelfDrawerIfAvailable(page);
+  await clickShelfCommand(page, "Create page in Launch");
   await showShelfIfAvailable(page);
   await openShelfDrawerIfAvailable(page);
   await page.getByRole("button", { name: "Delete Projects" }).click();
@@ -900,16 +926,17 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
 });
 
 test("exports a nested folder ZIP rooted at the selected folder", async ({ page }) => {
-  await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
-  await page.getByRole("button", { name: "New book - create shelf book", exact: true }).click();
+  await clickShelfCommand(page, "New book");
+  await openShelfDrawerIfAvailable(page);
   await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
-  await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Import markdown", exact: true }).click();
+  await closeShelfDrawerIfAvailable(page);
+  await clickShelfCommand(page, "Import markdown");
   await page.getByLabel("Choose markdown files").setInputFiles({
     name: "Checklist.md",
     mimeType: "text/markdown",

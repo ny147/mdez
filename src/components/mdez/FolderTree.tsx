@@ -33,17 +33,8 @@ export function FolderTree({
 
   return (
     <section className="min-h-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="sidebar-group-heading mb-3 flex items-center justify-between gap-3">
         <h3 className="font-display text-sm font-black text-ink">Books</h3>
-        <button
-          type="button"
-          onClick={() => onCreateFolder(null)}
-          aria-label="New book - create shelf book"
-          className="secondary-button inline-flex min-h-9 items-center justify-center gap-2 px-3 py-1.5 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
-        >
-          <BookOpen aria-hidden="true" className="h-4 w-4" />
-          New book
-        </button>
       </div>
 
       <div className="space-y-1" role="tree" aria-label="Books and pages">
@@ -60,12 +51,6 @@ export function FolderTree({
         >
           Shelf root
         </button>
-
-        {tree.length === 0 ? (
-          <p className="rounded border border-border bg-panel px-3 py-2 text-xs font-semibold leading-5 text-muted">
-            Create books when this shelf grows.
-          </p>
-        ) : null}
 
         {tree.map((node) => (
           <FolderTreeRow

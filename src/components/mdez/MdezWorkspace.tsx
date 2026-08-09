@@ -380,12 +380,9 @@ export function MdezWorkspace() {
           onRenameFolder={library.renameBook}
           onDeleteFolder={library.deleteBook}
           onSelectDocument={handleSelectDocument}
-          onCreateDocument={handleCreateDocument}
           onRenameDocument={handleRenameDocument}
           onMoveDocument={library.movePage}
           onDeleteDocument={library.deletePage}
-          onOpenImport={handleOpenImport}
-          onExportFolder={() => void handleSidebarFolderExport()}
           onRefreshGitHub={(source) => void handleRefreshGitHub(source)}
         />
 

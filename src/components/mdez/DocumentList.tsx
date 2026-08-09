@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePlus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { formatRelativeTime } from "@/lib/relative-time";
 import type { Document, Folder } from "@/types/content";
@@ -12,8 +12,6 @@ type DocumentListProps = {
   selectedFolderId: string | null;
   selectedDocumentId: string | null;
   onSelectDocument: (documentId: string) => void;
-  onCreateDocument: () => void;
-  onOpenImport: () => void;
   onRenameDocument: (documentId: string, title: string) => void;
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
@@ -25,8 +23,6 @@ export function DocumentList({
   selectedFolderId,
   selectedDocumentId,
   onSelectDocument,
-  onCreateDocument,
-  onOpenImport,
   onRenameDocument,
   onMoveDocument,
   onDeleteDocument
@@ -35,8 +31,6 @@ export function DocumentList({
     .filter((document) => document.folderId === selectedFolderId)
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   const selectedBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
-  const createPageLabel = selectedBook ? `Create page in ${selectedBook.name}` : "Create page";
-
   function renameDocument(document: Document) {
     const nextTitle = window.prompt("Rename page", document.title);
 
@@ -47,44 +41,14 @@ export function DocumentList({
 
   return (
     <section className="min-h-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="sidebar-group-heading mb-3 flex items-center justify-between gap-3">
         <h3 className="font-display text-sm font-black text-ink">Pages</h3>
-        <button
-          type="button"
-          onClick={onCreateDocument}
-          aria-label={`${createPageLabel} from page list`}
-          className="primary-button min-h-9 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
-        >
-          <FilePlus aria-hidden="true" className="h-4 w-4" />
-          {createPageLabel}
-        </button>
       </div>
 
       {visibleDocuments.length === 0 ? (
-        <div className="rounded border border-border bg-panel p-3">
-          <p className="text-sm font-semibold leading-6 text-muted">
-            Create a page in {selectedBook ? selectedBook.name : "the shelf root"} or import markdown here.
-          </p>
-          <div className="mt-3 grid gap-2">
-            <button
-              type="button"
-              onClick={onCreateDocument}
-              aria-label={createPageLabel}
-              className="primary-button w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <FilePlus aria-hidden="true" className="h-4 w-4" />
-              {createPageLabel}
-            </button>
-            <button
-              type="button"
-              onClick={onOpenImport}
-              aria-label="Import markdown into page list"
-              className="secondary-button w-full px-3 py-2 text-sm font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              Import markdown
-            </button>
-          </div>
-        </div>
+        <p className="sidebar-empty-copy text-sm font-semibold leading-6 text-muted">
+          {selectedBook ? `No pages in ${selectedBook.name}.` : "No loose pages on Shelf root."}
+        </p>
       ) : (
         <div className="space-y-2">
           {visibleDocuments.map((document) => (

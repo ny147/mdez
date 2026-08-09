@@ -43,49 +43,33 @@ export function ShelfPane({
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 8);
   const createPageLabel = openBook ? `Create page in ${openBook.name}` : "Create page";
-  const createBookLabel = openBook ? "New book on shelf" : "New book";
-
   return (
     <div className="grid min-h-0 flex-1 gap-5 overflow-hidden">
-      <div className="shelf-command-bar">
-        <p className="shelf-guidance text-sm font-semibold leading-6 text-muted">
-          {openBook ? `${openBook.name} is open. Recent pages are filtered to this book.` : "Open a book to focus the shelf."}
-        </p>
-        <div className="shelf-primary-actions">
-          <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
-            <FilePlus aria-hidden="true" className="h-4 w-4" />
-            Create page
-          </button>
-          <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
-            <BookOpen aria-hidden="true" className="h-4 w-4" />
-            {createBookLabel}
-          </button>
-          <button type="button" onClick={onOpenImport} aria-label="Import markdown" className="secondary-button px-4 py-2 text-sm font-extrabold">
-            <Upload aria-hidden="true" className="h-4 w-4" />
-            Import markdown
-          </button>
-          <button
-            type="button"
-            onClick={onExportFolder}
-            disabled={!openBook}
-            aria-label="Book ZIP for open book in Shelf"
-            title={openBook ? `Download ${openBook.name} as a folder ZIP` : "Open a book before exporting its folder ZIP"}
-            className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
-          >
-            <Download aria-hidden="true" className="h-4 w-4" />
-            Book ZIP
-          </button>
-        </div>
-      </div>
-
       <section className="workspace-section min-w-0" aria-labelledby="bookshelf-title">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="bookshelf-title" className="workspace-section-title">
-            Books
-          </h2>
-          <span className="rounded border border-border bg-panel px-3 py-1 text-xs font-bold text-muted">
-            {sortedFolders.length} {sortedFolders.length === 1 ? "book" : "books"}
-          </span>
+        <div className="shelf-section-header mb-4">
+          <div>
+            <h2 id="bookshelf-title" className="workspace-section-title">Books</h2>
+            <span className="shelf-section-count text-xs font-bold text-muted">
+              {sortedFolders.length} {sortedFolders.length === 1 ? "book" : "books"}
+            </span>
+          </div>
+          <div className="shelf-section-actions">
+            <button
+              type="button"
+              onClick={onExportFolder}
+              disabled={!openBook}
+              aria-label="Book ZIP for open book in Shelf"
+              title={openBook ? `Download ${openBook.name} as a folder ZIP` : "Open a book before exporting its folder ZIP"}
+              className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              <Download aria-hidden="true" className="h-4 w-4" />
+              Book ZIP
+            </button>
+            <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
+              <BookOpen aria-hidden="true" className="h-4 w-4" />
+              New book
+            </button>
+          </div>
         </div>
 
         {sortedFolders.length === 0 ? (
@@ -123,11 +107,21 @@ export function ShelfPane({
       </section>
 
       <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="recent-pages-title">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="recent-pages-title" className="workspace-section-title">
-            Recent pages
-          </h2>
-          {openBook ? <span className="text-sm font-semibold text-muted">{openBook.name}</span> : null}
+        <div className="shelf-section-header mb-4">
+          <div>
+            <h2 id="recent-pages-title" className="workspace-section-title">Recent pages</h2>
+            {openBook ? <span className="text-sm font-semibold text-muted">{openBook.name}</span> : null}
+          </div>
+          <div className="shelf-section-actions">
+            <button type="button" onClick={onOpenImport} aria-label="Import markdown" className="secondary-button px-4 py-2 text-sm font-extrabold">
+              <Upload aria-hidden="true" className="h-4 w-4" />
+              Import markdown
+            </button>
+            <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
+              <FilePlus aria-hidden="true" className="h-4 w-4" />
+              Create page
+            </button>
+          </div>
         </div>
 
         {visiblePages.length === 0 ? (
