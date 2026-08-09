@@ -71,7 +71,9 @@ describe("production readiness", () => {
   it("composes repository-backed library orchestration through a named controller", () => {
     const workspaceSource = readFileSync(resolve(process.cwd(), "src/components/mdez/MdezWorkspace.tsx"), "utf8");
 
-    expect(workspaceSource).toContain("const library = useWorkspaceLibrary();");
+    expect(workspaceSource).toContain("const localLibrary = useWorkspaceLibrary();");
+    expect(workspaceSource).toContain("const groupLibrary = useKeyGroupLibrary(activeGroupId);");
+    expect(workspaceSource).toContain("const library = activeGroupId ? groupLibrary : localLibrary;");
     expect(workspaceSource).not.toMatch(/\b(?:createDocument|createDocuments|createFolder|deleteDocument|deleteFolder|importGitHubSource|listContent|moveDocument|refreshGitHubSource|renameFolder)\b/);
     expect(workspaceSource).not.toContain("from \"@/lib/tree\"");
   });

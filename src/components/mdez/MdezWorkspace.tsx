@@ -19,6 +19,12 @@ import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
 import { WORKSPACE_COPY } from "@/lib/workspace-copy";
+import { CreateGroupDialog } from "@/components/mdez/CreateGroupDialog";
+import { JoinGroupDialog } from "@/components/mdez/JoinGroupDialog";
+import { WorkspaceSwitcher } from "@/components/mdez/WorkspaceSwitcher";
+import { useKeyGroupLibrary } from "@/hooks/useKeyGroupLibrary";
+import { loadRememberedGroups } from "@/lib/key-group-repository";
+import type { RememberedGroup } from "@/lib/db";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -68,7 +74,13 @@ const mobileIcons = {
 };
 
 export function MdezWorkspace() {
-  const library = useWorkspaceLibrary();
+  const localLibrary = useWorkspaceLibrary();
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const groupLibrary = useKeyGroupLibrary(activeGroupId);
+  const library = activeGroupId ? groupLibrary : localLibrary;
+  const [rememberedGroups, setRememberedGroups] = useState<RememberedGroup[]>([]);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
   const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
@@ -80,6 +92,8 @@ export function MdezWorkspace() {
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
+  useEffect(() => { void reloadRememberedGroups(); }, []);
   useEffect(() => {
     const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
     if (savedSidebar === "hidden") {
@@ -124,8 +138,8 @@ export function MdezWorkspace() {
     selectedDocumentId: library.selectedDocumentId,
     setDocuments: library.setDocuments,
     setError: library.setError,
-    persistBody: updateDocumentBody,
-    persistTitle: renameDocument
+    persistBody: groupLibrary.persistBody && activeGroupId ? groupLibrary.persistBody : updateDocumentBody,
+    persistTitle: groupLibrary.persistTitle && activeGroupId ? groupLibrary.persistTitle : renameDocument
   });
 
   useEffect(() => {
@@ -134,7 +148,7 @@ export function MdezWorkspace() {
     }
   }, [saveStatus]);
   const activeSourceId = library.selectedFolder?.sourceId ?? library.selectedDocument?.sourceId;
-  const activeGitHubSource = library.sources.find((source) => source.id === activeSourceId) ?? null;
+  const activeGitHubSource = activeGroupId ? null : library.sources.find((source) => source.id === activeSourceId) ?? null;
   const liveSelectedDocument = liveDocuments.find(
     (document) => document.id === library.selectedDocumentId
   ) ?? null;
@@ -355,6 +369,13 @@ export function MdezWorkspace() {
             {isSidebarVisible ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}
           </button>
           <span className="workspace-wordmark">Mdez</span>
+          <WorkspaceSwitcher
+            activeGroupId={activeGroupId}
+            groups={rememberedGroups}
+            onSelect={setActiveGroupId}
+            onCreate={() => setIsCreateGroupOpen(true)}
+            onJoin={() => setIsJoinGroupOpen(true)}
+          />
         </div>
 
         <nav className="workspace-mode-nav" aria-label="Workspace modes">
@@ -524,6 +545,18 @@ export function MdezWorkspace() {
       {isSharedLinksOpen ? (
         <SharedLinksDialog open onClose={() => setIsSharedLinksOpen(false)} />
       ) : null}
+      <CreateGroupDialog
+        open={isCreateGroupOpen}
+        folders={localLibrary.folders}
+        documents={localLibrary.documents}
+        onClose={() => setIsCreateGroupOpen(false)}
+        onCreated={(groupId) => { void reloadRememberedGroups(); setActiveGroupId(groupId); }}
+      />
+      <JoinGroupDialog
+        open={isJoinGroupOpen}
+        onClose={() => setIsJoinGroupOpen(false)}
+        onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); setActiveGroupId(groupId); }}
+      />
     </div>
   );
 
