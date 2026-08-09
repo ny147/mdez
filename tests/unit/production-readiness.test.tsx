@@ -9,6 +9,7 @@ import { appMetadata } from "@/app/metadata";
 import manifest from "@/app/manifest";
 import NotFound from "@/app/not-found";
 import { maxDuration } from "@/app/api/github/archive/route";
+import { EditorToolbar } from "@/components/mdez/EditorToolbar";
 import nextConfig from "../../next.config";
 
 describe("production readiness", () => {
@@ -107,12 +108,22 @@ describe("production readiness", () => {
     }
   });
 
-  it("composes the markdown toolbar through EditorToolbar", () => {
-    const editorPaneSource = readFileSync(resolve(process.cwd(), "src/components/mdez/EditorPane.tsx"), "utf8");
+  it("keeps formatting and document actions working in EditorToolbar", () => {
+    const onFormat = vi.fn();
+    const onQuickShare = vi.fn();
+    render(
+      <EditorToolbar
+        onFormat={onFormat}
+        onQuickShare={onQuickShare}
+        documentActions={<button type="button">Export .md</button>}
+      />
+    );
 
-    expect(editorPaneSource).toContain("<EditorToolbar onFormat={applyFormat} documentActions={rightSlot} />");
-    expect(editorPaneSource).not.toContain("const toolbarActions");
-    expect(editorPaneSource).not.toContain('role="toolbar"');
+    fireEvent.click(screen.getByRole("button", { name: "Bold" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quick Share" }));
+    expect(onFormat).toHaveBeenCalledWith("bold");
+    expect(onQuickShare).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Export .md" })).toBeVisible();
   });
 
   it("keeps editor, reader, and import features behind dynamic boundaries", () => {

@@ -3,7 +3,7 @@
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { keymap } from "@codemirror/view";
-import { FilePlus, Upload } from "lucide-react";
+import { FilePlus, Share2, Upload } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
@@ -18,6 +18,7 @@ type EditorPaneProps = {
   rightSlot?: ReactNode;
   onCreateDocument: () => void;
   onOpenImport: () => void;
+  onQuickShare: () => void;
   onViewModeChange: (viewMode: ViewMode) => void;
   onBodyChange: (body: string) => void;
   onRename: (title: string) => void;
@@ -32,6 +33,7 @@ export function EditorPane({
   rightSlot,
   onCreateDocument,
   onOpenImport,
+  onQuickShare,
   onViewModeChange,
   onBodyChange,
   onRename
@@ -100,12 +102,20 @@ export function EditorPane({
           <div className="max-w-sm">
             <h2 className="font-display text-xl font-bold text-ink">No page selected</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-muted">Create a page or import Markdown before editing.</p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
               <button type="button" onClick={onCreateDocument} className="primary-button px-3 py-2">
                 <FilePlus aria-hidden="true" className="h-4 w-4" /> Create page
               </button>
               <button type="button" onClick={onOpenImport} className="secondary-button px-3 py-2 text-sm font-extrabold">
                 <Upload aria-hidden="true" className="h-4 w-4" /> Import Markdown
+              </button>
+              <button
+                type="button"
+                disabled
+                title="Select a page to use Quick Share"
+                className="secondary-button px-3 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Share2 aria-hidden="true" className="h-4 w-4" /> Quick Share
               </button>
             </div>
           </div>
@@ -127,7 +137,12 @@ export function EditorPane({
         />
       </label>
 
-      <EditorToolbar onFormat={applyFormat} documentActions={rightSlot} />
+      <EditorToolbar
+        onFormat={applyFormat}
+        documentActions={rightSlot}
+        onQuickShare={onQuickShare}
+        quickShareDisabled={!document}
+      />
 
       <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface shadow-soft">
         <CodeMirror

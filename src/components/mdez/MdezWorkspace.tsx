@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { BookOpen, Columns2, Library, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
+import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
 
 import { renameDocument, updateDocumentBody } from "@/lib/repository";
 import type { ViewMode } from "@/types/content";
@@ -30,6 +30,14 @@ const PreviewPane = dynamic(
 );
 const ImportDialog = dynamic(
   () => import("@/components/mdez/ImportDialog").then((module) => module.ImportDialog),
+  { ssr: false }
+);
+const QuickShareDialog = dynamic(
+  () => import("@/components/mdez/QuickShareDialog").then((module) => module.QuickShareDialog),
+  { ssr: false }
+);
+const SharedLinksDialog = dynamic(
+  () => import("@/components/mdez/SharedLinksDialog").then((module) => module.SharedLinksDialog),
   { ssr: false }
 );
 
@@ -62,6 +70,8 @@ const mobileIcons = {
 export function MdezWorkspace() {
   const library = useWorkspaceLibrary();
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
+  const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
@@ -125,9 +135,9 @@ export function MdezWorkspace() {
   }, [saveStatus]);
   const activeSourceId = library.selectedFolder?.sourceId ?? library.selectedDocument?.sourceId;
   const activeGitHubSource = library.sources.find((source) => source.id === activeSourceId) ?? null;
-  const liveSelectedDocument = library.selectedDocument
-    ? { ...library.selectedDocument, title: draftTitle, body: draftBody }
-    : null;
+  const liveSelectedDocument = liveDocuments.find(
+    (document) => document.id === library.selectedDocumentId
+  ) ?? null;
 
   const showShelf = viewMode === "shelf";
   const showEditor = viewMode === "split" || viewMode === "editor";
@@ -310,6 +320,7 @@ export function MdezWorkspace() {
       }
       onCreateDocument={handleCreateDocument}
       onOpenImport={handleOpenImport}
+      onQuickShare={() => setIsQuickShareOpen(true)}
       onViewModeChange={handleViewModeChange}
       onBodyChange={handleDraftBodyChange}
       onRename={handleDraftTitleChange}
@@ -362,6 +373,14 @@ export function MdezWorkspace() {
         </nav>
 
         <div className="workspace-actions">
+          <button
+            type="button"
+            onClick={() => setIsSharedLinksOpen(true)}
+            aria-label="Shared links"
+            className="workspace-icon-button"
+          >
+            <Link2 aria-hidden="true" className="h-4 w-4" />
+          </button>
           <button
             ref={drawerTriggerRef}
             type="button"
@@ -494,6 +513,16 @@ export function MdezWorkspace() {
           onRequestGitHubPreview={handleRequestGitHubPreview}
           onImportGitHub={handleImportGitHub}
         />
+      ) : null}
+      {isQuickShareOpen && liveSelectedDocument ? (
+        <QuickShareDialog
+          open
+          document={liveSelectedDocument}
+          onClose={() => setIsQuickShareOpen(false)}
+        />
+      ) : null}
+      {isSharedLinksOpen ? (
+        <SharedLinksDialog open onClose={() => setIsSharedLinksOpen(false)} />
       ) : null}
     </div>
   );
