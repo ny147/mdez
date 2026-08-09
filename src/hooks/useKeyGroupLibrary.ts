@@ -7,8 +7,9 @@ import type { WorkspaceLibraryController } from "@/hooks/useWorkspaceLibrary";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession } from "@/types/github";
 import type { GroupDocument, GroupFolder, GroupSnapshot, GroupSummary } from "@/types/key-group";
+import type { PersistedDraftConflict } from "@/hooks/useDocumentDrafts";
 
-export type WorkspaceController = WorkspaceLibraryController & { kind: "local" | "group"; group?: GroupSummary; refresh?: () => Promise<void>; hasConflict?: boolean; persistBody?: (id: string, body: string) => Promise<Document>; persistTitle?: (id: string, title: string) => Promise<Document> };
+export type WorkspaceController = WorkspaceLibraryController & { kind: "local" | "group"; group?: GroupSummary; refresh?: () => Promise<void>; hasConflict?: boolean; persistBody?: (id: string, body: string) => Promise<Document>; persistTitle?: (id: string, title: string) => Promise<Document>; copyConflictDraft?: (draft: PersistedDraftConflict) => Promise<void>; reloadConflictDocument?: (id: string) => Promise<Document> };
 
 const folderView = (folder: GroupFolder): Folder => ({ id: folder.id, parentId: folder.parentId, name: folder.name, order: folder.order, createdAt: folder.createdAt, updatedAt: folder.updatedAt });
 const documentView = (document: GroupDocument): Document => ({ id: document.id, folderId: document.folderId, title: document.title, body: document.body, order: document.order, createdAt: document.createdAt, updatedAt: document.updatedAt });
@@ -56,8 +57,24 @@ export function useKeyGroupLibrary(groupId: string | null): WorkspaceController 
   const persistTitle = useCallback(async (id: string, title: string) => { if (!groupId) throw new Error("Group is unavailable"); const updated = await updateGroupDocument(groupId, keyRef.current, id, { title, expectedVersion: documentVersions.current.get(id) ?? 1 }); documentVersions.current.set(id, updated.version); const view = documentView(updated); setDocuments((current) => current.map((item) => item.id === id ? view : item)); return view; }, [groupId]);
   const movePage = useCallback(async (id: string, folderId: string | null) => { if (!groupId) return; const updated = await updateGroupDocument(groupId, keyRef.current, id, { folderId, expectedVersion: documentVersions.current.get(id) ?? 1 }); documentVersions.current.set(id, updated.version); setDocuments((current) => current.map((item) => item.id === id ? documentView(updated) : item)); setSelectedFolderId(folderId); }, [groupId]);
   const deletePage = useCallback(async (id: string) => { if (!groupId || !window.confirm("Delete this page?")) return; await deleteGroupDocument(groupId, keyRef.current, id, documentVersions.current.get(id) ?? 1); setDocuments((current) => current.filter((item) => item.id !== id)); setSelectedDocumentId((current) => current === id ? null : current); }, [groupId]);
+  const copyConflictDraft = useCallback(async (draft: PersistedDraftConflict) => {
+    if (!groupId) return;
+    const source = documents.find((item) => item.id === draft.id);
+    const extension = draft.title.toLowerCase().endsWith(".md") ? ".md" : "";
+    const base = extension ? draft.title.slice(0, -3) : draft.title;
+    let title = `${base} (conflict copy)${extension}`;
+    let suffix = 2;
+    while (documents.some((item) => item.title === title)) title = `${base} (conflict copy ${suffix++})${extension}`;
+    const created = await createGroupDocument(groupId, keyRef.current, { title, body: draft.body, folderId: source?.folderId ?? null });
+    documentVersions.current.set(created.id, created.version); setDocuments((current) => [...current, documentView(created)]); setSelectedFolderId(created.folderId); setSelectedDocumentId(created.id);
+  }, [documents, groupId]);
+  const reloadConflictDocument = useCallback(async (id: string) => {
+    if (!groupId) throw new Error("Group is unavailable");
+    const snapshot = await getGroupSnapshot(groupId, keyRef.current); const record = snapshot.documents.find((item) => item.id === id); if (!record) throw new Error("Shared page no longer exists");
+    apply(snapshot, id); await cacheGroupSnapshot(snapshot); return documentView(record);
+  }, [apply, groupId]);
   const refreshContent = useCallback(async (preferred?: string | null) => { await refresh(); if (preferred !== undefined) setSelectedDocumentId(preferred); }, [refresh]);
   const unavailable = useCallback(async (session: GitHubImportSession): Promise<GitHubImportResult> => { void session; throw new Error("GitHub refresh is unavailable in a group"); }, []);
   const selectedFolder = folders.find((item) => item.id === selectedFolderId) ?? null; const selectedDocument = documents.find((item) => item.id === selectedDocumentId) ?? null;
-  return useMemo(() => ({ kind: "group" as const, group, folders, documents, sources: [], selectedFolderId, selectedDocumentId, expandedFolderIds, selectedFolder, selectedDocument, isReady, error, setError: setError as Dispatch<SetStateAction<string | null>>, setDocuments, selectFolder, selectDocument, toggleFolder, createBook, renameBook, deleteBook, createPage, importPages, renamePage: async () => {}, movePage, deletePage, refreshContent, importGitHub: unavailable, refreshGitHub: async (_sourceId: string, session: GitHubImportSession) => unavailable(session), refresh, persistBody, persistTitle }), [createBook, createPage, deleteBook, deletePage, documents, error, expandedFolderIds, folders, group, importPages, isReady, movePage, persistBody, persistTitle, refresh, refreshContent, renameBook, selectDocument, selectFolder, selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, toggleFolder, unavailable]);
+  return useMemo(() => ({ kind: "group" as const, group, folders, documents, sources: [], selectedFolderId, selectedDocumentId, expandedFolderIds, selectedFolder, selectedDocument, isReady, error, setError: setError as Dispatch<SetStateAction<string | null>>, setDocuments, selectFolder, selectDocument, toggleFolder, createBook, renameBook, deleteBook, createPage, importPages, renamePage: async () => {}, movePage, deletePage, refreshContent, importGitHub: unavailable, refreshGitHub: async (_sourceId: string, session: GitHubImportSession) => unavailable(session), refresh, persistBody, persistTitle, copyConflictDraft, reloadConflictDocument }), [copyConflictDraft, createBook, createPage, deleteBook, deletePage, documents, error, expandedFolderIds, folders, group, importPages, isReady, movePage, persistBody, persistTitle, refresh, refreshContent, reloadConflictDocument, renameBook, selectDocument, selectFolder, selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, toggleFolder, unavailable]);
 }

@@ -14,7 +14,7 @@ import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
 import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
-import { useDocumentDrafts } from "@/hooks/useDocumentDrafts";
+import { useDocumentDrafts, type PersistedDraftConflict } from "@/hooks/useDocumentDrafts";
 import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
@@ -25,6 +25,8 @@ import { WorkspaceSwitcher } from "@/components/mdez/WorkspaceSwitcher";
 import { useKeyGroupLibrary } from "@/hooks/useKeyGroupLibrary";
 import { loadRememberedGroups } from "@/lib/key-group-repository";
 import type { RememberedGroup } from "@/lib/db";
+import type { GroupConflict } from "@/types/key-group";
+import { GroupConflictDialog } from "@/components/mdez/GroupConflictDialog";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -81,6 +83,8 @@ export function MdezWorkspace() {
   const [rememberedGroups, setRememberedGroups] = useState<RememberedGroup[]>([]);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
+  const [persistConflict, setPersistConflict] = useState<{ conflict: GroupConflict; draft: PersistedDraftConflict } | null>(null);
+  const [conflictBusy, setConflictBusy] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
   const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
@@ -132,15 +136,33 @@ export function MdezWorkspace() {
     saveStatus,
     changeBody: handleDraftBodyChange,
     changeTitle: handleDraftTitleChange,
-    renameTitleById: renameDraftTitle
+    renameTitleById: renameDraftTitle,
+    discardDraft
   } = useDocumentDrafts({
     documents: library.documents,
     selectedDocumentId: library.selectedDocumentId,
     setDocuments: library.setDocuments,
     setError: library.setError,
     persistBody: groupLibrary.persistBody && activeGroupId ? groupLibrary.persistBody : updateDocumentBody,
-    persistTitle: groupLibrary.persistTitle && activeGroupId ? groupLibrary.persistTitle : renameDocument
+    persistTitle: groupLibrary.persistTitle && activeGroupId ? groupLibrary.persistTitle : renameDocument,
+    onPersistConflict: activeGroupId ? (conflict, draft) => setPersistConflict({ conflict, draft }) : undefined
   });
+
+  async function reloadConflict() {
+    if (!persistConflict || !groupLibrary.reloadConflictDocument) return;
+    setConflictBusy(true);
+    try { const shared = await groupLibrary.reloadConflictDocument(persistConflict.draft.id); discardDraft(persistConflict.draft.id, shared); setPersistConflict(null); }
+    catch (cause) { library.setError(cause instanceof Error ? cause.message : "Could not reload shared page"); }
+    finally { setConflictBusy(false); }
+  }
+
+  async function copyConflict() {
+    if (!persistConflict || !groupLibrary.copyConflictDraft) return;
+    setConflictBusy(true);
+    try { await groupLibrary.copyConflictDraft(persistConflict.draft); setPersistConflict(null); }
+    catch (cause) { library.setError(cause instanceof Error ? cause.message : "Could not copy draft"); }
+    finally { setConflictBusy(false); }
+  }
 
   useEffect(() => {
     if (saveStatus === "Saving...") {
@@ -557,6 +579,7 @@ export function MdezWorkspace() {
         onClose={() => setIsJoinGroupOpen(false)}
         onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); setActiveGroupId(groupId); }}
       />
+      <GroupConflictDialog open={Boolean(persistConflict)} busy={conflictBusy} onReload={() => void reloadConflict()} onCopy={() => void copyConflict()} onClose={() => setPersistConflict(null)} />
     </div>
   );
 
