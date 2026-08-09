@@ -599,7 +599,7 @@ test("imports markdown by paste and previews it", async ({ page }) => {
   await page.getByRole("button", { name: "Import Paste", exact: true }).click();
 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Hello Mdez");
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeButton(page, "Read");
   await expect(page.locator(".markdown-preview").getByRole("heading", { name: "Hello Mdez" })).toBeVisible();
 });
 
@@ -607,7 +607,7 @@ test("preview prose uses reader typography while markdown code stays monospaced"
   await page.getByRole("button", { name: "Import markdown", exact: true }).last().click();
   await page.getByLabel("Paste markdown").fill("# Typography\n\nReadable prose with `inlineCode`.\n\n```ts\nconst value = 1;\n```");
   await page.getByRole("button", { name: "Import Paste", exact: true }).click();
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeButton(page, "Read");
 
   const preview = page.locator(".markdown-preview");
   const paragraph = preview.getByText("Readable prose with", { exact: false });
@@ -656,7 +656,7 @@ test("imports markdown from a file", async ({ page }) => {
   });
 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Release Notes");
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeButton(page, "Read");
   await expect(page.locator(".markdown-preview").getByRole("heading", { name: "File Import" })).toBeVisible();
 });
 
@@ -1033,17 +1033,13 @@ test("responsive layout switches exactly between 1023 and 1024 pixels", async ({
 });
 test("switches editor, split, and preview modes", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeButton(page, "Read");
   await expect(page.getByText("Reader", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "Edit" }).click();
+  await clickViewportModeButton(page, "Edit");
   await expect(page.locator(".cm-editor")).toBeVisible();
-  const splitButton = page.getByRole("tab", { name: "Split" });
-
-  if (await splitButton.isVisible().catch(() => false)) {
-    await splitButton.click();
-    await expect(page.locator(".cm-editor")).toBeVisible();
-    await expect(page.getByText("Reader", { exact: true })).toBeVisible();
-  }
+  await clickViewportModeButton(page, "Split");
+  await expect(page.locator(".cm-editor")).toBeVisible();
+  await expect(page.getByText("Reader", { exact: true })).toBeVisible();
 });
 
 
