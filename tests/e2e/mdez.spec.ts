@@ -339,9 +339,12 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
     await expectMinimumTouchTarget(toolbar.getByRole("button", { name }));
   }
 
-  const exportMarkdown = toolbar.getByRole("button", { name: "Export .md" });
-  await expectInsideViewport(exportMarkdown, 390);
-  await expectMinimumTouchTarget(exportMarkdown);
+  const documentActionNames = ["Quick Share", "Export .md"];
+  for (const name of documentActionNames) {
+    const action = toolbar.getByRole("button", { name });
+    await expectInsideViewport(action, 390);
+    await expectMinimumTouchTarget(action);
+  }
 
   const formatBox = await toolbar.locator(".editor-format-actions").boundingBox();
   const documentBox = await toolbar.locator(".editor-document-actions").boundingBox();
@@ -360,7 +363,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
   expect(geometry.formatScrolls).toBe(false);
   expect(geometry.pageScrollWidth).toBe(geometry.pageClientWidth);
 
-  const focusOrder = [...formatNames, "Export .md"];
+  const focusOrder = [...formatNames, ...documentActionNames];
   const visualPositions = await Promise.all(
     focusOrder.map(async (name) => {
       const box = await toolbar.getByRole("button", { name }).boundingBox();

@@ -1,7 +1,7 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { MoreHorizontal, Share2 } from "lucide-react";
+import React, { type ReactNode, useState } from "react";
 
 export type FormatAction = "bold" | "italic" | "link" | "image" | "code" | "h1" | "h2" | "divider";
 
@@ -30,6 +30,8 @@ const secondaryActions: FormatActionConfig[] = [
 type EditorToolbarProps = {
   onFormat: (action: FormatAction) => void;
   documentActions?: ReactNode;
+  onQuickShare?: () => void;
+  quickShareDisabled?: boolean;
 };
 
 function FormatButton({ item, onFormat }: { item: FormatActionConfig; onFormat: (action: FormatAction) => void }) {
@@ -49,7 +51,12 @@ function FormatButton({ item, onFormat }: { item: FormatActionConfig; onFormat: 
   );
 }
 
-export function EditorToolbar({ onFormat, documentActions }: EditorToolbarProps) {
+export function EditorToolbar({
+  onFormat,
+  documentActions,
+  onQuickShare,
+  quickShareDisabled = false
+}: EditorToolbarProps) {
   const [showSecondary, setShowSecondary] = useState(false);
 
   return (
@@ -75,7 +82,19 @@ export function EditorToolbar({ onFormat, documentActions }: EditorToolbarProps)
           </div>
         ) : null}
       </div>
-      <div className="editor-document-actions">{documentActions}</div>
+      <div className="editor-document-actions">
+        {onQuickShare ? (
+          <button
+            type="button"
+            onClick={onQuickShare}
+            disabled={quickShareDisabled}
+            className="secondary-button min-h-10 shrink-0 px-3 py-2 text-xs font-extrabold disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Share2 aria-hidden="true" className="h-4 w-4" /> Quick Share
+          </button>
+        ) : null}
+        {documentActions}
+      </div>
     </div>
   );
 }
