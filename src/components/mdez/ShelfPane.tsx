@@ -47,13 +47,11 @@ export function ShelfPane({
 
   return (
     <div className="grid min-h-0 flex-1 gap-5 overflow-hidden">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-semibold leading-6 text-muted">
-            {openBook ? `${openBook.name} is open. Bookmarked pages are filtered to this book.` : "Open a book to focus the shelf."}
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="shelf-command-bar">
+        <p className="shelf-guidance text-sm font-semibold leading-6 text-muted">
+          {openBook ? `${openBook.name} is open. Recent pages are filtered to this book.` : "Open a book to focus the shelf."}
+        </p>
+        <div className="shelf-primary-actions">
           <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
             <FilePlus aria-hidden="true" className="h-4 w-4" />
             {createPageLabel}
@@ -82,8 +80,8 @@ export function ShelfPane({
 
       <section className="workspace-section min-w-0" aria-labelledby="bookshelf-title">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="bookshelf-title" className="font-display text-xl font-black text-ink">
-            Bookshelf
+          <h2 id="bookshelf-title" className="workspace-section-title">
+            Books
           </h2>
           <span className="rounded border border-border bg-panel px-3 py-1 text-xs font-bold text-muted">
             {sortedFolders.length} {sortedFolders.length === 1 ? "book" : "books"}
@@ -92,7 +90,7 @@ export function ShelfPane({
 
         {sortedFolders.length === 0 ? (
           <div className="rounded border border-dashed border-border bg-panel p-6 text-center">
-            <p className="font-semibold text-muted">{isReady ? "Create books when this shelf grows." : "Indexing local library..."}</p>
+            <p className="font-semibold text-muted">{isReady ? "Create a book to group related pages." : "Indexing local library..."}</p>
           </div>
         ) : (
           <div className="overflow-x-auto pb-3">
@@ -124,10 +122,10 @@ export function ShelfPane({
         )}
       </section>
 
-      <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="bookmarked-pages-title">
+      <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="recent-pages-title">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="bookmarked-pages-title" className="font-display text-xl font-black text-ink">
-            Bookmarked pages
+          <h2 id="recent-pages-title" className="workspace-section-title">
+            Recent pages
           </h2>
           {openBook ? <span className="text-sm font-semibold text-muted">{openBook.name}</span> : null}
         </div>
@@ -139,7 +137,7 @@ export function ShelfPane({
             </p>
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Bookmarked pages">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Recent pages">
             {visiblePages.map((document) => {
               const parentBook = folders.find((folder) => folder.id === document.folderId)?.name ?? "Shelf root";
               const updated = formatRelativeTime(document.updatedAt);
@@ -157,7 +155,7 @@ export function ShelfPane({
                   >
                     <span className="block truncate font-display text-base font-black text-ink">{document.title}</span>
                     <span className="mt-2 block truncate text-sm font-semibold text-muted">{parentBook}</span>
-                    <span className="mt-3 block text-xs font-bold text-accent-files">Updated {updated}</span>
+                    <span className="mt-3 block text-[0.8125rem] font-bold text-accent-files">Updated {updated}</span>
                   </button>
                 </li>
               );

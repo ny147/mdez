@@ -9,7 +9,7 @@ async function showShelfIfAvailable(page: import("@playwright/test").Page) {
     const shelfButton = navigations.nth(index).getByRole("button", { name: "Shelf", exact: true });
 
     if (await shelfButton.isVisible().catch(() => false)) {
-      await shelfButton.click();
+      await shelfButton.evaluate((element) => (element as HTMLElement).click());
       await expect(shelfButton).toHaveAttribute("aria-pressed", "true");
       return;
     }
@@ -228,7 +228,7 @@ test("fresh workspace exposes visible create and import actions", async ({ page 
 
   await expect(createPage).toBeVisible();
   await expect(importMarkdown).toBeVisible();
-  await expect(page.getByText("Create books when this shelf grows.").last()).toBeVisible();
+  await expect(page.getByText("Create a book to group related pages.").last()).toBeVisible();
   await expect(newBook).toBeVisible();
 
   await createPage.click();
@@ -286,7 +286,7 @@ test("one open book controls shelf context", async ({ page }) => {
     .toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "New book on shelf", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).first()).toBeEnabled();
-  await expect(page.getByRole("list", { name: "Bookmarked pages" }).getByRole("listitem")).toHaveCount(1);
+  await expect(page.getByRole("list", { name: "Recent pages" }).getByRole("listitem")).toHaveCount(1);
 });
 
 
@@ -384,6 +384,53 @@ test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) =
   await expect(main.getByRole("heading", { level: 1, name: "Edit untitled.md", includeHidden: true })).toHaveClass(/sr-only/);
   await expect(main.getByRole("heading", { level: 1, name: "Untitled Document" })).toBeVisible();
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
+});
+
+test("shelf uses a descending non-repeating heading hierarchy", async ({ page }) => {
+  const main = page.getByRole("main");
+  const pageTitle = main.getByRole("heading", { level: 1, name: "Bookshelf" });
+  const books = main.getByRole("heading", { level: 2, name: "Books" });
+  const recent = main.getByRole("heading", { level: 2, name: "Recent pages" });
+
+  await expect(pageTitle).toBeVisible();
+  await expect(books).toBeVisible();
+  await expect(recent).toBeVisible();
+  await expect(main.getByRole("heading", { level: 2, name: "Bookshelf" })).toHaveCount(0);
+
+  const hierarchy = await page.evaluate(() => {
+    const h1 = document.querySelector<HTMLElement>(".workspace-title")!;
+    const h2 = document.querySelector<HTMLElement>(".workspace-section-title")!;
+    const h1Style = getComputedStyle(h1);
+    const h2Style = getComputedStyle(h2);
+    return {
+      h1Size: Number.parseFloat(h1Style.fontSize),
+      h2Size: Number.parseFloat(h2Style.fontSize),
+      h1Weight: Number.parseInt(h1Style.fontWeight, 10),
+      h2Weight: Number.parseInt(h2Style.fontWeight, 10)
+    };
+  });
+
+  expect(hierarchy.h1Size).toBeGreaterThan(hierarchy.h2Size);
+  expect(hierarchy.h1Weight).toBeGreaterThan(hierarchy.h2Weight);
+});
+
+test("tablet shelf actions form a readable two-by-two grid", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  const actions = page.locator(".shelf-primary-actions");
+  const buttons = actions.getByRole("button");
+  await expect(buttons).toHaveCount(4);
+
+  const geometry = await buttons.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return { x: Math.round(rect.x), y: Math.round(rect.y), whiteSpace: style.whiteSpace };
+    })
+  );
+
+  expect(new Set(geometry.map(({ x }) => x)).size).toBe(2);
+  expect(new Set(geometry.map(({ y }) => y)).size).toBe(2);
+  expect(geometry.every(({ whiteSpace }) => whiteSpace === "nowrap")).toBe(true);
 });
 test("reader prose uses the reader token and only overlays receive elevation", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
