@@ -195,11 +195,6 @@ a:focus-visible {
     content: "";
   }
 
-body {
-  font-family: var(--font-ui);
-  overflow: hidden;
-}
-
 .workspace-shell {
   --mode-accent: var(--color-shelf);
   display: grid;

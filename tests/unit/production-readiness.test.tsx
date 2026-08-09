@@ -95,6 +95,14 @@ describe("production readiness", () => {
     expect(consumerSource).not.toMatch(/#[\da-f]{3,8}\b|rgba?\(/i);
     expect(tokenSource.match(/:root\s*\{/g)).toHaveLength(1);
   });
+
+  it("keeps document scrolling available outside the fixed workspace shell", () => {
+    const workspaceCss = readFileSync(resolve(process.cwd(), "src/app/styles/workspace.css"), "utf8");
+
+    expect(workspaceCss).not.toMatch(/body\s*\{[^}]*overflow:\s*hidden/);
+    expect(workspaceCss).toMatch(/\.workspace-shell\s*\{[^}]*height:\s*100dvh;[^}]*overflow:\s*hidden;/);
+  });
+
   it("decomposes the import dialog into a shell and source panels", () => {
     const importDialogSource = readFileSync(resolve(process.cwd(), "src/components/mdez/ImportDialog.tsx"), "utf8");
 
