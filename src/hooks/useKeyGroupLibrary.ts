@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { createGroupDocument, createGroupFolder, deleteGroupDocument, deleteGroupFolder, getGroupSnapshot, updateGroupDocument, updateGroupFolder } from "@/lib/key-group-client";
+import { createGroupDocument, createGroupFolder, deleteGroupDocument, deleteGroupFolder, deleteKeyGroup, getGroupSnapshot, renameKeyGroup, restoreKeyGroup, updateGroupDocument, updateGroupFolder } from "@/lib/key-group-client";
 import { cacheGroupSnapshot, loadCachedGroup, loadRememberedGroup, rememberGroup } from "@/lib/key-group-repository";
 import type { WorkspaceLibraryController } from "@/hooks/useWorkspaceLibrary";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession } from "@/types/github";
 import type { GroupDocument, GroupFolder, GroupSnapshot, GroupSummary } from "@/types/key-group";
 import type { PersistedDraftConflict } from "@/hooks/useDocumentDrafts";
+import { useGroupRefresh } from "@/hooks/useGroupRefresh";
 
-export type WorkspaceController = WorkspaceLibraryController & { kind: "local" | "group"; group?: GroupSummary; refresh?: () => Promise<void>; hasConflict?: boolean; persistBody?: (id: string, body: string) => Promise<Document>; persistTitle?: (id: string, title: string) => Promise<Document>; copyConflictDraft?: (draft: PersistedDraftConflict) => Promise<void>; reloadConflictDocument?: (id: string) => Promise<Document> };
+export type WorkspaceController = WorkspaceLibraryController & { kind: "local" | "group"; group?: GroupSummary; refresh?: () => Promise<void>; hasConflict?: boolean; persistBody?: (id: string, body: string) => Promise<Document>; persistTitle?: (id: string, title: string) => Promise<Document>; copyConflictDraft?: (draft: PersistedDraftConflict) => Promise<void>; reloadConflictDocument?: (id: string) => Promise<Document>; setRefreshBlocked?: (blocked: boolean) => void; renameGroup?: (name: string) => Promise<void>; deleteGroup?: () => Promise<void>; restoreGroup?: () => Promise<void> };
 
 const folderView = (folder: GroupFolder): Folder => ({ id: folder.id, parentId: folder.parentId, name: folder.name, order: folder.order, createdAt: folder.createdAt, updatedAt: folder.updatedAt });
 const documentView = (document: GroupDocument): Document => ({ id: document.id, folderId: document.folderId, title: document.title, body: document.body, order: document.order, createdAt: document.createdAt, updatedAt: document.updatedAt });
@@ -18,6 +19,7 @@ export function useKeyGroupLibrary(groupId: string | null): WorkspaceController 
   const [folders, setFolders] = useState<Folder[]>([]); const [documents, setDocuments] = useState<Document[]>([]); const [group, setGroup] = useState<GroupSummary>();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null); const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null); const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [isReady, setIsReady] = useState(!groupId); const [error, setError] = useState<string | null>(null);
+  const [key, setKey] = useState(""); const [refreshBlocked, setRefreshBlocked] = useState(false);
   const keyRef = useRef(""); const folderVersions = useRef(new Map<string, number>()); const documentVersions = useRef(new Map<string, number>());
 
   const apply = useCallback((snapshot: GroupSnapshot, preferred?: string | null) => {
@@ -26,9 +28,18 @@ export function useKeyGroupLibrary(groupId: string | null): WorkspaceController 
     setSelectedDocumentId((current) => preferred !== undefined ? preferred : snapshot.documents.some((document) => document.id === current) ? current : snapshot.documents[0]?.id ?? null);
   }, []);
 
-  const refresh = useCallback(async () => {
+  const fullRefresh = useCallback(async () => {
     if (!groupId || !keyRef.current) return; const snapshot = await getGroupSnapshot(groupId, keyRef.current); apply(snapshot); await cacheGroupSnapshot(snapshot);
   }, [apply, groupId]);
+
+  const applyChanges = useCallback((result: Extract<import("@/types/key-group").GroupChangesResult, { status: "changes" }>) => {
+    const deletedFolders = new Set(result.changes.filter((change) => change.entityType === "folder" && change.operation === "delete").map((change) => change.entityId));
+    const deletedDocuments = new Set(result.changes.filter((change) => change.entityType === "document" && change.operation === "delete").map((change) => change.entityId));
+    setGroup((current) => result.records.group ?? (current ? { ...current, revision: result.revision } : current));
+    setFolders((current) => { const records = new Set(result.records.folders.map((item) => item.id)); result.records.folders.forEach((item) => folderVersions.current.set(item.id, item.version)); return [...current.filter((item) => !deletedFolders.has(item.id) && !records.has(item.id)), ...result.records.folders.map(folderView)]; });
+    setDocuments((current) => { const records = new Set(result.records.documents.map((item) => item.id)); result.records.documents.forEach((item) => documentVersions.current.set(item.id, item.version)); return [...current.filter((item) => !deletedDocuments.has(item.id) && !records.has(item.id)), ...result.records.documents.map(documentView)]; });
+  }, []);
+  const { refresh } = useGroupRefresh({ groupId: groupId ?? "", key, revision: group?.revision ?? 0, hasUnsavedDraft: refreshBlocked, onChanges: applyChanges, onReset: async (snapshot) => { apply(snapshot); await cacheGroupSnapshot(snapshot); } });
 
   useEffect(() => {
     let alive = true; setIsReady(!groupId); setError(null);
@@ -36,7 +47,7 @@ export function useKeyGroupLibrary(groupId: string | null): WorkspaceController 
     void (async () => {
       try {
         const cached = await loadCachedGroup(groupId); if (alive && cached) apply(cached.snapshot);
-        const remembered = await loadRememberedGroup(groupId); if (!remembered) throw new Error("Group access is not remembered in this browser"); keyRef.current = remembered.key;
+        const remembered = await loadRememberedGroup(groupId); if (!remembered) throw new Error("Group access is not remembered in this browser"); keyRef.current = remembered.key; setKey(remembered.key);
         const snapshot = await getGroupSnapshot(groupId, remembered.key); if (!alive) return; apply(snapshot); await cacheGroupSnapshot(snapshot); await rememberGroup({ ...remembered, name: snapshot.group.name, lastOpenedAt: new Date().toISOString() });
       } catch (cause) { if (alive) setError(cause instanceof Error ? cause.message : "Could not load group"); }
       finally { if (alive) setIsReady(true); }
@@ -73,8 +84,11 @@ export function useKeyGroupLibrary(groupId: string | null): WorkspaceController 
     const snapshot = await getGroupSnapshot(groupId, keyRef.current); const record = snapshot.documents.find((item) => item.id === id); if (!record) throw new Error("Shared page no longer exists");
     apply(snapshot, id); await cacheGroupSnapshot(snapshot); return documentView(record);
   }, [apply, groupId]);
-  const refreshContent = useCallback(async (preferred?: string | null) => { await refresh(); if (preferred !== undefined) setSelectedDocumentId(preferred); }, [refresh]);
+  const renameGroupName = useCallback(async (name: string) => { if (!groupId) return; const updated = await renameKeyGroup(groupId, keyRef.current, name); setGroup(updated); const remembered = await loadRememberedGroup(groupId); if (remembered) await rememberGroup({ ...remembered, name: updated.name, lastOpenedAt: new Date().toISOString() }); }, [groupId]);
+  const deleteCurrentGroup = useCallback(async () => { if (!groupId) return; setGroup(await deleteKeyGroup(groupId, keyRef.current)); }, [groupId]);
+  const restoreCurrentGroup = useCallback(async () => { if (!groupId) return; setGroup(await restoreKeyGroup(groupId, keyRef.current)); }, [groupId]);
+  const refreshContent = useCallback(async (preferred?: string | null) => { await fullRefresh(); if (preferred !== undefined) setSelectedDocumentId(preferred); }, [fullRefresh]);
   const unavailable = useCallback(async (session: GitHubImportSession): Promise<GitHubImportResult> => { void session; throw new Error("GitHub refresh is unavailable in a group"); }, []);
   const selectedFolder = folders.find((item) => item.id === selectedFolderId) ?? null; const selectedDocument = documents.find((item) => item.id === selectedDocumentId) ?? null;
-  return useMemo(() => ({ kind: "group" as const, group, folders, documents, sources: [], selectedFolderId, selectedDocumentId, expandedFolderIds, selectedFolder, selectedDocument, isReady, error, setError: setError as Dispatch<SetStateAction<string | null>>, setDocuments, selectFolder, selectDocument, toggleFolder, createBook, renameBook, deleteBook, createPage, importPages, renamePage: async () => {}, movePage, deletePage, refreshContent, importGitHub: unavailable, refreshGitHub: async (_sourceId: string, session: GitHubImportSession) => unavailable(session), refresh, persistBody, persistTitle, copyConflictDraft, reloadConflictDocument }), [copyConflictDraft, createBook, createPage, deleteBook, deletePage, documents, error, expandedFolderIds, folders, group, importPages, isReady, movePage, persistBody, persistTitle, refresh, refreshContent, reloadConflictDocument, renameBook, selectDocument, selectFolder, selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, toggleFolder, unavailable]);
+  return useMemo(() => ({ kind: "group" as const, group, folders, documents, sources: [], selectedFolderId, selectedDocumentId, expandedFolderIds, selectedFolder, selectedDocument, isReady, error, setError: setError as Dispatch<SetStateAction<string | null>>, setDocuments, selectFolder, selectDocument, toggleFolder, createBook, renameBook, deleteBook, createPage, importPages, renamePage: async () => {}, movePage, deletePage, refreshContent, importGitHub: unavailable, refreshGitHub: async (_sourceId: string, session: GitHubImportSession) => unavailable(session), refresh, persistBody, persistTitle, copyConflictDraft, reloadConflictDocument, setRefreshBlocked, renameGroup: renameGroupName, deleteGroup: deleteCurrentGroup, restoreGroup: restoreCurrentGroup }), [copyConflictDraft, createBook, createPage, deleteBook, deleteCurrentGroup, deletePage, documents, error, expandedFolderIds, folders, group, importPages, isReady, movePage, persistBody, persistTitle, refresh, refreshContent, reloadConflictDocument, renameBook, renameGroupName, restoreCurrentGroup, selectDocument, selectFolder, selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, toggleFolder, unavailable]);
 }

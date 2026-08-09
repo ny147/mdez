@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine } from "lucide-react";
+import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, Settings } from "lucide-react";
 
 import { renameDocument, updateDocumentBody } from "@/lib/repository";
 import type { ViewMode } from "@/types/content";
@@ -23,10 +23,11 @@ import { CreateGroupDialog } from "@/components/mdez/CreateGroupDialog";
 import { JoinGroupDialog } from "@/components/mdez/JoinGroupDialog";
 import { WorkspaceSwitcher } from "@/components/mdez/WorkspaceSwitcher";
 import { useKeyGroupLibrary } from "@/hooks/useKeyGroupLibrary";
-import { loadRememberedGroups } from "@/lib/key-group-repository";
+import { forgetGroup, loadRememberedGroups } from "@/lib/key-group-repository";
 import type { RememberedGroup } from "@/lib/db";
 import type { GroupConflict } from "@/types/key-group";
 import { GroupConflictDialog } from "@/components/mdez/GroupConflictDialog";
+import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -85,6 +86,8 @@ export function MdezWorkspace() {
   const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
   const [persistConflict, setPersistConflict] = useState<{ conflict: GroupConflict; draft: PersistedDraftConflict } | null>(null);
   const [conflictBusy, setConflictBusy] = useState(false);
+  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
+  const [groupSettingsBusy, setGroupSettingsBusy] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
   const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
@@ -169,6 +172,16 @@ export function MdezWorkspace() {
       setOperationStatus(null);
     }
   }, [saveStatus]);
+  useEffect(() => { groupLibrary.setRefreshBlocked?.(saveStatus !== "Saved" || Boolean(persistConflict)); }, [groupLibrary, persistConflict, saveStatus]);
+
+  async function leaveGroup() {
+    if (!activeGroupId) return; setGroupSettingsBusy(true);
+    try { await forgetGroup(activeGroupId); setActiveGroupId(null); setIsGroupSettingsOpen(false); await reloadRememberedGroups(); }
+    finally { setGroupSettingsBusy(false); }
+  }
+  async function renameActiveGroup(name: string) { setGroupSettingsBusy(true); try { await groupLibrary.renameGroup?.(name); await reloadRememberedGroups(); } finally { setGroupSettingsBusy(false); } }
+  async function deleteActiveGroup() { if (!window.confirm("Delete this group for every key holder?")) return; setGroupSettingsBusy(true); try { await groupLibrary.deleteGroup?.(); } finally { setGroupSettingsBusy(false); } }
+  async function restoreActiveGroup() { setGroupSettingsBusy(true); try { await groupLibrary.restoreGroup?.(); } finally { setGroupSettingsBusy(false); } }
   const activeSourceId = library.selectedFolder?.sourceId ?? library.selectedDocument?.sourceId;
   const activeGitHubSource = activeGroupId ? null : library.sources.find((source) => source.id === activeSourceId) ?? null;
   const liveSelectedDocument = liveDocuments.find(
@@ -416,6 +429,7 @@ export function MdezWorkspace() {
         </nav>
 
         <div className="workspace-actions">
+          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
           <button
             type="button"
             onClick={() => setIsSharedLinksOpen(true)}
@@ -580,6 +594,7 @@ export function MdezWorkspace() {
         onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); setActiveGroupId(groupId); }}
       />
       <GroupConflictDialog open={Boolean(persistConflict)} busy={conflictBusy} onReload={() => void reloadConflict()} onCopy={() => void copyConflict()} onClose={() => setPersistConflict(null)} />
+      {groupLibrary.group ? <GroupSettingsDialog open={isGroupSettingsOpen} group={groupLibrary.group} busy={groupSettingsBusy} onClose={() => setIsGroupSettingsOpen(false)} onRename={(name) => void renameActiveGroup(name)} onLeave={() => void leaveGroup()} onDelete={() => void deleteActiveGroup()} onRestore={() => void restoreActiveGroup()} /> : null}
     </div>
   );
 
