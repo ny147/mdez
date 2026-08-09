@@ -1053,11 +1053,14 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
 
   const projects = page.getByRole("treeitem", { name: "Projects book, 0 pages, closed", exact: true });
   await expect(projects).toHaveAttribute("aria-expanded", "true");
+  await expect(projects).toHaveAttribute("aria-owns", /.+/);
   await page.getByRole("button", { name: "Collapse Projects" }).click();
   await expect(projects).toHaveAttribute("aria-expanded", "false");
+  await expect(projects).not.toHaveAttribute("aria-owns", /.+/);
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Expand Projects" }).click();
   await expect(projects).toHaveAttribute("aria-expanded", "true");
+  await expect(projects).toHaveAttribute("aria-owns", /.+/);
 
   await closeShelfDrawerIfAvailable(page);
   await clickShelfCommand(page, "Create page in Launch");

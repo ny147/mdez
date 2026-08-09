@@ -136,7 +136,7 @@ function FolderTreeRow({
           aria-label={`${folder.name} book, ${pageCount} ${pageCount === 1 ? "page" : "pages"}, ${isSelected ? "open" : "closed"}`}
           aria-selected={isSelected}
           aria-expanded={hasChildren ? isExpanded : undefined}
-          aria-owns={hasChildren ? childGroupId : undefined}
+          aria-owns={hasChildren && isExpanded ? childGroupId : undefined}
           title={`Open ${folder.name} book`}
           className="sidebar-row-main"
         >
