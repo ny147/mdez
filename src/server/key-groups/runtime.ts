@@ -46,6 +46,6 @@ export async function restoreGroup(groupId: string, key: string, address: string
 }
 export async function purgeGroups(): Promise<{ groups: number; changes: number; buckets: number }> {
   const now = new Date();
-  const [groups, buckets] = await Promise.all([store().purgeDeletedGroups(now), purgeExpiredRateLimitBuckets(now)]);
-  return { groups, changes: 0, buckets };
+  const [maintenance, buckets] = await Promise.all([store().purgeMaintenance(now), purgeExpiredRateLimitBuckets(now)]);
+  return { ...maintenance, buckets };
 }

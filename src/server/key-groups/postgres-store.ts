@@ -221,10 +221,14 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
   }
 
   async purgeDeletedGroups(now: Date): Promise<number> {
+    return (await this.purgeMaintenance(now)).groups;
+  }
+
+  async purgeMaintenance(now: Date): Promise<{ groups: number; changes: number }> {
     return this.sql.begin(async (tx) => {
       const deleted = await tx`delete from public.key_groups where purge_after is not null and purge_after <= ${now}`;
-      await tx`delete from public.group_change_log log where changed_at < ${new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)} and id <> (select max(latest.id) from public.group_change_log latest where latest.group_id = log.group_id)`;
-      return deleted.count;
+      const changes = await tx`delete from public.group_change_log log where changed_at < ${new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)} and id <> (select max(latest.id) from public.group_change_log latest where latest.group_id = log.group_id)`;
+      return { groups: deleted.count, changes: changes.count };
     });
   }
 }

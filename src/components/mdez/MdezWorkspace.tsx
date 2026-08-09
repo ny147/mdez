@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, Settings } from "lucide-react";
+import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
 import { renameDocument, updateDocumentBody } from "@/lib/repository";
 import type { ViewMode } from "@/types/content";
@@ -429,6 +429,7 @@ export function MdezWorkspace() {
         </nav>
 
         <div className="workspace-actions">
+          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
           {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
           <button
             type="button"

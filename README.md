@@ -1,6 +1,6 @@
 # Mdez
 
-Mdez is a local-first Markdown reader and editor built with Next.js. Markdown documents, imported repositories, and source metadata are stored in browser IndexedDB. Quick Share can publish one immutable, view-only snapshot to Supabase Postgres when a user explicitly creates a public link.
+Mdez is a local-first Markdown reader and editor built with Next.js. Markdown documents, imported repositories, and source metadata are stored in browser IndexedDB. Quick Share publishes immutable view-only snapshots, while Key Groups let several browsers collaborate on a copied library using one secret group key.
 
 ## Development
 
@@ -33,6 +33,7 @@ npm run build
 - Single document `.md` export.
 - Folder `.zip` export with `manifest.json`.
 - Unlisted Quick Share snapshots with creator-selected expiry and creator-only deletion.
+- Key Group creation, joining, saved collaboration, conflict recovery, and seven-day deletion recovery without accounts.
 
 ## Public GitHub limits
 
@@ -48,7 +49,7 @@ The initial safety limits are:
 
 Refresh replaces source-owned pages and any local edits inside that imported book. Local books and other imported repositories remain unchanged. Private repositories, authentication, branch selection, background sync, and two-way merging are not supported.
 
-Mdez does not include accounts, cloud library sync, collaboration, PDF export, tags, full-text search, or plugins in V1.
+Mdez does not include accounts, automatic Local/Group synchronization, realtime co-editing, PDF export, tags, full-text search, or plugins in V1.
 
 ## Browser storage and privacy
 
@@ -59,6 +60,8 @@ The controlled archive route receives a public repository URL and streams the bo
 Clearing site data, using private browsing, or changing deployment domains can remove or isolate the local library. Export important pages or books before clearing browser storage.
 
 Quick Share stores its readable title and Markdown snapshot in Supabase so anyone with the unlisted URL can read it until deletion or expiry. Supabase stores an HMAC digest of the management token, never the raw management token. The raw token stays in the creator browser's IndexedDB. Clearing browser data removes the creator's ability to delete that link early.
+
+Key Groups store readable group Markdown and metadata in Supabase. The raw group key stays in the browser's IndexedDB and is sent only through the `x-mdez-group-key` HTTPS header. Supabase stores only its HMAC digest. Clearing browser data or choosing Leave Group removes remembered access from that browser. A lost group key cannot be recovered.
 
 ## Quick Share operations
 
@@ -108,3 +111,21 @@ After creating a preview deployment, run the verification commands from a clean 
 Only promote the reviewed preview after these checks pass. Record the preview and production URLs here when deployment is authorized and verified.
 
 For rollback, promote the previous verified Vercel deployment and stop the Quick Share cron. Leave migration `202608090001` and its rows in place so a corrected release can recover existing links. Do not drop share rows or rotate `MANAGEMENT_TOKEN_PEPPER` during rollback.
+
+## Key Group operations
+
+1. Apply [`supabase/migrations/202608090001_quick_shares.sql`](supabase/migrations/202608090001_quick_shares.sql), then apply [`supabase/migrations/202608090002_key_groups.sql`](supabase/migrations/202608090002_key_groups.sql). Migration 002 depends on migration 001's database and HMAC rate-limit table.
+2. Add `GROUP_KEY_PEPPER` to Vercel Preview and Production as an independent server-only secret containing at least 32 random bytes. Keep `SUPABASE_DATABASE_URL`, `RATE_LIMIT_PEPPER`, and `CRON_SECRET` configured. None may use a `NEXT_PUBLIC_` prefix.
+3. Redeploy, create a test group from a non-trivial Local Library, and compare book/page counts. In Supabase, confirm Markdown is readable, `key_digest` is an HMAC value, and no raw group key is stored.
+4. Join from a second signed-out browser. Save in both directions, refresh, force a stale-version conflict, and verify both recovery actions preserve the losing draft. Confirm every observed URL omits the key and request headers contain it only as `x-mdez-group-key`.
+5. Delete the test group, confirm the deletion and purge dates, and restore it within seven days. Manually invoke cleanup with the cron bearer secret:
+
+   ```bash
+   curl -H "Authorization: Bearer $CRON_SECRET" https://DEPLOYMENT_HOST/api/cron/key-groups
+   ```
+
+   The route reports deleted `groups`, retained-log cleanup `changes`, and expired rate-limit `buckets`; it must reject a request without the secret. Vercel invokes it daily at 03:43 UTC.
+
+Do not rotate `GROUP_KEY_PEPPER` casually. Rotation invalidates every existing key unless it is paired with an explicit key-invalidation and digest data-migration plan. Losing a group key means access cannot be recovered.
+
+For rollback, promote the last verified Quick-Share-only deployment and stop the Key Group cron. Leave migration 002 tables and group rows untouched, and do not rotate `GROUP_KEY_PEPPER`; deploy the corrected release against the preserved data.
