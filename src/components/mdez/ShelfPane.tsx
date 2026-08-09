@@ -57,7 +57,7 @@ export function ShelfPane({
               type="button"
               onClick={onExportFolder}
               disabled={!openBook}
-              aria-label="Book ZIP for open book in Shelf"
+              aria-label={openBook ? `Download ${openBook.name} as Book ZIP` : "Book ZIP unavailable for Shelf root"}
               title={openBook ? `Download ${openBook.name} as a folder ZIP` : "Open a book before exporting its folder ZIP"}
               className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
             >

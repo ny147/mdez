@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, ChevronDown, ChevronRight, Library } from "lucide-react";
+import { useId } from "react";
 
 import type { Document, Folder } from "@/types/content";
 import { buildFolderTree, type FolderNode } from "@/lib/tree";
@@ -95,6 +96,7 @@ function FolderTreeRow({
   const hasChildren = children.length > 0;
   const isSelected = selectedFolderId === folder.id;
   const pageCount = documents.filter((document) => document.folderId === folder.id).length;
+  const childGroupId = useId();
 
   function handleRename() {
     const nextName = window.prompt("Rename book", folder.name);
@@ -133,7 +135,8 @@ function FolderTreeRow({
           aria-level={depth + 1}
           aria-label={`${folder.name} book, ${pageCount} ${pageCount === 1 ? "page" : "pages"}, ${isSelected ? "open" : "closed"}`}
           aria-selected={isSelected}
-          aria-expanded={isSelected}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          aria-owns={hasChildren ? childGroupId : undefined}
           title={`Open ${folder.name} book`}
           className="sidebar-row-main"
         >
@@ -152,7 +155,7 @@ function FolderTreeRow({
       </div>
 
       {hasChildren && isExpanded ? (
-        <div className="mt-1 space-y-1" role="group">
+        <div id={childGroupId} className="mt-1 space-y-1" role="group">
           {children.map((child) => (
             <FolderTreeRow
               key={child.folder.id}

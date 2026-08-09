@@ -281,8 +281,8 @@ test("Shelf owns each library command exactly once", async ({ page }) => {
     await expect(sidebar.getByRole("button", { name, exact: true })).toHaveCount(0);
   }
 
-  await expect(main.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true })).toHaveCount(1);
-  await expect(sidebar.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true })).toHaveCount(0);
+  await expect(main.getByRole("button", { name: "Book ZIP unavailable for Shelf root", exact: true })).toHaveCount(1);
+  await expect(sidebar.getByRole("button", { name: "Book ZIP unavailable for Shelf root", exact: true })).toHaveCount(0);
 });
 
 test("sidebar uses human-readable page timestamps", async ({ page }) => {
@@ -318,7 +318,7 @@ test("no-document editor and reader states expose recovery actions", async ({ pa
 });
 
 test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
-  const bookZipButton = page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).last();
+  const bookZipButton = page.getByRole("button", { name: "Book ZIP unavailable for Shelf root", exact: true }).last();
 
   await expect(bookZipButton).toBeVisible();
   await expect(bookZipButton).toBeDisabled();
@@ -333,7 +333,7 @@ test("one open book controls shelf context", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Writing book, 1 page, open", exact: true }).first())
     .toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("main").getByRole("button", { name: "New book", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).first()).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Download Writing as Book ZIP", exact: true }).first()).toBeEnabled();
   await expect(page.getByRole("list", { name: "Recent pages" }).getByRole("listitem")).toHaveCount(1);
 });
 
@@ -374,6 +374,7 @@ test("sidebar presents quiet explorer rows with disclosed management actions", a
   await expect(page.getByRole("button", { name: "Rename Writing" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Create book inside Writing" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete Writing" })).toBeVisible();
+  await page.getByRole("button", { name: "Rename Writing" }).focus();
   await page.keyboard.press("Escape");
   await expect(more).toBeFocused();
 });
@@ -388,6 +389,42 @@ test("selected mobile explorer rows keep their More actions trigger available", 
   const box = await more.boundingBox();
   expect(box!.width).toBeGreaterThanOrEqual(44);
   expect(box!.height).toBeGreaterThanOrEqual(44);
+});
+
+test("row action menus rename, move, and delete library items", async ({ page }) => {
+  page.once("dialog", (dialog) => dialog.accept("Writing"));
+  await clickShelfCommand(page, "New book");
+  await openShelfDrawerIfAvailable(page);
+
+  page.once("dialog", (dialog) => dialog.accept("Notes"));
+  await openRowActions(page, "Writing");
+  await page.getByRole("button", { name: "Rename Writing" }).click();
+  await expect(page.getByRole("treeitem", { name: /Notes book/ })).toBeVisible();
+
+  await closeShelfDrawerIfAvailable(page);
+  await clickShelfCommand(page, "Create page in Notes");
+  await openShelfDrawerIfAvailable(page);
+
+  page.once("dialog", (dialog) => dialog.accept("Overview"));
+  await openRowActions(page, "untitled.md");
+  await page.getByRole("button", { name: "Rename untitled.md" }).click();
+  await expect(page.getByRole("button", { name: "More actions for Overview" })).toBeVisible();
+
+  await openRowActions(page, "Overview");
+  await page.getByRole("combobox", { name: "Move Overview page" }).selectOption("");
+  await expect(page.getByRole("treeitem", { name: "Shelf root" })).toHaveAttribute("aria-selected", "true");
+
+  await openRowActions(page, "Overview");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete Overview" }).click();
+  await expect(page.getByRole("button", { name: "More actions for Overview" })).toHaveCount(0);
+
+  await page.getByRole("treeitem", { name: /Notes book/ }).click();
+  await openShelfDrawerIfAvailable(page);
+  await openRowActions(page, "Notes");
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete Notes" }).click();
+  await expect(page.getByRole("treeitem", { name: /Notes book/ })).toHaveCount(0);
 });
 
 test("Shelf uses horizontal book tiles including Shelf root", async ({ page }) => {
@@ -1014,6 +1051,14 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
   await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
+  const projects = page.getByRole("treeitem", { name: "Projects book, 0 pages, closed", exact: true });
+  await expect(projects).toHaveAttribute("aria-expanded", "true");
+  await page.getByRole("button", { name: "Collapse Projects" }).click();
+  await expect(projects).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Expand Projects" }).click();
+  await expect(projects).toHaveAttribute("aria-expanded", "true");
+
   await closeShelfDrawerIfAvailable(page);
   await clickShelfCommand(page, "Create page in Launch");
   await showShelfIfAvailable(page);
@@ -1047,7 +1092,7 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await showShelfIfAvailable(page);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Book ZIP for open book in Shelf", exact: true }).last().click();
+  await page.getByRole("button", { name: "Download Launch as Book ZIP", exact: true }).last().click();
   const download = await downloadPromise;
   const zip = await JSZip.loadAsync(await readFile((await download.path())!));
 
