@@ -15,6 +15,11 @@
   --color-warning: #c98622;
   --color-error: #a93966;
   --color-reader-muted: #3d3444;
+  --color-code-keyword: #e8b6ff;
+  --color-code-string: #9fe3ca;
+  --color-code-number: #ffd29b;
+  --color-code-title: #ffc1da;
+  --color-code-comment: #c5b4cc;
   --color-scrim: rgb(43 34 51 / 22%);
   --shadow-focus: 0 0 0 5px rgb(128 83 200 / 16%);
   --shadow-field-focus: 0 0 0 4px rgb(128 83 200 / 12%);

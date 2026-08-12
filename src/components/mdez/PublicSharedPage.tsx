@@ -71,7 +71,7 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
   if (state.status === "loading") {
     return (
       <main className="min-h-screen bg-canvas px-5 py-10 text-ink">
-        <div className="mx-auto w-full max-w-[760px] animate-pulse" role="status">
+        <div className="shared-page-loading mx-auto w-full max-w-[760px] animate-pulse" role="status">
           <span className="sr-only">Loading shared page...</span>
           <div className="h-4 w-28 rounded bg-panel" />
           <div className="mt-8 h-10 w-2/3 rounded bg-panel" />

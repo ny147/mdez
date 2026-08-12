@@ -47,25 +47,28 @@ export function FolderTree({
         </button>
       </div>
 
-      <div className="space-y-1" role="tree" aria-label="Books and pages">
-        <button
-          type="button"
-          onClick={() => onSelectFolder(null)}
-          role="treeitem"
-          aria-selected={selectedFolderId === null}
-          className={`w-full rounded border px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
-            selectedFolderId === null
-              ? "border-accent-files bg-accent-files text-accent-on shadow-soft"
-              : "border-transparent text-muted hover:border-border hover:bg-panel hover:text-ink"
-          }`}
-        >
-          {WORKSPACE_COPY.pagesWithoutBook}
-        </button>
+      <ul className="m-0 list-none space-y-1 p-0" aria-label="Books and pages">
+        <li>
+          <button
+            type="button"
+            onClick={() => onSelectFolder(null)}
+            aria-pressed={selectedFolderId === null}
+            className={`w-full rounded border px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
+              selectedFolderId === null
+                ? "border-accent-files bg-accent-files text-accent-on shadow-soft"
+                : "border-transparent text-muted hover:border-border hover:bg-panel hover:text-ink"
+            }`}
+          >
+            {WORKSPACE_COPY.pagesWithoutBook}
+          </button>
+        </li>
 
         {tree.length === 0 ? (
-          <p className="rounded border border-border bg-panel px-3 py-2 text-xs font-semibold leading-5 text-muted">
-            No books yet. Create a book to group related pages.
-          </p>
+          <li>
+            <p className="rounded border border-border bg-panel px-3 py-2 text-xs font-semibold leading-5 text-muted">
+              No books yet. Create a book to group related pages.
+            </p>
+          </li>
         ) : null}
 
         {tree.map((node) => (
@@ -83,7 +86,7 @@ export function FolderTree({
             onDeleteFolder={onDeleteFolder}
           />
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -120,13 +123,15 @@ function FolderTreeRow({
   }
 
   return (
-    <div>
+    <li>
       <div className="group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
         <button
           type="button"
           onClick={() => hasChildren && onToggleFolder(folder.id)}
           disabled={!hasChildren}
           aria-label={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          aria-controls={hasChildren ? `book-children-${folder.id}` : undefined}
           title={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
           className="flex h-9 w-7 shrink-0 items-center justify-center rounded text-muted transition hover:bg-surface-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
         >
@@ -144,11 +149,8 @@ function FolderTreeRow({
         <button
           type="button"
           onClick={() => onSelectFolder(folder.id)}
-          role="treeitem"
-          aria-level={depth + 1}
           aria-label={`${folder.name} book, ${pageCount} ${pageCount === 1 ? "page" : "pages"}, ${isSelected ? "open" : "closed"}`}
-          aria-selected={isSelected}
-          aria-expanded={isSelected}
+          aria-pressed={isSelected}
           title={`Open ${folder.name} book`}
           className={`min-w-0 flex-1 rounded border px-2 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
             isSelected ? "border-accent-files bg-accent-files text-accent-on shadow-soft" : "border-transparent text-muted hover:text-ink"
@@ -176,7 +178,11 @@ function FolderTreeRow({
       </div>
 
       {hasChildren && isExpanded ? (
-        <div className="mt-1 space-y-1" role="group">
+        <ul
+          id={`book-children-${folder.id}`}
+          className="m-0 mt-1 list-none space-y-1 p-0"
+          aria-label={`Books inside ${folder.name}`}
+        >
           {children.map((child) => (
             <FolderTreeRow
               key={child.folder.id}
@@ -192,8 +198,8 @@ function FolderTreeRow({
               onDeleteFolder={onDeleteFolder}
             />
           ))}
-        </div>
+        </ul>
       ) : null}
-    </div>
+    </li>
   );
 }

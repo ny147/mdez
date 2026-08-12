@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
@@ -75,6 +75,12 @@ const mobileIcons = {
   preview: BookOpen,
   split: Columns2
 };
+
+const workspacePanelId = "workspace-mode-panel";
+
+function modeTabId(location: "desktop" | "mobile", mode: ViewMode) {
+  return `${location}-workspace-mode-${mode}`;
+}
 
 export function MdezWorkspace() {
   const localLibrary = useWorkspaceLibrary();
@@ -335,6 +341,22 @@ export function MdezWorkspace() {
     setIsDrawerOpen(false);
   }
 
+  function handleModeTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, options: { value: ViewMode }[]) {
+    const currentIndex = options.findIndex((option) => option.value === viewMode);
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % options.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + options.length) % options.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = options.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    handleViewModeChange(options[nextIndex].value);
+    const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    tabs?.item(nextIndex).focus();
+  }
+
   function toggleDesktopSidebar() {
     const nextVisible = !isSidebarVisible;
     setIsSidebarVisible(nextVisible);
@@ -398,6 +420,7 @@ export function MdezWorkspace() {
             type="button"
             onClick={toggleDesktopSidebar}
             aria-label="Toggle sidebar"
+            title="Toggle sidebar"
             aria-expanded={isSidebarVisible}
             className="workspace-icon-button desktop-sidebar-toggle"
           >
@@ -413,28 +436,34 @@ export function MdezWorkspace() {
           />
         </div>
 
-        <nav className="workspace-mode-nav" aria-label="Workspace modes">
+        <div className="workspace-mode-nav" role="tablist" aria-label="Workspace modes">
           {readerViewOptions.map((option) => (
             <button
               key={option.value}
+              id={modeTabId("desktop", option.value)}
               type="button"
               role="tab"
+              data-active-treatment="filled"
               aria-selected={viewMode === option.value}
+              aria-controls={workspacePanelId}
+              tabIndex={viewMode === option.value ? 0 : -1}
               onClick={() => handleViewModeChange(option.value)}
+              onKeyDown={(event) => handleModeTabKeyDown(event, readerViewOptions)}
               className="workspace-mode-button"
             >
               {option.label}
             </button>
           ))}
-        </nav>
+        </div>
 
         <div className="workspace-actions">
-          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
-          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
+          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" title="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
+          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" title="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
           <button
             type="button"
             onClick={() => setIsSharedLinksOpen(true)}
             aria-label="Shared links"
+            title="Shared links"
             className="workspace-icon-button"
           >
             <Link2 aria-hidden="true" className="h-4 w-4" />
@@ -444,6 +473,7 @@ export function MdezWorkspace() {
             type="button"
             onClick={() => setIsDrawerOpen(true)}
             aria-label="Open library shelf"
+            title="Open library shelf"
             aria-controls="library-shelf"
             aria-expanded={isDrawerOpen}
             className="workspace-icon-button mobile-drawer-trigger"
@@ -494,7 +524,12 @@ export function MdezWorkspace() {
           data-testid="workspace-main"
           inert={isTabletLayout && isDrawerOpen}
         >
-          <section className="workspace-surface">
+          <section
+            id={workspacePanelId}
+            className="workspace-surface"
+            role="tabpanel"
+            aria-labelledby={modeTabId(isMobileLayout ? "mobile" : "desktop", viewMode)}
+          >
             <div className="workspace-context">
               <div className="min-w-0">
                 <p className="workspace-context-label">
@@ -543,16 +578,21 @@ export function MdezWorkspace() {
         isInert={isMobileLayout && isDrawerOpen}
       />
 
-      <nav className="mobile-mode-nav" aria-label="Workspace modes" inert={isMobileLayout && isDrawerOpen}>
+      <div className="mobile-mode-nav" role="tablist" aria-label="Workspace modes" inert={isMobileLayout && isDrawerOpen}>
         {mobileOptions.map((option) => {
           const Icon = mobileIcons[option.value];
           return (
             <button
               key={option.value}
+              id={modeTabId("mobile", option.value)}
               type="button"
               role="tab"
+              data-active-treatment="filled"
               aria-selected={viewMode === option.value}
+              aria-controls={workspacePanelId}
+              tabIndex={viewMode === option.value ? 0 : -1}
               onClick={() => handleViewModeChange(option.value)}
+              onKeyDown={(event) => handleModeTabKeyDown(event, mobileOptions)}
               className="mobile-mode-button"
             >
               <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -560,7 +600,7 @@ export function MdezWorkspace() {
             </button>
           );
         })}
-      </nav>
+      </div>
 
       {isImportOpen ? (
         <ImportDialog

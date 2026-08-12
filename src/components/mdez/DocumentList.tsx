@@ -45,13 +45,14 @@ export function DocumentList({
 
   return (
     <section className="min-h-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 grid gap-2">
         <h3 className="font-display text-sm font-black text-ink">Pages</h3>
         <button
           type="button"
+          data-visual-priority="secondary"
           onClick={onCreateDocument}
-          aria-label={`${createPageLabel} from page list`}
-          className="primary-button min-h-9 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+          aria-label={createPageLabel}
+          className="secondary-button sidebar-create-button min-h-9 w-full px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <FilePlus aria-hidden="true" className="h-4 w-4" />
           {createPageLabel}
@@ -63,17 +64,6 @@ export function DocumentList({
           <p className="text-sm font-semibold leading-6 text-muted">
             Create a page in {selectedBook ? selectedBook.name : WORKSPACE_COPY.pagesWithoutBook} or import Markdown here.
           </p>
-          <div className="mt-3 grid gap-2">
-            <button
-              type="button"
-              onClick={onCreateDocument}
-              aria-label={createPageLabel}
-              className="primary-button w-full px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <FilePlus aria-hidden="true" className="h-4 w-4" />
-              {createPageLabel}
-            </button>
-          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -92,7 +82,9 @@ export function DocumentList({
                     : "border-transparent text-ink hover:bg-panel"
                 }`}
               >
-                <span className="block truncate font-display text-sm font-black">{document.title}</span>
+                <span className="page-title-clamp font-display text-sm font-black" title={document.title}>
+                  {document.title}
+                </span>
                 <span className="mt-1 block truncate text-xs font-semibold opacity-70">
                   Updated {formatRelativeTime(document.updatedAt)}
                 </span>
