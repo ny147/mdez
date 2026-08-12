@@ -1,5 +1,6 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Shippori_Mincho_B1, Space_Grotesk } from "next/font/google";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 import { appMetadata } from "@/app/metadata";
 
