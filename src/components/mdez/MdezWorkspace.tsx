@@ -398,6 +398,7 @@ export function MdezWorkspace() {
             type="button"
             onClick={toggleDesktopSidebar}
             aria-label="Toggle sidebar"
+            title="Toggle sidebar"
             aria-expanded={isSidebarVisible}
             className="workspace-icon-button desktop-sidebar-toggle"
           >
@@ -419,6 +420,7 @@ export function MdezWorkspace() {
               key={option.value}
               type="button"
               role="tab"
+              data-active-treatment="filled"
               aria-selected={viewMode === option.value}
               onClick={() => handleViewModeChange(option.value)}
               className="workspace-mode-button"
@@ -429,12 +431,13 @@ export function MdezWorkspace() {
         </nav>
 
         <div className="workspace-actions">
-          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
-          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
+          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" title="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
+          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" title="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
           <button
             type="button"
             onClick={() => setIsSharedLinksOpen(true)}
             aria-label="Shared links"
+            title="Shared links"
             className="workspace-icon-button"
           >
             <Link2 aria-hidden="true" className="h-4 w-4" />
@@ -444,6 +447,7 @@ export function MdezWorkspace() {
             type="button"
             onClick={() => setIsDrawerOpen(true)}
             aria-label="Open library shelf"
+            title="Open library shelf"
             aria-controls="library-shelf"
             aria-expanded={isDrawerOpen}
             className="workspace-icon-button mobile-drawer-trigger"
@@ -551,6 +555,7 @@ export function MdezWorkspace() {
               key={option.value}
               type="button"
               role="tab"
+              data-active-treatment="filled"
               aria-selected={viewMode === option.value}
               onClick={() => handleViewModeChange(option.value)}
               className="mobile-mode-button"

@@ -19,11 +19,11 @@ export function DocumentActions({ document, folders, onRename, onMove, onDelete 
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
   return (
-    <details className="mt-2 rounded border border-border bg-panel">
+    <details className="page-actions mt-2 rounded border bg-panel">
       <summary
         role="button"
         aria-label={`Manage ${document.title}`}
-        className="flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-muted"
+        className="flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-ink"
       >
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
         Manage page

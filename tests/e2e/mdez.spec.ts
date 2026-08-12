@@ -160,6 +160,56 @@ test("uses the renewed light library shell and mode accents", async ({ page }) =
   expect(fonts.heading).toContain("Space Grotesk");
 });
 
+test("workspace polish distinguishes primary actions and active modes", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  const shelfCreate = page.getByRole("main").getByRole("button", { name: "Create page", exact: true });
+  const sidebarCreate = page
+    .getByRole("complementary", { name: "Library shelf" })
+    .getByRole("button", { name: /Create page.*from page list/ });
+
+  await expect(shelfCreate).toHaveAttribute("data-visual-priority", "primary");
+  await expect(sidebarCreate).toHaveAttribute("data-visual-priority", "secondary");
+
+  const shelfTab = page.getByRole("tab", { name: "Shelf", exact: true }).first();
+  await expect(shelfTab).toHaveAttribute("data-active-treatment", "filled");
+  const style = await shelfTab.evaluate((node) => {
+    const computed = getComputedStyle(node);
+    return { background: computed.backgroundColor, border: computed.borderColor };
+  });
+
+  expect(style.background).not.toBe("rgba(0, 0, 0, 0)");
+  expect(style.border).not.toBe("rgba(0, 0, 0, 0)");
+});
+
+test("workspace polish keeps localized titles and icon actions discoverable", async ({ page }) => {
+  const title = "เฉลย EGAT Aptitude Test สำหรับเตรียมสอบฉบับสมบูรณ์";
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("textbox", { name: "Page title" }).fill(title);
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
+  await showShelfIfAvailable(page);
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const sidebarTitle = sidebar.getByTitle(title);
+  await expect(sidebarTitle).toHaveCSS("-webkit-line-clamp", "2");
+  await expect(sidebarTitle).toHaveAttribute("title", title);
+
+  for (const name of ["Toggle sidebar", "Shared links", "Open library shelf"]) {
+    await expect(page.locator(`button[aria-label="${name}"]`)).toHaveAttribute("title", name);
+  }
+
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    const viewport = await page.evaluate(() => ({
+      client: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth
+    }));
+    expect(viewport.scroll).toBe(viewport.client);
+  }
+});
+
 test("desktop sidebar can reopen and restores its state", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const toggle = page.getByRole("button", { name: "Toggle sidebar" });

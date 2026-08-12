@@ -57,7 +57,13 @@ export function ShelfPane({
         </div>
         <div className="grid gap-2 md:justify-items-end">
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="primary-button px-4 py-2">
+            <button
+              type="button"
+              data-visual-priority="primary"
+              onClick={onCreateDocument}
+              aria-label={createPageLabel}
+              className="primary-button px-4 py-2"
+            >
               <FilePlus aria-hidden="true" className="h-4 w-4" />
               {createPageLabel}
             </button>
@@ -161,7 +167,9 @@ export function ShelfPane({
                       selectedDocumentId === document.id ? "border-accent bg-panel" : "border-border"
                     }`}
                   >
-                    <span className="block truncate font-display text-base font-black text-ink">{document.title}</span>
+                    <span className="page-title-clamp font-display text-base font-black text-ink" title={document.title}>
+                      {document.title}
+                    </span>
                     <span className="mt-2 block truncate text-sm font-semibold text-muted">{parentBook}</span>
                     <span className="mt-3 block text-xs font-bold text-accent-files">Updated {updated}</span>
                   </button>
