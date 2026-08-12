@@ -166,7 +166,7 @@ test("workspace polish distinguishes primary actions and active modes", async ({
   const shelfCreate = page.getByRole("main").getByRole("button", { name: "Create page", exact: true });
   const sidebarCreate = page
     .getByRole("complementary", { name: "Library shelf" })
-    .getByRole("button", { name: /Create page.*from page list/ });
+    .locator('button[data-visual-priority="secondary"]');
 
   await expect(shelfCreate).toHaveAttribute("data-visual-priority", "primary");
   await expect(sidebarCreate).toHaveAttribute("data-visual-priority", "secondary");

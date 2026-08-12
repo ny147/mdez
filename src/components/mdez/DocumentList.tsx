@@ -51,7 +51,7 @@ export function DocumentList({
           type="button"
           data-visual-priority="secondary"
           onClick={onCreateDocument}
-          aria-label={`${createPageLabel} from page list`}
+          aria-label={createPageLabel}
           className="secondary-button sidebar-create-button min-h-9 w-full px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <FilePlus aria-hidden="true" className="h-4 w-4" />
