@@ -141,7 +141,7 @@ test("uses the renewed light library shell and mode accents", async ({ page }) =
   const shell = page.getByTestId("workspace-shell");
 
   await expect(shell).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Workspace modes" })).toBeVisible();
+  await expect(page.getByRole("tablist", { name: "Workspace modes" }).first()).toBeAttached();
   await expect(page.getByRole("contentinfo", { name: "Workspace status" })).toBeVisible();
 
   const colors = await shell.evaluate((node) => {
@@ -180,6 +180,167 @@ test("workspace polish distinguishes primary actions and active modes", async ({
 
   expect(style.background).not.toBe("rgba(0, 0, 0, 0)");
   expect(style.border).not.toBe("rgba(0, 0, 0, 0)");
+});
+
+test("workspace mode tabs expose their panel and support roving keyboard focus", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+
+    const tablist = page.locator(width <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
+    const shelfTab = tablist.getByRole("tab", { name: "Shelf", exact: true });
+    const editTab = tablist.getByRole("tab", { name: "Edit", exact: true });
+    const readTab = tablist.getByRole("tab", { name: "Read", exact: true });
+
+    await expect(tablist).toHaveRole("tablist");
+    await expect(tablist).toHaveAccessibleName("Workspace modes");
+    await expect(shelfTab).toHaveAttribute("tabindex", "0");
+    await expect(editTab).toHaveAttribute("tabindex", "-1");
+
+    const panelId = await shelfTab.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    await expect(page.locator(`#${panelId}`)).toHaveRole("tabpanel");
+    await expect(page.locator(`#${panelId}`)).toHaveAttribute("aria-labelledby", await shelfTab.getAttribute("id") as string);
+
+    await shelfTab.focus();
+    await shelfTab.press("ArrowRight");
+    await expect(editTab).toBeFocused();
+    await expect(editTab).toHaveAttribute("aria-selected", "true");
+    await expect(editTab).toHaveAttribute("tabindex", "0");
+
+    await editTab.press("End");
+    const lastTab = tablist.getByRole("tab").last();
+    await expect(lastTab).toBeFocused();
+    await expect(lastTab).toHaveAttribute("aria-selected", "true");
+
+    await lastTab.press("Home");
+    await expect(shelfTab).toBeFocused();
+    await expect(shelfTab).toHaveAttribute("aria-selected", "true");
+    await expect(readTab).toHaveAttribute("tabindex", "-1");
+  }
+});
+
+test("book hierarchy uses nested lists with explicit selection and expansion states", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const books = sidebar.getByRole("list", { name: "Books and pages" });
+
+  await expect(books).toBeVisible();
+  await expect(books.getByRole("button", { name: "Pages without a book" })).toHaveAttribute("aria-pressed", "true");
+
+  page.once("dialog", (dialog) => dialog.accept("Projects"));
+  await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
+  const projects = books.getByTitle("Open Projects book");
+  await expect(projects).toHaveAttribute("aria-pressed", "true");
+
+  page.once("dialog", (dialog) => dialog.accept("Launch"));
+  await sidebar.getByRole("button", { name: "Create book inside Projects" }).click();
+
+  await expect(projects).toHaveAttribute("aria-pressed", "false");
+  const expandProjects = books.getByRole("button", { name: "Collapse Projects" });
+  await expect(expandProjects).toHaveAttribute("aria-expanded", "true");
+  const childListId = await expandProjects.getAttribute("aria-controls");
+  expect(childListId).toBeTruthy();
+  await expect(books.locator(`#${childListId}`)).toHaveRole("list");
+  await expect(books.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
+});
+
+test("reduced motion stops looping loading and refresh animations without hiding status", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/quick-shares/reduced-motion", async () => new Promise(() => {}));
+  await page.goto("/share/reduced-motion");
+
+  const sharedLoading = page.locator('[role="status"]', { hasText: "Loading shared page..." });
+  await expect(sharedLoading).toBeVisible();
+  await expect(sharedLoading).toHaveCSS("animation-name", "none");
+
+  let archiveRequests = 0;
+  const archive = await makeGitHubArchive({ "codex-main/readme.md": "# Motion" });
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await page.route("**/api/github/archive", async (route) => {
+    archiveRequests += 1;
+    if (archiveRequests > 1) return new Promise(() => {});
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "content-type": "application/zip",
+        "x-mdez-default-branch": "main",
+        "x-mdez-repository-url": "https://github.com/openai/codex"
+      },
+      body: archive
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "GitHub repository" }).click();
+  await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
+  await dialog.getByRole("button", { name: "Preview repository" }).click();
+  await dialog.getByRole("button", { name: "Import repository" }).click();
+  await openShelfDrawerIfAvailable(page);
+  page.once("dialog", (confirmation) => confirmation.accept());
+  await page.getByRole("button", { name: "Refresh from GitHub" }).click();
+
+  const refreshButton = page.getByRole("button", { name: "Refreshing from GitHub..." });
+  await expect(refreshButton).toBeVisible();
+  await expect(refreshButton.locator("svg")).toHaveCSS("animation-name", "none");
+});
+
+test("markdown syntax colors use readable Mdez semantic tokens", async ({ page }) => {
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill([
+    "# Token sample",
+    "",
+    "```javascript",
+    "function greet() {",
+    "  const count = 2;",
+    "  return \"hello\"; // note",
+    "}",
+    "```"
+  ].join("\n"));
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await clickViewportModeTab(page, "Read");
+
+  const preview = page.locator(".markdown-preview");
+  const result = await preview.evaluate((element) => {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const background = getComputedStyle(element.querySelector("pre")!).backgroundColor;
+    const pairs = [
+      ["--color-code-keyword", ".hljs-keyword"],
+      ["--color-code-string", ".hljs-string"],
+      ["--color-code-number", ".hljs-number"],
+      ["--color-code-title", ".hljs-title"],
+      ["--color-code-comment", ".hljs-comment"]
+    ] as const;
+    const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+    const luminance = (value: string) => {
+      const channels = rgb(value).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const backgroundLuminance = luminance(background);
+
+    return pairs.map(([token, selector]) => {
+      const tokenColor = rootStyle.getPropertyValue(token).trim();
+      const renderedColor = getComputedStyle(element.querySelector(selector)!).color;
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      element.append(probe);
+      const resolvedTokenColor = getComputedStyle(probe).color;
+      probe.remove();
+      const foregroundLuminance = luminance(renderedColor);
+      const contrast = (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+        / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+      return { token, tokenColor, resolvedTokenColor, renderedColor, contrast };
+    });
+  });
+
+  for (const item of result) {
+    expect(item.tokenColor, `${item.token} should be defined`).not.toBe("");
+    expect(item.renderedColor).toBe(item.resolvedTokenColor);
+    expect(item.contrast).toBeGreaterThanOrEqual(4.5);
+  }
 });
 
 test("workspace polish keeps localized titles and icon actions discoverable", async ({ page }) => {
@@ -241,7 +402,7 @@ test("mobile drawer makes the workspace inert", async ({ page }) => {
   await expect(sidebar).toHaveAttribute("aria-hidden", "false");
   await expect(page.getByTestId("workspace-main")).toHaveAttribute("inert", "");
   await expect(page.locator('footer[aria-label="Workspace status"]')).toHaveAttribute("inert", "");
-  await expect(page.locator("nav.mobile-mode-nav")).toHaveAttribute("inert", "");
+  await expect(page.locator(".mobile-mode-nav")).toHaveAttribute("inert", "");
   await page.keyboard.press("Escape");
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
   await expect(trigger).toBeFocused();
@@ -251,7 +412,7 @@ test("library copy explains page and book scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("treeitem", { name: "Pages without a book" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Pages without a book" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
   await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
   await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
@@ -741,7 +902,7 @@ test("imports a public GitHub repository through preview and persists its source
 
   await page.reload();
   await openShelfDrawerIfAvailable(page);
-  await expect(page.getByRole("treeitem", { name: /docs book/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /docs book/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh from GitHub" })).toBeVisible();
 });
 
@@ -884,11 +1045,12 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await page.getByRole("button", { name: "Create book", exact: true }).first().click();
-  await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.getByRole("button", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
-  await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
   await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Launch", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
@@ -904,11 +1066,12 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await page.getByRole("button", { name: "Create book", exact: true }).first().click();
-  await expect(page.getByRole("treeitem", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.getByRole("button", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
   await page.getByRole("button", { name: "Create book inside Projects" }).click();
-  await expect(page.getByRole("treeitem", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
   await showShelfIfAvailable(page);
   await page.getByRole("button", { name: "Import Markdown", exact: true }).click();

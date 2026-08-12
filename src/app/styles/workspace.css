@@ -597,6 +597,11 @@ a:focus-visible {
   .mobile-mode-button {
     transition-duration: 0.01ms;
   }
+
+  .shared-page-loading,
+  .github-refresh-icon {
+    animation: none !important;
+  }
 }
 
 

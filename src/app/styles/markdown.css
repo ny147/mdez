@@ -56,6 +56,52 @@
   padding: 0;
 }
 
+.markdown-preview .hljs-keyword,
+.markdown-preview .hljs-selector-tag,
+.markdown-preview .hljs-literal,
+.markdown-preview .hljs-section,
+.markdown-preview .hljs-link {
+  color: var(--color-code-keyword);
+}
+
+.markdown-preview .hljs-string,
+.markdown-preview .hljs-attribute,
+.markdown-preview .hljs-symbol,
+.markdown-preview .hljs-bullet,
+.markdown-preview .hljs-addition {
+  color: var(--color-code-string);
+}
+
+.markdown-preview .hljs-number,
+.markdown-preview .hljs-meta,
+.markdown-preview .hljs-variable,
+.markdown-preview .hljs-template-variable {
+  color: var(--color-code-number);
+}
+
+.markdown-preview .hljs-title,
+.markdown-preview .hljs-name,
+.markdown-preview .hljs-selector-id,
+.markdown-preview .hljs-selector-class,
+.markdown-preview .hljs-type {
+  color: var(--color-code-title);
+}
+
+.markdown-preview .hljs-comment,
+.markdown-preview .hljs-quote,
+.markdown-preview .hljs-deletion {
+  color: var(--color-code-comment);
+  font-style: italic;
+}
+
+.markdown-preview .hljs-strong {
+  font-weight: 800;
+}
+
+.markdown-preview .hljs-emphasis {
+  font-style: italic;
+}
+
 .markdown-preview blockquote {
   margin-inline: 0;
   border: 1px solid color-mix(in srgb, var(--color-read) 32%, var(--color-rule));

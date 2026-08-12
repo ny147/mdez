@@ -44,7 +44,7 @@ export function GitHubSourcePanel({ source, isRefreshing, onRefresh }: GitHubSou
         disabled={isRefreshing}
         className="secondary-button mt-3 w-full px-3 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
       >
-        <RefreshCw aria-hidden="true" className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+        <RefreshCw aria-hidden="true" className={`github-refresh-icon h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
         {isRefreshing ? "Refreshing from GitHub..." : "Refresh from GitHub"}
       </button>
     </section>

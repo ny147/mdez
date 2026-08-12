@@ -1,6 +1,5 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Shippori_Mincho_B1, Space_Grotesk } from "next/font/google";
-import "highlight.js/styles/github.css";
 import "./globals.css";
 import { appMetadata } from "@/app/metadata";
 
