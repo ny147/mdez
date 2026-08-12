@@ -19,6 +19,7 @@
     "dexie": "^4.0.11",
     "highlight.js": "^11.11.1",
     "jszip": "^3.10.1",
+    "katex": "^0.18.4",
     "lucide-react": "^0.468.0",
     "next": "^15.0.0",
     "postgres": "^3.4.9",
@@ -26,7 +27,9 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.3",
     "rehype-highlight": "^7.0.0",
+    "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

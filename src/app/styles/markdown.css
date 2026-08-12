@@ -116,6 +116,13 @@
   border-collapse: collapse;
 }
 
+.markdown-preview .katex-display {
+  margin-block: 1.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.125rem;
+}
+
 .markdown-preview th,
 .markdown-preview td {
   border: 1px solid var(--color-rule);

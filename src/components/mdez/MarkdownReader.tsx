@@ -12,7 +12,9 @@ import React, {
 } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 
 import { extractHeadings } from "@/lib/headings";
 
@@ -150,8 +152,11 @@ export function MarkdownReader({
       <h1 className="reader-document-title break-words">{displayTitle(title)}</h1>
       <div className="markdown-preview min-w-0 max-w-[680px]">
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeHighlight]}
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[
+            rehypeHighlight,
+            [rehypeKatex, { throwOnError: false }]
+          ]}
           components={headingComponents}
           skipHtml
         >
