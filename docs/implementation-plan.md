@@ -179,10 +179,15 @@ This is a targeted product pass, not another redesign. Preserve the quiet pastel
 ### Task 1: Release automation
 
 - [x] Review the user-owned deletion before restoring .github/workflows/ci.yml.
-- [ ] Install from the lockfile in CI.
-- [ ] Run lint, typecheck, unit, build, and production-mode E2E.
-- [ ] Require no deployment secret for public import.
-- [ ] Keep CI failures actionable.
+- [x] Install from the lockfile in CI.
+- [x] Run lint, typecheck, unit, build, and production-mode E2E.
+- [x] Require no deployment secret for public import.
+- [x] Keep CI failures actionable.
+
+Local CI reproduction passed on 2026-08-20: clean lockfile install, lint,
+typecheck, 157 unit tests, production build, and 57 Chromium tests against
+`npm run start`. The first hosted GitHub Actions run and required branch check
+remain pending.
 
 ### Task 2: Production readiness
 

@@ -130,10 +130,10 @@ deleteGitHubSource(sourceId: string): Promise<void>
 
 ### Task 9: CI, Docs, Preview, and Production
 
-- [ ] Show the CI deletion diff and ask permission. If withheld, leave it deleted and do not claim CI complete.
-- [ ] After approval restore the HEAD workflow: Node 22, npm ci, lint, typecheck, unit, Chromium, build, production-server E2E, and failure artifacts. Add no secret.
+- [x] Show the CI deletion diff and ask permission. If withheld, leave it deleted and do not claim CI complete.
+- [x] After approval restore the HEAD workflow: Node 22, npm ci, lint, typecheck, unit, Chromium, build, production-server E2E, and failure artifacts. Add no secret.
 - [ ] Update PRODUCT and README with shipped public/default-only behavior, overwrite refresh, origin-scoped IndexedDB, ignored files, limits, and deferred private/sync features.
-- [ ] Reproduce CI locally against `npm run start`. Expected: every gate passes.
+- [x] Reproduce CI locally against `npm run start`. Expected: every gate passes.
 - [ ] Ask deployment authorization. After approval create a Vercel preview and smoke-test import, edit, autosave, reload, refresh, export, mobile, friendly errors, and log privacy.
 - [ ] After preview approval promote to production; record the HTTPS URL and local-data notice.
 - [ ] Commit CI as `ci: verify production GitHub import flow`; commit docs separately as `docs: publish Mdez GitHub import release`.
