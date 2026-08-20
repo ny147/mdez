@@ -1,0 +1,38 @@
+{
+  "title": "Quick Share sequence",
+  "theme": "light",
+  "groups": [
+    { "id": "creator-lane", "label": "Creator", "x": 30, "y": 70, "width": 210, "height": 1280 },
+    { "id": "browser-lane", "label": "Mdez browser", "x": 270, "y": 70, "width": 280, "height": 1280 },
+    { "id": "api-lane", "label": "Next.js API", "x": 580, "y": 70, "width": 250, "height": 1280 },
+    { "id": "db-lane", "label": "Supabase", "x": 860, "y": 70, "width": 250, "height": 1280 },
+    { "id": "viewer-lane", "label": "Viewer", "x": 1140, "y": 70, "width": 240, "height": 1280 }
+  ],
+  "nodes": [
+    { "id": "select-page", "label": "1. Select page\nand Quick Share", "type": "rectangle", "x": 55, "y": 125, "width": 160, "height": 72, "backgroundColor": "#fff0f8", "strokeColor": "#b8487a" },
+    { "id": "choose-expiry", "label": "2. Choose expiry\n1h / 1d / 7d / 30d / never", "type": "rectangle", "x": 300, "y": 235, "width": 220, "height": 88, "backgroundColor": "#f6edff", "strokeColor": "#8053c8" },
+    { "id": "create-request", "label": "3. Send title, Markdown,\nand expiration", "type": "rectangle", "x": 600, "y": 355, "width": 210, "height": 82, "backgroundColor": "#f6edff", "strokeColor": "#8053c8" },
+    { "id": "validate-share", "label": "4. Validate size, content,\nand expiration", "type": "diamond", "x": 610, "y": 485, "width": 190, "height": 105, "backgroundColor": "#fff7fc", "strokeColor": "#b8487a" },
+    { "id": "insert-share", "label": "5. Store readable snapshot,\nexpiry, and owner-token hash", "type": "rectangle", "x": 880, "y": 635, "width": 210, "height": 92, "backgroundColor": "#e9f8f4", "strokeColor": "#177f71" },
+    { "id": "share-response", "label": "6. Return public link\n+ private management token", "type": "rectangle", "x": 600, "y": 770, "width": 210, "height": 82, "backgroundColor": "#f6edff", "strokeColor": "#8053c8" },
+    { "id": "save-token", "label": "7. Save management token\nin IndexedDB", "type": "rectangle", "x": 300, "y": 890, "width": 220, "height": 76, "backgroundColor": "#e9f8f4", "strokeColor": "#177f71" },
+    { "id": "send-link", "label": "8. Send public link", "type": "rectangle", "x": 55, "y": 1015, "width": 160, "height": 64, "backgroundColor": "#fff0f8", "strokeColor": "#b8487a" },
+    { "id": "open-link", "label": "9. Open link", "type": "rectangle", "x": 1180, "y": 1015, "width": 160, "height": 64, "backgroundColor": "#fff0f8", "strokeColor": "#b8487a" },
+    { "id": "fetch-share", "label": "10. Request shared page", "type": "rectangle", "x": 600, "y": 1115, "width": 210, "height": 64, "backgroundColor": "#f6edff", "strokeColor": "#8053c8" },
+    { "id": "check-expiry", "label": "11. Load record and\ncheck expires_at", "type": "diamond", "x": 890, "y": 1210, "width": 190, "height": 100, "backgroundColor": "#e9f8f4", "strokeColor": "#177f71" },
+    { "id": "quick-note", "label": "Active: return Markdown and render read-only. Expired: return 410 Gone.", "type": "text", "x": 450, "y": 1385, "width": 520, "height": 45, "strokeColor": "#725f7c" }
+  ],
+  "edges": [
+    { "from": "select-page", "to": "choose-expiry", "label": "open share dialog" },
+    { "from": "choose-expiry", "to": "create-request", "label": "publish snapshot" },
+    { "from": "create-request", "to": "validate-share", "label": "POST /api/quick-shares" },
+    { "from": "validate-share", "to": "insert-share", "label": "valid" },
+    { "from": "insert-share", "to": "share-response", "label": "created" },
+    { "from": "share-response", "to": "save-token", "label": "link + token" },
+    { "from": "save-token", "to": "send-link", "label": "show link" },
+    { "from": "send-link", "to": "open-link", "label": "share with viewer" },
+    { "from": "open-link", "to": "fetch-share", "label": "GET /share/{id}" },
+    { "from": "fetch-share", "to": "check-expiry", "label": "query" },
+    { "from": "check-expiry", "to": "open-link", "label": "200 Markdown or 410 expired" }
+  ]
+}

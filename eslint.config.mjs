@@ -22,7 +22,12 @@ const eslintConfig = [
       "coverage/**",
       "playwright-report/**",
       "test-results/**",
+      ".claude/**",
+      ".codex/**",
       ".github/skills/**",
+      ".impeccable/**",
+      ".superpowers/**",
+      ".worktrees/**",
       "next-env.d.ts"
     ]
   },
