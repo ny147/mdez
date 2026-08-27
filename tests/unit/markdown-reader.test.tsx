@@ -48,4 +48,28 @@ describe("MarkdownReader math rendering", () => {
     expect(container.querySelector(".katex")).toBeInTheDocument();
     expect(container.querySelector("script")).toBeNull();
   });
+
+  it("renders LaTeX inline compatibility delimiters", () => {
+    const { container } = render(
+      <MarkdownReader title="Inline" markdown={"Value: \\(n! = n(n-1)\\cdots1\\)"} />
+    );
+    expect(container.querySelector(".katex")).toBeInTheDocument();
+    expect(container.querySelector(".katex-display")).toBeNull();
+  });
+
+  it("renders LaTeX display compatibility delimiters", () => {
+    const { container } = render(
+      <MarkdownReader title="Display" markdown={"\\[\n\\frac{8!}{6!}=56\n\\]"} />
+    );
+    expect(container.querySelector(".katex-display")).toBeInTheDocument();
+  });
+
+  it("does not render compatibility delimiters inside code", () => {
+    const { container } = render(
+      <MarkdownReader title="Code" markdown={"`\\(inline\\)`\n\n```text\n\\[display\\]\n```"} />
+    );
+    expect(container.querySelector(".katex")).toBeNull();
+    expect(screen.getByText("\\(inline\\)")).toBeVisible();
+    expect(screen.getByText("\\[display\\]")).toBeVisible();
+  });
 });

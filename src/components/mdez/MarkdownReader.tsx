@@ -17,6 +17,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
 import { extractHeadings } from "@/lib/headings";
+import { normalizeMathDelimiters } from "@/lib/markdown-math";
 
 type MarkdownReaderProps = {
   title: string;
@@ -40,6 +41,10 @@ export function MarkdownReader({
   const tocRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const headings = useMemo(() => extractHeadings(markdown), [markdown]);
+  const normalizedMarkdown = useMemo(
+    () => normalizeMathDelimiters(markdown),
+    [markdown]
+  );
   let headingCursor = 0;
 
   useEffect(() => {
@@ -160,7 +165,7 @@ export function MarkdownReader({
           components={headingComponents}
           skipHtml
         >
-          {markdown}
+          {normalizedMarkdown}
         </ReactMarkdown>
       </div>
     </div>
