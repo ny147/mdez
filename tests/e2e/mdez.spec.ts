@@ -850,6 +850,34 @@ test("preview prose uses reader typography while markdown code stays monospaced"
   expect(previewMaxWidth).not.toBe("");
 });
 
+test("reader renders compatibility math and enhanced code blocks", async ({ page }) => {
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill(
+    "# Technical notes\n\n\\[\n\\frac{8!}{6!}=56\n\\]\n\n```ts\nconst value = 1;\n```"
+  );
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await page.getByRole("tab", { name: "Read" }).click();
+
+  const preview = page.locator(".markdown-preview");
+  await expect(preview.locator(".katex-display")).toBeVisible();
+  await expect(preview.getByText("ts", { exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Copy code" })).toBeVisible();
+  await expect(preview.locator("pre code")).toContainText("const value = 1;");
+});
+
+test("reader lets long code language identifiers yield to the Copy control", async ({ page }) => {
+  const language = "a-very-long-language-identifier-that-must-not-displace-copy";
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill(`\`\`\`${language}\nconst value = 1;\n\`\`\``);
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await page.getByRole("tab", { name: "Read" }).click();
+
+  const preview = page.locator(".markdown-preview");
+  const languageLabel = preview.getByText(language, { exact: true });
+  await expect(preview.getByRole("button", { name: "Copy code" })).toBeVisible();
+  await expect(languageLabel).toHaveCSS("min-width", "0px");
+});
+
 
 
 test("reader table of contents is inert when closed and keyboard safe when open", async ({ page }) => {
