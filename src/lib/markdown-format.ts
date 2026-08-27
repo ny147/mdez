@@ -9,6 +9,7 @@ type MarkdownFormatRequest = {
   to: number;
   selected: string;
   line?: { from: number; to: number; text: string };
+  codeBlockLanguage?: string;
 };
 
 export type MarkdownFormatEdit = {
@@ -38,7 +39,7 @@ export function createMarkdownFormatEdit(request: MarkdownFormatRequest): Markdo
   let fallback: string;
 
   if (action === "codeBlock") {
-    before = "\n```text\n";
+    before = `\n\`\`\`${request.codeBlockLanguage ?? "text"}\n`;
     after = "\n```\n";
     fallback = "code";
   } else if (action === "math" && selected.includes("\n")) {

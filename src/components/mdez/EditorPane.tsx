@@ -4,7 +4,7 @@ import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorView, keymap } from "@codemirror/view";
 import { FilePlus, Share2, Upload } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useRef } from "react";
+import React, { type ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
 import { createMarkdownFormatEdit, type MarkdownFormatAction } from "@/lib/markdown-format";
@@ -61,7 +61,8 @@ export function EditorPane({
       from: selection.from,
       to: selection.to,
       selected,
-      line
+      line,
+      codeBlockLanguage: action === "code" ? "" : undefined
     });
 
     view.dispatch({

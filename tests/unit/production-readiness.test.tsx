@@ -10,7 +10,31 @@ import manifest from "@/app/manifest";
 import NotFound from "@/app/not-found";
 import { maxDuration } from "@/app/api/github/archive/route";
 import { EditorToolbar } from "@/components/mdez/EditorToolbar";
+import { EditorPane } from "@/components/mdez/EditorPane";
 import nextConfig from "../../next.config";
+
+const mockedEditor = vi.hoisted(() => ({
+  view: {
+    state: {
+      selection: { main: { from: 0, to: 12 } },
+      sliceDoc: () => "first\nsecond",
+      doc: { lineAt: () => ({ from: 0, to: 12, text: "first\nsecond" }) }
+    },
+    dispatch: vi.fn(),
+    focus: vi.fn()
+  }
+}));
+
+vi.mock("@uiw/react-codemirror", async () => {
+  const React = await import("react");
+
+  return {
+    default: React.forwardRef(function MockCodeMirror(_props, ref) {
+      React.useImperativeHandle(ref, () => ({ view: mockedEditor.view }));
+      return <div data-testid="markdown-editor" />;
+    })
+  };
+});
 
 describe("production readiness", () => {
   it("publishes app metadata, a manifest, and a local icon", () => {
@@ -134,6 +158,41 @@ describe("production readiness", () => {
     expect(onFormat).toHaveBeenCalledWith("bold");
     expect(onQuickShare).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "Export .md" })).toBeVisible();
+  });
+
+  it("keeps bare fenced output for the legacy multiline Code control", () => {
+    mockedEditor.view.dispatch.mockClear();
+    render(
+      <EditorPane
+        document={{
+          id: "document-1",
+          title: "Example",
+          body: "first\nsecond",
+          folderId: null,
+          order: 0,
+          createdAt: "2026-08-27T00:00:00.000Z",
+          updatedAt: "2026-08-27T00:00:00.000Z"
+        }}
+        title="Example"
+        body="first\nsecond"
+        saveStatus="Saved"
+        viewMode="editor"
+        onCreateDocument={vi.fn()}
+        onOpenImport={vi.fn()}
+        onQuickShare={vi.fn()}
+        onViewModeChange={vi.fn()}
+        onBodyChange={vi.fn()}
+        onRename={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "More formatting" }));
+    fireEvent.click(screen.getByRole("button", { name: "Code" }));
+
+    expect(mockedEditor.view.dispatch).toHaveBeenCalledWith({
+      changes: { from: 0, to: 12, insert: "\n```\nfirst\nsecond\n```\n" },
+      selection: { anchor: 22 }
+    });
   });
 
   it("keeps editor, reader, and import features behind dynamic boundaries", () => {
