@@ -1,6 +1,6 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { MarkdownReader } from "@/components/mdez/MarkdownReader";
 
@@ -71,5 +71,33 @@ describe("MarkdownReader math rendering", () => {
     expect(container.querySelector(".katex")).toBeNull();
     expect(screen.getByText("\\(inline\\)")).toBeVisible();
     expect(screen.getByText("\\[display\\]")).toBeVisible();
+  });
+
+  it("labels a fenced code block and copies its source", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText }
+    });
+
+    render(
+      <MarkdownReader title="TypeScript" markdown={"```ts\nconst value = 1;\n```"} />
+    );
+
+    expect(screen.getByText("ts", { exact: true })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("const value = 1;"));
+    expect(screen.getByRole("button", { name: "Code copied" })).toBeVisible();
+  });
+
+  it("reports when copying a code block fails", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("Clipboard unavailable")) }
+    });
+
+    render(<MarkdownReader title="Failure" markdown={"```text\ncopy me\n```"} />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
+    expect(await screen.findByRole("button", { name: "Copy failed" })).toBeVisible();
   });
 });

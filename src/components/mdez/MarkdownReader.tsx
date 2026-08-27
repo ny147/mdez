@@ -16,6 +16,7 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
+import { MarkdownCodeBlock } from "@/components/mdez/MarkdownCodeBlock";
 import { extractHeadings } from "@/lib/headings";
 import { normalizeMathDelimiters } from "@/lib/markdown-math";
 
@@ -162,7 +163,12 @@ export function MarkdownReader({
             rehypeHighlight,
             [rehypeKatex, { throwOnError: false }]
           ]}
-          components={headingComponents}
+          components={{
+            ...headingComponents,
+            pre: ({ children }: { children?: ReactNode }) => (
+              <MarkdownCodeBlock>{children}</MarkdownCodeBlock>
+            )
+          }}
           skipHtml
         >
           {normalizedMarkdown}
