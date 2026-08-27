@@ -12,15 +12,20 @@ function isEscaped(value: string, index: number) {
   return slashCount % 2 === 1;
 }
 
-function normalizeLine(line: string) {
+function normalizeLine(
+  line: string,
+  inlineCodeTicks: number,
+  hasClosingBackticks: (index: number, tickCount: number) => boolean,
+) {
   let result = "";
   let cursor = 0;
-  let inlineCodeTicks = 0;
 
   while (cursor < line.length) {
     if (line[cursor] === "`") {
       const tickCount = countRun(line, cursor, "`");
-      if (inlineCodeTicks === 0) inlineCodeTicks = tickCount;
+      if (inlineCodeTicks === 0 && !isEscaped(line, cursor) && hasClosingBackticks(cursor, tickCount)) {
+        inlineCodeTicks = tickCount;
+      }
       else if (tickCount === inlineCodeTicks) inlineCodeTicks = 0;
       result += line.slice(cursor, cursor + tickCount);
       cursor += tickCount;
@@ -45,30 +50,47 @@ function normalizeLine(line: string) {
     cursor += 1;
   }
 
-  return result;
+  return { inlineCodeTicks, result };
 }
 
 export function normalizeMathDelimiters(markdown: string) {
   let fenceMarker: "`" | "~" | null = null;
   let fenceLength = 0;
+  let inlineCodeTicks = 0;
+  const lines = markdown.split(/(\r?\n)/);
 
-  return markdown.split(/(\r?\n)/).map((line) => {
+  return lines.map((line, lineIndex) => {
     if (/^\r?\n$/.test(line)) return line;
     const fence = line.match(/^\s{0,3}(`{3,}|~{3,})/);
 
-    if (fence) {
+    if (fence && inlineCodeTicks === 0) {
       const marker = fence[1][0] as "`" | "~";
       const length = fence[1].length;
       if (fenceMarker === null) {
         fenceMarker = marker;
         fenceLength = length;
-      } else if (marker === fenceMarker && length >= fenceLength) {
+        inlineCodeTicks = 0;
+      } else if (marker === fenceMarker && length >= fenceLength && /^\s*$/.test(line.slice(fence[0].length))) {
         fenceMarker = null;
         fenceLength = 0;
       }
       return line;
     }
 
-    return fenceMarker === null ? normalizeLine(line) : line;
+    if (fenceMarker !== null) return line;
+
+    const normalized = normalizeLine(line, inlineCodeTicks, (index, tickCount) => {
+      for (let nextLineIndex = lineIndex; nextLineIndex < lines.length; nextLineIndex += 1) {
+        const nextLine = lines[nextLineIndex];
+        const start = nextLineIndex === lineIndex ? index + tickCount : 0;
+        for (let nextIndex = start; nextIndex < nextLine.length; nextIndex += 1) {
+          if (nextLine[nextIndex] !== "`" || isEscaped(nextLine, nextIndex)) continue;
+          if (countRun(nextLine, nextIndex, "`") === tickCount) return true;
+        }
+      }
+      return false;
+    });
+    inlineCodeTicks = normalized.inlineCodeTicks;
+    return normalized.result;
   }).join("");
 }

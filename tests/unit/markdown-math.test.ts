@@ -22,4 +22,21 @@ describe("normalizeMathDelimiters", () => {
     const markdown = "`\\(inline\\)`\n\n```text\n\\[backticks\\]\n```\n\n~~~text\n\\(tildes\\)\n~~~";
     expect(normalizeMathDelimiters(markdown)).toBe(markdown);
   });
+
+  it("does not normalize delimiters inside multiline inline code", () => {
+    const markdown = "`code\n\\(still code\\)\n`";
+    expect(normalizeMathDelimiters(markdown)).toBe(markdown);
+  });
+
+  it("does not treat a fenced code line with trailing text as a closing fence", () => {
+    const markdown = "```text\n```not a closing fence\n\\(still code\\)\n```";
+    expect(normalizeMathDelimiters(markdown)).toBe(markdown);
+  });
+
+  it("normalizes after escaped and unmatched backticks", () => {
+    expect(normalizeMathDelimiters("\\` \\(x\\)"))
+      .toBe("\\` $x$");
+    expect(normalizeMathDelimiters("`unclosed \\(x\\)"))
+      .toBe("`unclosed $x$");
+  });
 });
