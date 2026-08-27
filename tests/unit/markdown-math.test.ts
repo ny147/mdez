@@ -39,4 +39,9 @@ describe("normalizeMathDelimiters", () => {
     expect(normalizeMathDelimiters("`unclosed \\(x\\)"))
       .toBe("`unclosed $x$");
   });
+
+  it("does not let an unmatched backtick cross into a fenced block", () => {
+    const markdown = "Text `unclosed\n```text\n` still code with \\(x\\)\n```";
+    expect(normalizeMathDelimiters(markdown)).toBe(markdown);
+  });
 });

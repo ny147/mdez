@@ -80,8 +80,25 @@ export function normalizeMathDelimiters(markdown: string) {
     if (fenceMarker !== null) return line;
 
     const normalized = normalizeLine(line, inlineCodeTicks, (index, tickCount) => {
+      let scanFenceMarker: "`" | "~" | null = null;
+      let scanFenceLength = 0;
       for (let nextLineIndex = lineIndex; nextLineIndex < lines.length; nextLineIndex += 1) {
         const nextLine = lines[nextLineIndex];
+        const nextFence = nextLine.match(/^\s{0,3}(`{3,}|~{3,})/);
+        if (nextFence) {
+          const marker = nextFence[1][0] as "`" | "~";
+          const length = nextFence[1].length;
+          if (scanFenceMarker === null) {
+            scanFenceMarker = marker;
+            scanFenceLength = length;
+          } else if (marker === scanFenceMarker && length >= scanFenceLength && /^\s*$/.test(nextLine.slice(nextFence[0].length))) {
+            scanFenceMarker = null;
+            scanFenceLength = 0;
+          }
+          continue;
+        }
+        if (scanFenceMarker !== null) continue;
+
         const start = nextLineIndex === lineIndex ? index + tickCount : 0;
         for (let nextIndex = start; nextIndex < nextLine.length; nextIndex += 1) {
           if (nextLine[nextIndex] !== "`" || isEscaped(nextLine, nextIndex)) continue;
