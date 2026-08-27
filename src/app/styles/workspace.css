@@ -749,26 +749,15 @@ a:focus-visible {
   padding-block: var(--space-2);
 }
 
-.editor-format-groups {
-  display: grid;
-  min-width: 0;
-  gap: var(--space-1);
-}
-
 .editor-format-actions {
   display: flex;
-  flex-wrap: wrap;
   min-width: 0;
+  flex-wrap: nowrap;
   gap: var(--space-1);
-  overflow: visible;
-}
-
-.editor-secondary-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  padding-top: var(--space-1);
-  border-top: 1px solid var(--color-rule);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
 }
 
 .editor-document-actions {

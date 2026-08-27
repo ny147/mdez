@@ -1,9 +1,11 @@
 "use client";
 
-import { MoreHorizontal, Share2 } from "lucide-react";
-import React, { type ReactNode, useState } from "react";
+import { Share2 } from "lucide-react";
+import React, { type ReactNode } from "react";
 
-export type FormatAction = "bold" | "italic" | "link" | "image" | "code" | "h1" | "h2" | "divider";
+import type { MarkdownFormatAction } from "@/lib/markdown-format";
+
+export type FormatAction = MarkdownFormatAction;
 
 type FormatActionConfig = {
   action: FormatAction;
@@ -13,15 +15,14 @@ type FormatActionConfig = {
   shortcutLabel?: string;
 };
 
-const primaryActions: FormatActionConfig[] = [
+const actions: FormatActionConfig[] = [
   { action: "bold", label: "Bold", glyph: "B", ariaKeyShortcuts: "Control+B Meta+B", shortcutLabel: "Ctrl/⌘ B" },
   { action: "italic", label: "Italic", glyph: "I", ariaKeyShortcuts: "Control+I Meta+I", shortcutLabel: "Ctrl/⌘ I" },
-  { action: "link", label: "Insert link", glyph: "↗", ariaKeyShortcuts: "Control+K Meta+K", shortcutLabel: "Ctrl/⌘ K" }
-];
-
-const secondaryActions: FormatActionConfig[] = [
+  { action: "link", label: "Insert link", glyph: "↗", ariaKeyShortcuts: "Control+K Meta+K", shortcutLabel: "Ctrl/⌘ K" },
   { action: "image", label: "Insert image", glyph: "▧" },
-  { action: "code", label: "Code", glyph: "</>" },
+  { action: "inlineCode", label: "Inline code", glyph: "`" },
+  { action: "codeBlock", label: "Code block", glyph: "</>" },
+  { action: "math", label: "Math", glyph: "∑" },
   { action: "h1", label: "Heading 1", glyph: "H1" },
   { action: "h2", label: "Heading 2", glyph: "H2" },
   { action: "divider", label: "Divider", glyph: "---" }
@@ -57,30 +58,10 @@ export function EditorToolbar({
   onQuickShare,
   quickShareDisabled = false
 }: EditorToolbarProps) {
-  const [showSecondary, setShowSecondary] = useState(false);
-
   return (
     <div role="toolbar" aria-label="Markdown toolbar" className="editor-toolbar">
-      <div className="editor-format-groups">
-        <div className="editor-format-actions">
-          {primaryActions.map((item) => <FormatButton key={item.action} item={item} onFormat={onFormat} />)}
-          <button
-            type="button"
-            aria-label="More formatting"
-            aria-expanded={showSecondary}
-            aria-controls="secondary-format-actions"
-            onClick={() => setShowSecondary((current) => !current)}
-            className="secondary-button min-h-10 shrink-0 px-3 py-2 text-xs"
-          >
-            <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
-            More
-          </button>
-        </div>
-        {showSecondary ? (
-          <div id="secondary-format-actions" className="editor-secondary-actions">
-            {secondaryActions.map((item) => <FormatButton key={item.action} item={item} onFormat={onFormat} />)}
-          </div>
-        ) : null}
+      <div className="editor-format-actions">
+        {actions.map((item) => <FormatButton key={item.action} item={item} onFormat={onFormat} />)}
       </div>
       <div className="editor-document-actions">
         {onQuickShare ? (

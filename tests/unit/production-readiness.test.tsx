@@ -153,14 +153,24 @@ describe("production readiness", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Bold" }));
+    const formattingActions = [
+      "Bold", "Italic", "Insert link", "Insert image", "Inline code",
+      "Code block", "Math", "Heading 1", "Heading 2", "Divider"
+    ];
+
+    for (const action of formattingActions) {
+      expect(screen.getByRole("button", { name: action })).toBeVisible();
+    }
+
+    expect(screen.queryByRole("button", { name: "More formatting" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Inline code" }));
     fireEvent.click(screen.getByRole("button", { name: "Quick Share" }));
-    expect(onFormat).toHaveBeenCalledWith("bold");
+    expect(onFormat).toHaveBeenCalledWith("inlineCode");
     expect(onQuickShare).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "Export .md" })).toBeVisible();
   });
 
-  it("keeps bare fenced output for the legacy multiline Code control", () => {
+  it("inserts a fenced code block from the explicit Code block control", () => {
     mockedEditor.view.dispatch.mockClear();
     render(
       <EditorPane
@@ -186,12 +196,11 @@ describe("production readiness", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "More formatting" }));
-    fireEvent.click(screen.getByRole("button", { name: "Code" }));
+    fireEvent.click(screen.getByRole("button", { name: "Code block" }));
 
     expect(mockedEditor.view.dispatch).toHaveBeenCalledWith({
-      changes: { from: 0, to: 12, insert: "\n```\nfirst\nsecond\n```\n" },
-      selection: { anchor: 22 }
+      changes: { from: 0, to: 12, insert: "\n```text\nfirst\nsecond\n```\n" },
+      selection: { anchor: 26 }
     });
   });
 

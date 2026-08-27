@@ -508,21 +508,38 @@ test("an open book explains filtering and export scope", async ({ page }) => {
 
 
 
-test("editor keeps primary formatting visible and discloses secondary actions", async ({ page }) => {
+test("editor exposes formatting in one row without a disclosure", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
 
-  for (const name of ["Bold", "Italic", "Insert link", "More formatting", "Export .md"]) {
+  for (const name of [
+    "Bold", "Italic", "Insert link", "Insert image", "Inline code",
+    "Code block", "Math", "Heading 1", "Heading 2", "Divider", "Export .md"
+  ]) {
     await expect(toolbar.getByRole("button", { name })).toBeVisible();
   }
-  for (const name of ["Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
-    await expect(toolbar.getByRole("button", { name })).toBeHidden();
-  }
+  await expect(toolbar.getByRole("button", { name: "More formatting" })).toHaveCount(0);
+});
 
-  await toolbar.getByRole("button", { name: "More formatting" }).click();
-  for (const name of ["Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
-    await expect(toolbar.getByRole("button", { name })).toBeVisible();
-  }
+test("editor toolbar inserts inline math and fenced code", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  const editor = page.locator(".cm-content");
+  const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
+
+  await editor.click();
+  await editor.press("Control+A");
+  await page.keyboard.insertText("x + y");
+  await editor.press("Control+A");
+  await toolbar.getByRole("button", { name: "Math" }).click();
+  await expect(editor).toContainText("$x + y$");
+
+  await editor.click();
+  await editor.press("Control+A");
+  await page.keyboard.insertText("const value = 1;");
+  await editor.press("Control+A");
+  await toolbar.getByRole("button", { name: "Code block" }).click();
+  await expect(editor).toContainText("```text");
+  await expect(editor).toContainText("const value = 1;");
 });
 
 test("editor formatting shortcuts apply Markdown", async ({ page }) => {
@@ -545,7 +562,10 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
   await clickViewportModeTab(page, "Edit");
 
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
-  const formatNames = ["Bold", "Italic", "Insert link", "More formatting"];
+  const formatNames = [
+    "Bold", "Italic", "Insert link", "Insert image", "Inline code",
+    "Code block", "Math", "Heading 1", "Heading 2", "Divider"
+  ];
   for (const name of formatNames) {
     await expectMinimumTouchTarget(toolbar.getByRole("button", { name }));
   }
@@ -571,7 +591,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
       pageScrollWidth: document.documentElement.scrollWidth
     };
   });
-  expect(geometry.formatScrolls).toBe(false);
+  expect(geometry.formatScrolls).toBe(true);
   expect(geometry.pageScrollWidth).toBe(geometry.pageClientWidth);
 
   const focusOrder = [...formatNames, ...documentActionNames];

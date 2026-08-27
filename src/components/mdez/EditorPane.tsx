@@ -7,7 +7,7 @@ import { FilePlus, Share2, Upload } from "lucide-react";
 import React, { type ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
-import { createMarkdownFormatEdit, type MarkdownFormatAction } from "@/lib/markdown-format";
+import { createMarkdownFormatEdit } from "@/lib/markdown-format";
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
 
 type EditorPaneProps = {
@@ -50,19 +50,15 @@ export function EditorPane({
 
     const selection = view.state.selection.main;
     const selected = view.state.sliceDoc(selection.from, selection.to);
-    const formatAction: MarkdownFormatAction = action === "code"
-      ? selected.includes("\n") ? "codeBlock" : "inlineCode"
-      : action;
-    const line = formatAction === "h1" || formatAction === "h2"
+    const line = action === "h1" || action === "h2"
       ? view.state.doc.lineAt(selection.from)
       : undefined;
     const edit = createMarkdownFormatEdit({
-      action: formatAction,
+      action,
       from: selection.from,
       to: selection.to,
       selected,
-      line,
-      codeBlockLanguage: action === "code" ? "" : undefined
+      line
     });
 
     view.dispatch({
