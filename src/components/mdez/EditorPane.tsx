@@ -4,9 +4,10 @@ import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorView, keymap } from "@codemirror/view";
 import { FilePlus, Share2, Upload } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useRef } from "react";
+import React, { type ReactNode, useCallback, useMemo, useRef } from "react";
 
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
+import { createMarkdownFormatEdit } from "@/lib/markdown-format";
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
 
 type EditorPaneProps = {
@@ -49,39 +50,21 @@ export function EditorPane({
 
     const selection = view.state.selection.main;
     const selected = view.state.sliceDoc(selection.from, selection.to);
-    let from = selection.from;
-    let to = selection.to;
-    let insert = selected;
-    let anchor = selection.from;
+    const line = action === "h1" || action === "h2"
+      ? view.state.doc.lineAt(selection.from)
+      : undefined;
+    const edit = createMarkdownFormatEdit({
+      action,
+      from: selection.from,
+      to: selection.to,
+      selected,
+      line
+    });
 
-    if (action === "h1" || action === "h2") {
-      const line = view.state.doc.lineAt(selection.from);
-      const text = line.text.replace(/^#{1,6}\s+/, "");
-      const prefix = action === "h1" ? "# " : "## ";
-      from = line.from;
-      to = line.to;
-      insert = prefix + text;
-      anchor = from + insert.length;
-    } else if (action === "divider") {
-      insert = "\n---\n";
-      anchor = from + insert.length;
-    } else {
-      const config = {
-        bold: { before: "**", after: "**", fallback: "bold text" },
-        italic: { before: "_", after: "_", fallback: "italic text" },
-        link: { before: "[", after: "](url)", fallback: "link text" },
-        image: { before: "![", after: "](url)", fallback: "image description" },
-        code: selected.includes("\n")
-          ? { before: "\n\`\`\`\n", after: "\n\`\`\`\n", fallback: "code" }
-          : { before: "`", after: "`", fallback: "code" }
-      }[action];
-
-      const value = selected || config.fallback;
-      insert = config.before + value + config.after;
-      anchor = selected ? from + insert.length : from + config.before.length;
-    }
-
-    view.dispatch({ changes: { from, to, insert }, selection: { anchor } });
+    view.dispatch({
+      changes: { from: edit.from, to: edit.to, insert: edit.insert },
+      selection: { anchor: edit.anchor }
+    });
     view.focus();
   }, []);
 

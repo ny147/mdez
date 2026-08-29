@@ -1,7 +1,8 @@
 export const WORKSPACE_COPY = {
   library: "Library",
   books: "Books",
-  pagesWithoutBook: "Pages without a book",
+  pagesWithoutBook: "Unsorted pages",
+  pagesWithoutBookHint: "Not added to a book yet",
   recentPages: "Recent pages",
   importMarkdown: "Import Markdown"
 } as const;

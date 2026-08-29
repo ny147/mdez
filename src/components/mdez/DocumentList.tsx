@@ -45,47 +45,49 @@ export function DocumentList({
 
   return (
     <section className="min-h-0">
-      <div className="mb-3 grid gap-2">
-        <h3 className="font-display text-sm font-black text-ink">Pages</h3>
+      <div className="sidebar-section-heading">
+        <h3 className="min-w-0 truncate font-display text-sm font-black text-ink">
+          {selectedBook?.name ?? WORKSPACE_COPY.pagesWithoutBook}
+        </h3>
         <button
           type="button"
           data-visual-priority="secondary"
           onClick={onCreateDocument}
           aria-label={createPageLabel}
-          className="secondary-button sidebar-create-button min-h-9 w-full px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+          title={createPageLabel}
+          className="workspace-icon-button shrink-0"
         >
           <FilePlus aria-hidden="true" className="h-4 w-4" />
-          {createPageLabel}
         </button>
       </div>
 
       {visibleDocuments.length === 0 ? (
         <div className="rounded border border-border bg-panel p-3">
           <p className="text-sm font-semibold leading-6 text-muted">
-            Create a page in {selectedBook ? selectedBook.name : WORKSPACE_COPY.pagesWithoutBook} or import Markdown here.
+            {selectedBook
+              ? `Create a page in ${selectedBook.name} or import Markdown here.`
+              : "Create a page here or import Markdown. You can move it into a book later."}
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="sidebar-page-list">
           {visibleDocuments.map((document) => (
             <article
               key={document.id}
-              className="dogear-card rounded border border-border bg-surface p-2 shadow-soft transition hover:border-accent-files"
+              aria-label={document.title}
+              data-selected={selectedDocumentId === document.id}
+              className="sidebar-page-row"
             >
               <button
                 type="button"
                 onClick={() => onSelectDocument(document.id)}
                 aria-pressed={selectedDocumentId === document.id}
-                className={`w-full rounded border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-accent ${
-                  selectedDocumentId === document.id
-                    ? "border-accent bg-panel text-ink shadow-soft"
-                    : "border-transparent text-ink hover:bg-panel"
-                }`}
+                className="sidebar-page-open"
               >
                 <span className="page-title-clamp font-display text-sm font-black" title={document.title}>
                   {document.title}
                 </span>
-                <span className="mt-1 block truncate text-xs font-semibold opacity-70">
+                <span className="mt-0.5 block truncate text-xs font-semibold text-muted">
                   Updated {formatRelativeTime(document.updatedAt)}
                 </span>
               </button>

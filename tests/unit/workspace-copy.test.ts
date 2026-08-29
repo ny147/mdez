@@ -7,7 +7,8 @@ describe("workspace copy", () => {
     expect(WORKSPACE_COPY).toMatchObject({
       library: "Library",
       books: "Books",
-      pagesWithoutBook: "Pages without a book",
+      pagesWithoutBook: "Unsorted pages",
+      pagesWithoutBookHint: "Not added to a book yet",
       recentPages: "Recent pages",
       importMarkdown: "Import Markdown"
     });

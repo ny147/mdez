@@ -225,7 +225,7 @@ test("book hierarchy uses nested lists with explicit selection and expansion sta
   const books = sidebar.getByRole("list", { name: "Books and pages" });
 
   await expect(books).toBeVisible();
-  await expect(books.getByRole("button", { name: "Pages without a book" })).toHaveAttribute("aria-pressed", "true");
+  await expect(books.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toHaveAttribute("aria-pressed", "true");
 
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
@@ -353,8 +353,9 @@ test("workspace polish keeps localized titles and icon actions discoverable", as
   await showShelfIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  const sidebarTitle = sidebar.getByTitle(title);
-  await expect(sidebarTitle).toHaveCSS("-webkit-line-clamp", "2");
+  const sidebarTitle = sidebar.locator(".page-title-clamp").filter({ hasText: title });
+  await expect(sidebarTitle).toHaveCSS("white-space", "nowrap");
+  await expect(sidebarTitle).toHaveCSS("text-overflow", "ellipsis");
   await expect(sidebarTitle).toHaveAttribute("title", title);
 
   for (const name of ["Toggle sidebar", "Shared links", "Open library shelf"]) {
@@ -412,7 +413,8 @@ test("library copy explains page and book scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: "Pages without a book" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toBeVisible();
+  await expect(sidebar.getByText("Not added to a book yet")).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
   await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
   await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
@@ -485,9 +487,15 @@ test("sidebar page rows reveal management actions on demand", async ({ page }) =
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   const pageRow = sidebar.getByRole("article").filter({ hasText: "untitled.md" });
   await expect(pageRow.getByText(/minute ago|Recently updated/)).toBeVisible();
+  await expect(pageRow.getByText("Manage page", { exact: true })).toHaveCount(0);
+  const compactRow = await pageRow.boundingBox();
+  expect(compactRow?.height).toBeLessThanOrEqual(72);
   await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeHidden();
 
-  await pageRow.getByRole("button", { name: "Manage untitled.md" }).click();
+  const manageButton = pageRow.getByRole("button", { name: "Manage untitled.md" });
+  const manageBox = await manageButton.boundingBox();
+  expect(manageBox?.width).toBeLessThanOrEqual(44);
+  await manageButton.click();
   await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeVisible();
   await expect(pageRow.getByRole("combobox", { name: "Move untitled.md page" })).toBeVisible();
   await expect(pageRow.getByRole("button", { name: "Delete untitled.md" })).toBeVisible();
@@ -508,21 +516,38 @@ test("an open book explains filtering and export scope", async ({ page }) => {
 
 
 
-test("editor keeps primary formatting visible and discloses secondary actions", async ({ page }) => {
+test("editor exposes formatting in one row without a disclosure", async ({ page }) => {
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
 
-  for (const name of ["Bold", "Italic", "Insert link", "More formatting", "Export .md"]) {
+  for (const name of [
+    "Bold", "Italic", "Insert link", "Insert image", "Inline code",
+    "Code block", "Math", "Heading 1", "Heading 2", "Divider", "Export .md"
+  ]) {
     await expect(toolbar.getByRole("button", { name })).toBeVisible();
   }
-  for (const name of ["Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
-    await expect(toolbar.getByRole("button", { name })).toBeHidden();
-  }
+  await expect(toolbar.getByRole("button", { name: "More formatting" })).toHaveCount(0);
+});
 
-  await toolbar.getByRole("button", { name: "More formatting" }).click();
-  for (const name of ["Insert image", "Code", "Heading 1", "Heading 2", "Divider"]) {
-    await expect(toolbar.getByRole("button", { name })).toBeVisible();
-  }
+test("editor toolbar inserts inline math and fenced code", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  const editor = page.locator(".cm-content");
+  const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
+
+  await editor.click();
+  await editor.press("Control+A");
+  await page.keyboard.insertText("x + y");
+  await editor.press("Control+A");
+  await toolbar.getByRole("button", { name: "Math" }).click();
+  await expect(editor).toContainText("$x + y$");
+
+  await editor.click();
+  await editor.press("Control+A");
+  await page.keyboard.insertText("const value = 1;");
+  await editor.press("Control+A");
+  await toolbar.getByRole("button", { name: "Code block" }).click();
+  await expect(editor).toContainText("```text");
+  await expect(editor).toContainText("const value = 1;");
 });
 
 test("editor formatting shortcuts apply Markdown", async ({ page }) => {
@@ -545,7 +570,10 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
   await clickViewportModeTab(page, "Edit");
 
   const toolbar = page.getByRole("toolbar", { name: "Markdown toolbar" });
-  const formatNames = ["Bold", "Italic", "Insert link", "More formatting"];
+  const formatNames = [
+    "Bold", "Italic", "Insert link", "Insert image", "Inline code",
+    "Code block", "Math", "Heading 1", "Heading 2", "Divider"
+  ];
   for (const name of formatNames) {
     await expectMinimumTouchTarget(toolbar.getByRole("button", { name }));
   }
@@ -571,7 +599,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
       pageScrollWidth: document.documentElement.scrollWidth
     };
   });
-  expect(geometry.formatScrolls).toBe(false);
+  expect(geometry.formatScrolls).toBe(true);
   expect(geometry.pageScrollWidth).toBe(geometry.pageClientWidth);
 
   const focusOrder = [...formatNames, ...documentActionNames];
@@ -828,6 +856,34 @@ test("preview prose uses reader typography while markdown code stays monospaced"
   expect(blockCodeFamily).toMatch(/JetBrains|Consolas|monospace/i);
   expect(previewMaxWidth).not.toBe("none");
   expect(previewMaxWidth).not.toBe("");
+});
+
+test("reader renders compatibility math and enhanced code blocks", async ({ page }) => {
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill(
+    "# Technical notes\n\n\\[\n\\frac{8!}{6!}=56\n\\]\n\n```ts\nconst value = 1;\n```"
+  );
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await page.getByRole("tab", { name: "Read" }).click();
+
+  const preview = page.locator(".markdown-preview");
+  await expect(preview.locator(".katex-display")).toBeVisible();
+  await expect(preview.getByText("ts", { exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Copy code" })).toBeVisible();
+  await expect(preview.locator("pre code")).toContainText("const value = 1;");
+});
+
+test("reader lets long code language identifiers yield to the Copy control", async ({ page }) => {
+  const language = "a-very-long-language-identifier-that-must-not-displace-copy";
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await page.getByLabel("Paste Markdown").fill(`\`\`\`${language}\nconst value = 1;\n\`\`\``);
+  await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await page.getByRole("tab", { name: "Read" }).click();
+
+  const preview = page.locator(".markdown-preview");
+  const languageLabel = preview.getByText(language, { exact: true });
+  await expect(preview.getByRole("button", { name: "Copy code" })).toBeVisible();
+  await expect(languageLabel).toHaveCSS("min-width", "0px");
 });
 
 
