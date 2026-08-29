@@ -225,7 +225,7 @@ test("book hierarchy uses nested lists with explicit selection and expansion sta
   const books = sidebar.getByRole("list", { name: "Books and pages" });
 
   await expect(books).toBeVisible();
-  await expect(books.getByRole("button", { name: "Pages without a book" })).toHaveAttribute("aria-pressed", "true");
+  await expect(books.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toHaveAttribute("aria-pressed", "true");
 
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
@@ -353,8 +353,9 @@ test("workspace polish keeps localized titles and icon actions discoverable", as
   await showShelfIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  const sidebarTitle = sidebar.getByTitle(title);
-  await expect(sidebarTitle).toHaveCSS("-webkit-line-clamp", "2");
+  const sidebarTitle = sidebar.locator(".page-title-clamp").filter({ hasText: title });
+  await expect(sidebarTitle).toHaveCSS("white-space", "nowrap");
+  await expect(sidebarTitle).toHaveCSS("text-overflow", "ellipsis");
   await expect(sidebarTitle).toHaveAttribute("title", title);
 
   for (const name of ["Toggle sidebar", "Shared links", "Open library shelf"]) {
@@ -412,7 +413,8 @@ test("library copy explains page and book scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: "Pages without a book" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toBeVisible();
+  await expect(sidebar.getByText("Not added to a book yet")).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
   await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
   await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
@@ -485,9 +487,15 @@ test("sidebar page rows reveal management actions on demand", async ({ page }) =
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   const pageRow = sidebar.getByRole("article").filter({ hasText: "untitled.md" });
   await expect(pageRow.getByText(/minute ago|Recently updated/)).toBeVisible();
+  await expect(pageRow.getByText("Manage page", { exact: true })).toHaveCount(0);
+  const compactRow = await pageRow.boundingBox();
+  expect(compactRow?.height).toBeLessThanOrEqual(72);
   await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeHidden();
 
-  await pageRow.getByRole("button", { name: "Manage untitled.md" }).click();
+  const manageButton = pageRow.getByRole("button", { name: "Manage untitled.md" });
+  const manageBox = await manageButton.boundingBox();
+  expect(manageBox?.width).toBeLessThanOrEqual(44);
+  await manageButton.click();
   await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeVisible();
   await expect(pageRow.getByRole("combobox", { name: "Move untitled.md page" })).toBeVisible();
   await expect(pageRow.getByRole("button", { name: "Delete untitled.md" })).toBeVisible();

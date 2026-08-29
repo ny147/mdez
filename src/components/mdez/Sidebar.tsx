@@ -91,8 +91,8 @@ export function Sidebar({
           </p>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border bg-surface/80 p-3">
-          <div className="space-y-5">
+        <div className="sidebar-library-scroll">
+          <div className="sidebar-library-sections">
             <FolderTree
               folders={folders}
               documents={documents}

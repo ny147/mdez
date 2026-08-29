@@ -19,16 +19,16 @@ export function DocumentActions({ document, folders, onRename, onMove, onDelete 
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
   return (
-    <details className="page-actions mt-2 rounded border bg-panel">
+    <details className="page-actions">
       <summary
         role="button"
         aria-label={`Manage ${document.title}`}
-        className="flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-ink"
+        title="Page actions"
+        className="page-actions-trigger"
       >
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
-        Manage page
       </summary>
-      <div className="grid gap-2 border-t border-border p-2">
+      <div className="page-actions-panel">
         <button
           type="button"
           onClick={onRename}

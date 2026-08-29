@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { BookOpen, BookPlus, ChevronDown, ChevronRight, Files, Trash2 } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import { buildFolderTree, type FolderNode } from "@/lib/tree";
@@ -31,19 +31,21 @@ export function FolderTree({
   onDeleteFolder
 }: FolderTreeProps) {
   const tree = buildFolderTree(folders);
+  const unsortedPageCount = documents.filter((document) => document.folderId === null).length;
+  const unsortedIsSelected = selectedFolderId === null;
 
   return (
     <section className="min-h-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-display text-sm font-black text-ink">{WORKSPACE_COPY.books}</h3>
+      <div className="sidebar-section-heading">
+        <strong className="min-w-0 truncate font-display text-sm font-black text-ink">{WORKSPACE_COPY.library}</strong>
         <button
           type="button"
           onClick={() => onCreateFolder(null)}
           aria-label="Create book"
-          className="secondary-button inline-flex min-h-9 items-center justify-center gap-2 px-3 py-1.5 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
+          title="Create book"
+          className="workspace-icon-button shrink-0"
         >
-          <BookOpen aria-hidden="true" className="h-4 w-4" />
-          Create book
+          <BookPlus aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
 
@@ -52,14 +54,21 @@ export function FolderTree({
           <button
             type="button"
             onClick={() => onSelectFolder(null)}
-            aria-pressed={selectedFolderId === null}
-            className={`w-full rounded border px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
-              selectedFolderId === null
-                ? "border-accent-files bg-accent-files text-accent-on shadow-soft"
-                : "border-transparent text-muted hover:border-border hover:bg-panel hover:text-ink"
-            }`}
+            aria-label={`${WORKSPACE_COPY.pagesWithoutBook}, ${unsortedPageCount} ${unsortedPageCount === 1 ? "page" : "pages"}, ${unsortedIsSelected ? "open" : "closed"}`}
+            aria-pressed={unsortedIsSelected}
+            data-selected={unsortedIsSelected}
+            className="sidebar-collection-button"
           >
-            {WORKSPACE_COPY.pagesWithoutBook}
+            <Files aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <strong className="block truncate text-sm">{WORKSPACE_COPY.pagesWithoutBook}</strong>
+              <small className="mt-0.5 block truncate text-xs font-semibold opacity-70">
+                {WORKSPACE_COPY.pagesWithoutBookHint}
+              </small>
+            </span>
+            <span aria-hidden="true" className="sidebar-collection-count">
+              {unsortedPageCount}
+            </span>
           </button>
         </li>
 

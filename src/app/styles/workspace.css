@@ -358,38 +358,167 @@ a:focus-visible {
   opacity: 0;
 }
 
-.sidebar-create-button {
+.sidebar-library-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-1);
+}
+
+.sidebar-library-sections {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sidebar-section-heading {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.sidebar-collection-button {
+  display: flex;
+  width: 100%;
   min-width: 0;
-  justify-content: flex-start;
-  border-color: color-mix(in srgb, var(--color-shelf) 38%, var(--color-rule));
-  overflow-wrap: anywhere;
-  line-height: 1.25;
+  min-height: 3.5rem;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  padding: var(--space-2);
+  color: var(--color-muted);
   text-align: left;
-  white-space: normal;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
-.sidebar-create-button svg {
+.sidebar-collection-button:hover {
+  border-color: var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.sidebar-collection-button[data-selected="true"] {
+  border-color: var(--color-shelf);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.sidebar-collection-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.sidebar-collection-count {
   flex: 0 0 auto;
+  min-width: 1.5rem;
+  border-radius: 999px;
+  background: var(--color-panel);
+  padding: 0.125rem 0.375rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
-.page-actions {
-  border-color: color-mix(in srgb, var(--color-shelf) 32%, var(--color-rule));
+.sidebar-page-list {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.sidebar-page-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  min-height: 3.625rem;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  padding: var(--space-1);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.sidebar-page-row:hover,
+.sidebar-page-row[data-selected="true"] {
   background: var(--color-paper);
 }
 
-.page-actions > summary:hover {
+.sidebar-page-row[data-selected="true"] {
+  border-color: var(--color-edit);
+}
+
+.sidebar-page-open {
+  min-width: 0;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 2px);
+  background: transparent;
+  padding: 0.375rem;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+.sidebar-page-open:focus-visible,
+.page-actions-trigger:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.page-actions {
+  position: static;
+  min-width: 0;
+}
+
+.page-actions-trigger {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--color-muted);
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.page-actions-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.page-actions-trigger:hover,
+.page-actions[open] .page-actions-trigger {
   background: var(--color-lavender);
+  color: var(--color-ink);
+}
+
+.page-actions-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% - var(--space-1));
+  right: var(--space-1);
+  display: grid;
+  width: min(14rem, calc(100% - var(--space-2)));
+  gap: var(--space-2);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-control);
+  background: var(--color-paper);
+  box-shadow: var(--shadow-floating);
+  padding: var(--space-2);
 }
 
 .page-title-clamp {
-  display: -webkit-box;
+  display: block;
   min-width: 0;
-  min-block-size: 2.5em;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
   line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
 }
 
 .workspace-main {
