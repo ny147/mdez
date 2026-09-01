@@ -414,7 +414,7 @@ export function MdezWorkspace() {
       data-mode={viewMode}
       data-sidebar={isSidebarVisible ? "visible" : "hidden"}
     >
-      <header className="workspace-topbar">
+      <header className="workspace-topbar" aria-label="Workspace toolbar">
         <div className="workspace-brand">
           <button
             type="button"

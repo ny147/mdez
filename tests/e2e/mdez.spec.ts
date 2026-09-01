@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import JSZip from "jszip";
 
@@ -99,6 +99,23 @@ async function expectMinimumTouchTarget(locator: Locator) {
   expect(box!.height).toBeGreaterThanOrEqual(44);
 }
 
+async function expectNoHorizontalOverflow(page: Page) {
+  const evidence = await page.evaluate(() => {
+    const clientWidth = document.documentElement.clientWidth;
+    const offenders = Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && rect.width > 0 && rect.right > clientWidth + 1;
+      })
+      .map((element) => ({ selector: element.className, right: element.getBoundingClientRect().right }));
+    return { clientWidth, scrollWidth: document.documentElement.scrollWidth, offenders };
+  });
+
+  expect(evidence.scrollWidth).toBe(evidence.clientWidth);
+  expect(evidence.offenders).toEqual([]);
+}
+
 async function makeGitHubArchive(entries: Record<string, string>) {
   const zip = new JSZip();
 
@@ -133,6 +150,25 @@ test.beforeEach(async ({ page }) => {
     });
   });
   await page.goto("/");
+});
+
+for (const width of [320, 390, 414, 768, 1024, 1243, 1280, 1440, 1920]) {
+  test(`Shelf contains every visible element at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await expectNoHorizontalOverflow(page);
+  });
+}
+
+test("mobile status and mode navigation occupy separate shell rows", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const rectangles = await page.evaluate(() => {
+    const main = document.querySelector("main")!.getBoundingClientRect();
+    const status = document.querySelector('footer[aria-label="Workspace status"]')!.getBoundingClientRect();
+    const nav = document.querySelector(".mobile-mode-nav")!.getBoundingClientRect();
+    return { mainBottom: main.bottom, statusTop: status.top, statusBottom: status.bottom, navTop: nav.top };
+  });
+  expect(rectangles.mainBottom).toBeLessThanOrEqual(rectangles.statusTop + 1);
+  expect(rectangles.statusBottom).toBeLessThanOrEqual(rectangles.navTop + 1);
 });
 
 
