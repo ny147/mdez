@@ -140,12 +140,18 @@ export function ShelfPane({
         </div>
 
         {visiblePages.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-panel p-6 text-center">
+          <div className="grid justify-items-center gap-3 rounded border border-dashed border-border bg-panel p-6 text-center">
             <p className="font-semibold text-muted">
               {openBook
                 ? "No pages in this book yet. Create a page or import Markdown here."
                 : "No pages yet. Create a page or import Markdown to begin."}
             </p>
+            {openBook ? (
+              <button type="button" onClick={onCreateDocument} aria-label={`Add first page to ${openBook.name}`} className="primary-button px-4 py-2">
+                <FilePlus aria-hidden="true" className="h-4 w-4" />
+                Add first page
+              </button>
+            ) : null}
           </div>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label={WORKSPACE_COPY.recentPages}>

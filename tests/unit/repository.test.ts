@@ -234,15 +234,15 @@ describe("repository", () => {
     expect((await listContent()).documents).toHaveLength(0);
   });
 
-  it("uses fallback names and titles", async () => {
-    const folder = await createFolder("   ", null);
+  it("rejects blank book names while preserving fallback page titles", async () => {
+    await expect(createFolder("   ", null)).rejects.toThrow("Enter a book name.");
+    const folder = await createFolder("Research", null);
     const document = await createDocument({ title: "   ", body: "", folderId: null });
-    const renamedFolder = await renameFolder(folder.id, " ");
+    await expect(renameFolder(folder.id, " ")).rejects.toThrow("Enter a book name.");
     const renamedDocument = await renameDocument(document.id, " ");
 
-    expect(folder.name).toBe("Untitled Book");
+    expect(folder.name).toBe("Research");
     expect(document.title).toBe("untitled.md");
-    expect(renamedFolder.name).toBe("Untitled Book");
     expect(renamedDocument.title).toBe("untitled.md");
   });
 

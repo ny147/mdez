@@ -206,6 +206,28 @@ test("Shelf action menu supports keyboard and outside dismissal", async ({ page 
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
+test("book dialog creates a named book without a native prompt", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const nativePrompts: string[] = [];
+  page.on("dialog", async (dialog) => { nativePrompts.push(dialog.type()); await dialog.dismiss(); });
+  await page.getByRole("main").getByRole("button", { name: "Create book", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create a book" });
+  await dialog.getByRole("textbox", { name: "Book name" }).fill("Research");
+  await dialog.getByRole("button", { name: "Create book" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("main").getByRole("button", { name: /Research book, 0 pages/ })).toBeVisible();
+  expect(nativePrompts).toEqual([]);
+});
+
+test("Add first page opens an empty book in the editor", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("main").getByRole("button", { name: "Create book", exact: true }).click();
+  await page.getByRole("textbox", { name: "Book name" }).fill("Launch");
+  await page.getByRole("dialog").getByRole("button", { name: "Create book" }).click();
+  await page.getByRole("button", { name: "Add first page to Launch" }).click();
+  await expect(page.getByTestId("screen-editor")).toBeVisible();
+});
+
 
 
 test("uses the renewed light library shell and mode accents", async ({ page }) => {

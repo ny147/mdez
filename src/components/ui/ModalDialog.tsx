@@ -16,6 +16,7 @@ type ModalDialogProps = {
   label?: string;
   closeLabel: string;
   onClose: () => void;
+  dismissDisabled?: boolean;
   children: ReactNode;
 };
 
@@ -34,7 +35,8 @@ export function ModalDialog({
   label,
   closeLabel,
   onClose,
-  children
+  children,
+  dismissDisabled = false
 }: ModalDialogProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -52,7 +54,7 @@ export function ModalDialog({
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
-      onClose();
+      if (!dismissDisabled) onClose();
       return;
     }
     if (event.key !== "Tab") return;
@@ -92,7 +94,7 @@ export function ModalDialog({
               {title}
             </h2>
           </div>
-          <IconButton label={closeLabel} onClick={onClose}>
+          <IconButton label={closeLabel} onClick={onClose} disabled={dismissDisabled}>
             <X aria-hidden="true" size={20} />
           </IconButton>
         </div>

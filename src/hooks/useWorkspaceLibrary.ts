@@ -36,8 +36,8 @@ export type WorkspaceLibraryController = {
   selectFolder: (folderId: string | null) => void;
   selectDocument: (documentId: string) => void;
   toggleFolder: (folderId: string) => void;
-  createBook: (parentId: string | null) => Promise<void>;
-  renameBook: (folderId: string, name: string) => Promise<void>;
+  createBook: (parentId: string | null, name: string) => Promise<Folder>;
+  renameBook: (folderId: string, name: string) => Promise<Folder>;
   deleteBook: (folderId: string) => Promise<void>;
   createPage: () => Promise<void>;
   importPages: (items: { title: string; body: string }[], folderId: string | null) => Promise<void>;
@@ -160,10 +160,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     await loadContent(preferredDocumentId);
   }, [loadContent]);
 
-  const createBook = useCallback(async (parentId: string | null) => {
-    const name = window.prompt("New book name", "New Book");
-    if (name === null) return;
-
+  const createBook = useCallback(async (parentId: string | null, name: string) => {
     try {
       const folder = await createFolder(name, parentId);
       setError(null);
@@ -176,18 +173,24 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
       });
       setSelectedFolderId(folder.id);
       await loadContent(null);
-    } catch {
-      setError("Could not create book.");
+      return folder;
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error("Could not create book.");
+      setError(error.message);
+      throw error;
     }
   }, [folders, loadContent]);
 
   const renameBook = useCallback(async (folderId: string, name: string) => {
     try {
-      await renameFolder(folderId, name);
+      const folder = await renameFolder(folderId, name);
       setError(null);
       await loadContent();
-    } catch {
-      setError("Could not rename book.");
+      return folder;
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error("Could not rename book.");
+      setError(error.message);
+      throw error;
     }
   }, [loadContent]);
 

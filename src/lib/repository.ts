@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { createId } from "@/lib/id";
+import { normalizeBookName, validateBookName } from "@/lib/book-names";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession, GitHubSource } from "@/types/github";
 
@@ -36,10 +37,13 @@ export async function listContent() {
 export async function createFolder(name: string, parentId: string | null): Promise<Folder> {
   return db.transaction("rw", db.folders, async () => {
     const timestamp = now();
+    const folders = await db.folders.toArray();
+    const validationMessage = validateBookName(name, folders, parentId);
+    if (validationMessage) throw new Error(validationMessage);
     const order = await countFoldersByParent(parentId);
     const folder: Folder = {
       id: createId("folder"),
-      name: name.trim() || "Untitled Book",
+      name: normalizeBookName(name),
       parentId,
       order,
       createdAt: timestamp,
@@ -52,22 +56,17 @@ export async function createFolder(name: string, parentId: string | null): Promi
 }
 
 export async function renameFolder(id: string, name: string) {
-  const updatedCount = await db.folders.update(id, {
-    name: name.trim() || "Untitled Book",
-    updatedAt: now()
+  return db.transaction("rw", db.folders, async () => {
+    const folder = await db.folders.get(id);
+    if (!folder) throw new Error("Folder not found.");
+    const folders = await db.folders.toArray();
+    const validationMessage = validateBookName(name, folders, folder.parentId, folder.id);
+    if (validationMessage) throw new Error(validationMessage);
+    const timestamp = now();
+    const normalizedName = normalizeBookName(name);
+    await db.folders.update(id, { name: normalizedName, updatedAt: timestamp });
+    return { ...folder, name: normalizedName, updatedAt: timestamp };
   });
-
-  if (updatedCount === 0) {
-    throw new Error("Folder not found.");
-  }
-
-  const folder = await db.folders.get(id);
-
-  if (!folder) {
-    throw new Error("Folder not found.");
-  }
-
-  return folder;
 }
 
 export async function deleteFolder(id: string) {

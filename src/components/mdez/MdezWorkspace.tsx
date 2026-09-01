@@ -28,6 +28,8 @@ import type { RememberedGroup } from "@/lib/db";
 import type { GroupConflict } from "@/types/key-group";
 import { GroupConflictDialog } from "@/components/mdez/GroupConflictDialog";
 import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
+import { BookDialog, type BookDialogIntent } from "@/components/mdez/BookDialog";
+import type { Folder } from "@/types/content";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -97,6 +99,8 @@ export function MdezWorkspace() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
   const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
+  const [bookDialogIntent, setBookDialogIntent] = useState<BookDialogIntent | null>(null);
+  const [bookDialogBusy, setBookDialogBusy] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
@@ -336,6 +340,27 @@ export function MdezWorkspace() {
     setIsImportOpen(true);
   }
 
+  function handleRequestCreateBook(parentId: string | null) {
+    const parentName = parentId ? library.folders.find((folder) => folder.id === parentId)?.name ?? null : null;
+    setBookDialogIntent({ mode: "create", parentId, parentName });
+  }
+
+  function handleRequestRenameBook(folder: Folder) {
+    setBookDialogIntent({ mode: "rename", folderId: folder.id, parentId: folder.parentId, currentName: folder.name });
+  }
+
+  async function handleSubmitBook(name: string) {
+    if (!bookDialogIntent) return;
+    setBookDialogBusy(true);
+    try {
+      if (bookDialogIntent.mode === "create") await library.createBook(bookDialogIntent.parentId, name);
+      else await library.renameBook(bookDialogIntent.folderId, name);
+      setBookDialogIntent(null);
+    } finally {
+      setBookDialogBusy(false);
+    }
+  }
+
   function handleViewModeChange(nextMode: ViewMode) {
     setViewMode(nextMode);
     setIsDrawerOpen(false);
@@ -499,8 +524,8 @@ export function MdezWorkspace() {
           onClose={() => setIsDrawerOpen(false)}
           onSelectFolder={handleSelectFolder}
           onToggleFolder={library.toggleFolder}
-          onCreateFolder={library.createBook}
-          onRenameFolder={library.renameBook}
+          onCreateFolder={handleRequestCreateBook}
+          onRenameFolder={handleRequestRenameBook}
           onDeleteFolder={library.deleteBook}
           onSelectDocument={handleSelectDocument}
           onCreateDocument={handleCreateDocument}
@@ -550,7 +575,7 @@ export function MdezWorkspace() {
                 onSelectFolder={handleSelectFolder}
                 onSelectDocument={handleSelectDocument}
                 onCreateDocument={handleCreateDocument}
-                onCreateFolder={library.createBook}
+                onCreateFolder={handleRequestCreateBook}
                 onOpenImport={handleOpenImport}
                 onExportFolder={() => void handleSidebarFolderExport()}
                 onBackupWorkspace={() => undefined}
@@ -622,6 +647,15 @@ export function MdezWorkspace() {
       ) : null}
       {isSharedLinksOpen ? (
         <SharedLinksDialog open onClose={() => setIsSharedLinksOpen(false)} />
+      ) : null}
+      {bookDialogIntent ? (
+        <BookDialog
+          intent={bookDialogIntent}
+          folders={library.folders}
+          busy={bookDialogBusy}
+          onClose={() => setBookDialogIntent(null)}
+          onSubmit={handleSubmitBook}
+        />
       ) : null}
       <CreateGroupDialog
         open={isCreateGroupOpen}

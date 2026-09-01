@@ -15,7 +15,7 @@ type FolderTreeProps = {
   onSelectFolder: (folderId: string | null) => void;
   onToggleFolder: (folderId: string) => void;
   onCreateFolder: (parentId: string | null) => void;
-  onRenameFolder: (folderId: string, name: string) => void;
+  onRenameFolder: (folder: Folder) => void;
   onDeleteFolder: (folderId: string) => void;
 };
 
@@ -114,14 +114,6 @@ function FolderTreeRow({
   const isSelected = selectedFolderId === folder.id;
   const pageCount = documents.filter((document) => document.folderId === folder.id).length;
 
-  function handleRename() {
-    const nextName = window.prompt("Rename book", folder.name);
-
-    if (nextName !== null) {
-      onRenameFolder(folder.id, nextName);
-    }
-  }
-
   return (
     <li>
       <div className="group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
@@ -161,7 +153,7 @@ function FolderTreeRow({
 
         <button
           type="button"
-          onClick={handleRename}
+          onClick={() => onRenameFolder(folder)}
           className="rounded px-2 py-1 text-xs font-black text-muted opacity-100 transition hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
           aria-label={`Rename ${folder.name}`}
           title={`Rename ${folder.name}`}
