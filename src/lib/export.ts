@@ -1,12 +1,14 @@
 import JSZip from "jszip";
 import type { Document, Folder } from "@/types/content";
-import { makeMarkdownFileName, slugifyTitle } from "@/lib/markdown";
+import { fileNameToTitle, makeMarkdownFileName, slugifyTitle } from "@/lib/markdown";
 import { getDescendantFolderIds } from "@/lib/tree";
 
 export type ExportEntry = {
   path: string;
   body: string;
 };
+
+export type WorkspaceExportEntry = ExportEntry & { documentId: string };
 
 export type ExportManifest = {
   app: "Mdez";
@@ -130,6 +132,40 @@ export function buildFolderExportEntries(folders: Folder[], documents: Document[
         };
       })
   );
+}
+
+export function buildWorkspaceExportEntries(folders: Folder[], documents: Document[]): WorkspaceExportEntry[] {
+  const roots = new Map(folders.filter((folder) => folder.parentId === null).map((folder) => [folder.id, folder]));
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  const usedPaths = new Set<string>();
+
+  function pathFor(document: Document) {
+    if (document.folderId === null) return "pages-without-book";
+    let current = byId.get(document.folderId);
+    const visited = new Set<string>();
+    while (current?.parentId !== null) {
+      if (!current || visited.has(current.id)) throw new Error("Folder cycle detected while building export path.");
+      visited.add(current.id);
+      current = current.parentId ? byId.get(current.parentId) : undefined;
+    }
+    if (!current || !roots.has(current.id)) throw new Error("Folder path does not include a workspace root.");
+    return folderPath(folders, document.folderId, current.id);
+  }
+
+  return [...documents]
+    .sort((a, b) => pathFor(a).localeCompare(pathFor(b)) || a.order - b.order || a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
+    .map((document) => {
+      const directory = pathFor(document);
+      const baseName = slugifyTitle(fileNameToTitle(document.title));
+      let path = `${directory}/${baseName}.md`;
+      let suffix = 2;
+      while (usedPaths.has(path)) {
+        path = `${directory}/${baseName}-${suffix}.md`;
+        suffix += 1;
+      }
+      usedPaths.add(path);
+      return { documentId: document.id, path, body: document.body };
+    });
 }
 
 export function buildExportManifest(folders: Folder[], documents: Document[], folderId: string): ExportManifest {
