@@ -171,6 +171,41 @@ test("mobile status and mode navigation occupy separate shell rows", async ({ pa
   expect(rectangles.statusBottom).toBeLessThanOrEqual(rectangles.navTop + 1);
 });
 
+test("Shelf progressively discloses secondary actions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const shelf = page.getByRole("main");
+  await expect(shelf.getByRole("button", { name: "Create page", exact: true })).toBeVisible();
+  await expect(shelf.getByRole("button", { name: "Create book", exact: true })).toBeHidden();
+  const more = page.getByRole("button", { name: "More Shelf actions" });
+  await more.click();
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("menuitem", { name: /Create book/ })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: /Import Markdown/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await expect(more).toBeFocused();
+});
+
+test("Shelf action menu supports keyboard and outside dismissal", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const more = page.getByRole("button", { name: "More Shelf actions" });
+  await more.click();
+  const createBook = page.getByRole("menuitem", { name: /Create book/ });
+  const importMarkdown = page.getByRole("menuitem", { name: /Import Markdown/ });
+  await expect(createBook).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(importMarkdown).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(page.getByRole("menuitem", { name: /Download workspace backup/ })).toBeFocused();
+  await page.mouse.click(1, 1);
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+
+  await more.click();
+  await page.getByRole("menuitem", { name: /Import Markdown/ }).click();
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("dialog")).toBeVisible();
+});
+
 
 
 test("uses the renewed light library shell and mode accents", async ({ page }) => {

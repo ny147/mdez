@@ -553,6 +553,7 @@ export function MdezWorkspace() {
                 onCreateFolder={library.createBook}
                 onOpenImport={handleOpenImport}
                 onExportFolder={() => void handleSidebarFolderExport()}
+                onBackupWorkspace={() => undefined}
               />
             ) : viewMode === "split" ? (
               <SplitWorkspace

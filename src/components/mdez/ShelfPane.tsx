@@ -1,9 +1,10 @@
 "use client";
 
-import { BookOpen, Download, FilePlus, Upload } from "lucide-react";
+import { BookOpen, FilePlus } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import { WORKSPACE_COPY, formatRelativeTime, getBookExportCopy } from "@/lib/workspace-copy";
+import { ShelfActionsMenu } from "@/components/mdez/ShelfActionsMenu";
 
 type ShelfPaneProps = {
   folders: Folder[];
@@ -17,6 +18,7 @@ type ShelfPaneProps = {
   onCreateFolder: (parentId: string | null) => void;
   onOpenImport: () => void;
   onExportFolder: () => void;
+  onBackupWorkspace: () => void;
 };
 
 function getBookPageCount(documents: Document[], folderId: string) {
@@ -34,7 +36,8 @@ export function ShelfPane({
   onCreateDocument,
   onCreateFolder,
   onOpenImport,
-  onExportFolder
+  onExportFolder,
+  onBackupWorkspace
 }: ShelfPaneProps) {
   const sortedFolders = folders.filter((folder) => folder.parentId === null).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
   const openBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
@@ -56,7 +59,7 @@ export function ShelfPane({
           </p>
         </div>
         <div className="grid gap-2 md:justify-items-end">
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="shelf-primary-actions">
             <button
               type="button"
               data-visual-priority="primary"
@@ -67,26 +70,20 @@ export function ShelfPane({
               <FilePlus aria-hidden="true" className="h-4 w-4" />
               {createPageLabel}
             </button>
-            <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
+            <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button shelf-create-book-button px-4 py-2 text-sm font-extrabold">
               <BookOpen aria-hidden="true" className="h-4 w-4" />
               Create book
             </button>
-            <button type="button" onClick={onOpenImport} aria-label={WORKSPACE_COPY.importMarkdown} className="secondary-button px-4 py-2 text-sm font-extrabold">
-              <Upload aria-hidden="true" className="h-4 w-4" />
-              {WORKSPACE_COPY.importMarkdown}
-            </button>
-            <button
-              type="button"
-              onClick={onExportFolder}
-              disabled={exportCopy.disabled}
-              aria-label={exportCopy.label}
-              className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              <Download aria-hidden="true" className="h-4 w-4" />
-              {exportCopy.label}
-            </button>
+            <ShelfActionsMenu
+              bookExportLabel={exportCopy.label}
+              bookExportDescription={exportCopy.hint}
+              bookExportDisabled={exportCopy.disabled}
+              onCreateBook={() => onCreateFolder(null)}
+              onImportMarkdown={onOpenImport}
+              onExportBook={onExportFolder}
+              onBackupWorkspace={onBackupWorkspace}
+            />
           </div>
-          <p className="max-w-md text-xs font-semibold leading-5 text-muted">{exportCopy.hint}</p>
         </div>
       </div>
 
