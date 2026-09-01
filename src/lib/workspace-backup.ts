@@ -1,9 +1,10 @@
 import JSZip from "jszip";
 
 import { buildWorkspaceExportEntries } from "@/lib/export";
+import { createId } from "@/lib/id";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubSource } from "@/types/github";
-import type { ParsedWorkspaceBackup, WorkspaceBackupManifestV1, WorkspaceBackupPreview } from "@/types/backup";
+import type { ParsedWorkspaceBackup, PreparedWorkspaceRestore, WorkspaceBackupManifestV1, WorkspaceBackupPreview } from "@/types/backup";
 
 const MAX_COMPRESSED_BYTES = 100 * 1024 * 1024;
 const MAX_ENTRIES = 10_000;
@@ -154,4 +155,65 @@ export async function previewWorkspaceBackup(file: File): Promise<WorkspaceBacku
     warnings,
     parsed: { manifest, documents: parsedDocuments }
   };
+}
+
+function validTimestamp(value: string, fallback: string) {
+  return Number.isNaN(Date.parse(value)) ? fallback : new Date(value).toISOString();
+}
+
+function restoredRootLabel(name: string, existingFolders: Folder[]) {
+  const base = name.trim() || "Restored workspace";
+  const used = new Set(existingFolders.filter((folder) => folder.parentId === null).map((folder) => folder.name.toLocaleLowerCase()));
+  if (!used.has(base.toLocaleLowerCase())) return base;
+  let suffix = 2;
+  while (used.has(`${base} (restored ${suffix})`.toLocaleLowerCase())) suffix += 1;
+  return `${base} (restored ${suffix})`;
+}
+
+export function prepareWorkspaceRestore(
+  parsed: ParsedWorkspaceBackup,
+  existingFolders: Folder[],
+  now = new Date().toISOString()
+): PreparedWorkspaceRestore {
+  const timestamp = validTimestamp(now, new Date().toISOString());
+  const rootLabel = restoredRootLabel(parsed.manifest.workspace.name, existingFolders);
+  const wrapperId = createId("folder");
+  const folderIds = new Map(parsed.manifest.folders.map((folder) => [folder.id, createId("folder")]));
+  const validSources = parsed.manifest.githubSources.filter((source) => folderIds.has(source.rootFolderId));
+  const sourceIds = new Map(validSources.map((source) => [source.id, createId("github") ]));
+  const wrapper: Folder = {
+    id: wrapperId,
+    name: rootLabel,
+    parentId: null,
+    order: existingFolders.filter((folder) => folder.parentId === null).length,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+  const folders = [wrapper, ...parsed.manifest.folders.map((folder) => ({
+    ...folder,
+    id: folderIds.get(folder.id)!,
+    parentId: folder.parentId === null ? wrapperId : folderIds.get(folder.parentId)!,
+    sourceId: folder.sourceId ? sourceIds.get(folder.sourceId) : undefined,
+    createdAt: validTimestamp(folder.createdAt, timestamp),
+    updatedAt: validTimestamp(folder.updatedAt, timestamp)
+  }))];
+  const documents = parsed.documents.map((document) => ({
+    id: createId("document"),
+    title: document.title,
+    body: document.body,
+    folderId: document.folderId === null ? wrapperId : folderIds.get(document.folderId)!,
+    sourceId: document.sourceId ? sourceIds.get(document.sourceId) : undefined,
+    order: document.order,
+    createdAt: validTimestamp(document.createdAt, timestamp),
+    updatedAt: validTimestamp(document.updatedAt, timestamp)
+  }));
+  const githubSources = validSources.map((source) => ({
+    ...source,
+    id: sourceIds.get(source.id)!,
+    rootFolderId: folderIds.get(source.rootFolderId)!,
+    createdAt: validTimestamp(source.createdAt, timestamp),
+    updatedAt: validTimestamp(source.updatedAt, timestamp),
+    lastRefreshedAt: validTimestamp(source.lastRefreshedAt, timestamp)
+  }));
+  return { rootLabel, folders, documents, githubSources, firstDocumentId: documents[0]?.id ?? null };
 }

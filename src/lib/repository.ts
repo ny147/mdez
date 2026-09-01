@@ -3,6 +3,7 @@ import { createId } from "@/lib/id";
 import { normalizeBookName, validateBookName } from "@/lib/book-names";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession, GitHubSource } from "@/types/github";
+import type { PreparedWorkspaceRestore } from "@/types/backup";
 
 function now() {
   return new Date().toISOString();
@@ -66,6 +67,19 @@ export async function renameFolder(id: string, name: string) {
     const normalizedName = normalizeBookName(name);
     await db.folders.update(id, { name: normalizedName, updatedAt: timestamp });
     return { ...folder, name: normalizedName, updatedAt: timestamp };
+  });
+}
+
+export async function restoreWorkspaceBackup(prepared: PreparedWorkspaceRestore) {
+  return db.transaction("rw", db.folders, db.documents, db.githubSources, async () => {
+    await db.folders.bulkAdd(prepared.folders);
+    await db.documents.bulkAdd(prepared.documents);
+    if (prepared.githubSources.length > 0) await db.githubSources.bulkAdd(prepared.githubSources);
+    return {
+      folderCount: prepared.folders.length,
+      documentCount: prepared.documents.length,
+      firstDocumentId: prepared.firstDocumentId
+    };
   });
 }
 

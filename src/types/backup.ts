@@ -26,3 +26,11 @@ export type WorkspaceBackupPreview = {
   warnings: string[];
   parsed: ParsedWorkspaceBackup;
 };
+
+export type PreparedWorkspaceRestore = {
+  rootLabel: string;
+  folders: Folder[];
+  documents: Document[];
+  githubSources: GitHubSource[];
+  firstDocumentId: string | null;
+};
