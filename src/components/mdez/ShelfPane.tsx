@@ -1,6 +1,7 @@
 "use client";
 
-import { BookOpen, FilePlus } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ArrowUpRight, BookOpen, FilePlus } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import { WORKSPACE_COPY, formatRelativeTime, getBookExportCopy } from "@/lib/workspace-copy";
@@ -25,6 +26,29 @@ function getBookPageCount(documents: Document[], folderId: string) {
   return documents.filter((document) => document.folderId === folderId).length;
 }
 
+function bookCountLabel(count: number) {
+  if (count === 0) return "Empty";
+  return count === 1 ? "1 page" : `${count} pages`;
+}
+
+function useOverflowState(itemCount: number) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  useEffect(() => {
+    const rail = ref.current;
+    if (!rail) return;
+    const measure = () => setHasOverflow(rail.scrollWidth > rail.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rail);
+    if (rail.firstElementChild) observer.observe(rail.firstElementChild);
+    return () => observer.disconnect();
+  }, [itemCount]);
+
+  return { ref, hasOverflow };
+}
+
 export function ShelfPane({
   folders,
   documents,
@@ -47,6 +71,13 @@ export function ShelfPane({
     .slice(0, 8);
   const createPageLabel = openBook ? `Create page in ${openBook.name}` : "Create page";
   const exportCopy = getBookExportCopy(openBook?.name ?? null);
+  const bookRail = useOverflowState(sortedFolders.length);
+
+  function handleBookRailKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.currentTarget !== event.target || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    event.currentTarget.scrollBy({ left: event.key === "ArrowRight" ? 112 : -112, behavior: "smooth" });
+  }
 
   return (
     <div className="grid min-h-0 flex-1 gap-5 overflow-hidden">
@@ -102,7 +133,7 @@ export function ShelfPane({
             <p className="font-semibold text-muted">{isReady ? "No books yet. Create a book to group related pages." : "Indexing local library..."}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto pb-3">
+          <div ref={bookRail.ref} className="book-rail overflow-x-auto pb-3" aria-label="Bookshelf" tabIndex={bookRail.hasOverflow ? 0 : undefined} onKeyDown={handleBookRailKeyDown}>
             <div className="flex min-w-max items-end gap-3 border-b-4 border-accent-files/25 px-2 pb-2">
               {sortedFolders.map((folder) => {
                 const pageCount = getBookPageCount(documents, folder.id);
@@ -110,20 +141,23 @@ export function ShelfPane({
                 const height = Math.min(11.5, 7.5 + pageCount * 0.8);
                 const width = Math.min(5.25, 3 + pageCount * 0.45);
 
+                const countLabel = bookCountLabel(pageCount);
                 return (
+                  <div key={folder.id} className="book-volume">
                   <button
-                    key={folder.id}
                     type="button"
-                    aria-label={`${folder.name} book, ${pageCount} ${pageCount === 1 ? "page" : "pages"}, ${isOpen ? "open" : "closed"}`}
+                    aria-label={`${folder.name} book, ${countLabel}, ${isOpen ? "open" : "closed"}`}
                     aria-pressed={isOpen}
-                    aria-expanded={isOpen}
                     onClick={() => onSelectFolder(folder.id)}
                     className={`book-spine ${isOpen ? "book-spine-open" : ""}`}
                     style={{ height: `${height}rem`, width: `${width}rem` }}
+                    title={`${folder.name} · ${countLabel}`}
                   >
-                    <span className="writing-mode-vertical truncate">{folder.name}</span>
-                    <span className="mt-auto text-[0.68rem] font-bold">{pageCount}p</span>
+                    <span aria-hidden="true" className="writing-mode-vertical">{folder.name}</span>
+                    <span className="mt-auto text-[0.68rem] font-bold">{countLabel}</span>
                   </button>
+                  <span className="book-caption" title={folder.name}>{folder.name}</span>
+                  </div>
                 );
               })}
             </div>
@@ -158,6 +192,7 @@ export function ShelfPane({
             {visiblePages.map((document) => {
               const parentBook = folders.find((folder) => folder.id === document.folderId)?.name ?? WORKSPACE_COPY.pagesWithoutBook;
               const updated = formatRelativeTime(document.updatedAt);
+              const absoluteDate = new Intl.DateTimeFormat(undefined, { dateStyle: "long", timeStyle: "short" }).format(new Date(document.updatedAt));
 
               return (
                 <li key={document.id}>
@@ -166,15 +201,16 @@ export function ShelfPane({
                     aria-label={`${document.title} page in ${parentBook}, updated ${updated}`}
                     aria-pressed={selectedDocumentId === document.id}
                     onClick={() => onSelectDocument(document.id)}
-                    className={`dogear-card w-full rounded-md border bg-surface p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-files focus:outline-none focus:ring-2 focus:ring-accent-files ${
+                    className={`page-card relative w-full rounded-md border bg-surface p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-files focus:outline-none focus:ring-2 focus:ring-accent-files ${
                       selectedDocumentId === document.id ? "border-accent bg-panel" : "border-border"
                     }`}
                   >
                     <span className="page-title-clamp font-display text-base font-black text-ink" title={document.title}>
                       {document.title}
                     </span>
+                    <ArrowUpRight aria-hidden="true" className="page-card-open h-4 w-4" />
                     <span className="mt-2 block truncate text-sm font-semibold text-muted">{parentBook}</span>
-                    <span className="mt-3 block text-xs font-bold text-accent-files">Updated {updated}</span>
+                    <time dateTime={document.updatedAt} title={absoluteDate} className="mt-3 block text-xs font-bold text-accent-files">Updated {updated}</time>
                   </button>
                 </li>
               );

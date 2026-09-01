@@ -99,6 +99,20 @@ async function expectMinimumTouchTarget(locator: Locator) {
   expect(box!.height).toBeGreaterThanOrEqual(44);
 }
 
+async function openShelfImport(page: Page) {
+  const direct = page.getByRole("button", { name: "Import Markdown", exact: true });
+  for (let index = 0; index < await direct.count(); index += 1) {
+    if (await direct.nth(index).isVisible().catch(() => false)) {
+      await direct.nth(index).click();
+      return direct.nth(index);
+    }
+  }
+  const more = page.getByRole("button", { name: "More Shelf actions" });
+  await more.click();
+  await page.getByRole("menuitem", { name: /Import Markdown/ }).click();
+  return more;
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   const evidence = await page.evaluate(() => {
     const clientWidth = document.documentElement.clientWidth;
@@ -157,6 +171,23 @@ for (const width of [320, 390, 414, 768, 1024, 1243, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await expectNoHorizontalOverflow(page);
   });
+}
+
+async function createBook(page: Page, name: string) {
+  await page.getByRole("main").getByRole("button", { name: "Create book", exact: true }).click();
+  await page.getByRole("textbox", { name: "Book name" }).fill(name);
+  await page.getByRole("dialog").getByRole("button", { name: "Create book" }).click();
+}
+
+async function createBookWithPages(page: Page, name: string, pageCount: number) {
+  await createBook(page, name);
+  for (let index = 0; index < pageCount; index += 1) {
+    const createPage = page.getByRole("main").getByRole("button", { name: index === 0 ? `Add first page to ${name}` : `Create page in ${name}` });
+    await expect(createPage).toBeVisible();
+    await createPage.click();
+    await expect(page.getByTestId("screen-editor")).toBeVisible();
+    await clickViewportModeTab(page, "Shelf");
+  }
 }
 
 test("mobile status and mode navigation occupy separate shell rows", async ({ page }) => {
@@ -226,6 +257,31 @@ test("Add first page opens an empty book in the editor", async ({ page }) => {
   await page.getByRole("dialog").getByRole("button", { name: "Create book" }).click();
   await page.getByRole("button", { name: "Add first page to Launch" }).click();
   await expect(page.getByTestId("screen-editor")).toBeVisible();
+});
+
+test("Shelf exposes complete book and timestamp values", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await createBookWithPages(page, "Research notes for the September launch", 2);
+  const book = page.getByRole("main").getByRole("button", { name: /Research notes for the September launch book, 2 pages/ });
+  await expect(book).toContainText("2 pages");
+  await expect(page.locator(".book-caption").getByText("Research notes for the September launch", { exact: true })).toBeVisible();
+  const updated = page.locator("time[datetime]").first();
+  await expect(updated).toHaveAttribute("title", /\d{4}/);
+});
+
+test("book rail becomes keyboard-scrollable only when it overflows", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await createBook(page, "One");
+  await createBook(page, "Two");
+  const rail = page.locator(".book-rail");
+  await expect(rail).toHaveAttribute("aria-label", "Bookshelf");
+  await expect.poll(() => rail.evaluate((element) => element.scrollWidth === element.clientWidth)).toBe(true);
+  await expect(rail).not.toHaveAttribute("tabindex", "0");
+
+  for (const name of ["Three", "Four", "Five", "Six"]) await createBook(page, name);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => rail.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  await expect(rail).toHaveAttribute("tabindex", "0");
 });
 
 
@@ -363,7 +419,7 @@ test("reduced motion stops looping loading and refresh animations without hiding
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
@@ -379,7 +435,7 @@ test("reduced motion stops looping loading and refresh animations without hiding
 });
 
 test("markdown syntax colors use readable Mdez semantic tokens", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   await page.getByLabel("Paste Markdown").fill([
     "# Token sample",
     "",
@@ -556,7 +612,7 @@ test("global actions have one visible home", async ({ page }) => {
 });
 
 test("import dialog uses specific labels and recovery copy", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
 
   await expect(dialog.getByRole("tab", { name: "Paste text" })).toBeVisible();
@@ -828,14 +884,14 @@ test("mobile workspace interactive targets are at least 44 by 44 pixels", async 
 
   await sidebar.getByRole("button", { name: "Close library shelf" }).click();
   await showShelfIfAvailable(page);
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  await openShelfImport(page);
   await expect(page.getByRole("dialog", { name: "Add Markdown to your library" })).toBeVisible();
   await auditVisibleTargets("Import dialog");
 
   expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
 });
 test("import source tabs expose only the active input", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
 
   await expect(dialog.getByRole("textbox", { name: "Paste Markdown" })).toBeVisible();
@@ -848,8 +904,7 @@ test("import source tabs expose only the active input", async ({ page }) => {
 });
 
 test("import source tabs support arrows and the dialog restores focus", async ({ page }) => {
-  const trigger = page.getByRole("button", { name: "Import Markdown", exact: true }).last();
-  await trigger.click();
+  const trigger = await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   const pasteTab = dialog.getByRole("tab", { name: "Paste text" });
   const filesTab = dialog.getByRole("tab", { name: "Choose files" });
@@ -871,8 +926,7 @@ test("import source tabs support arrows and the dialog restores focus", async ({
 });
 
 test("import dialog traps focus and returns it to its trigger", async ({ page }) => {
-  const trigger = page.getByRole("button", { name: "Import Markdown", exact: true }).last();
-  await trigger.click();
+  const trigger = await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await expect(dialog).toBeVisible();
 
@@ -884,7 +938,7 @@ test("import dialog traps focus and returns it to its trigger", async ({ page })
 });
 
 test("imports markdown by paste and previews it", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
 
   await page.getByLabel("Paste Markdown").fill("# Hello Mdez\n\n- [x] local");
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
@@ -896,7 +950,7 @@ test("imports markdown by paste and previews it", async ({ page }) => {
 });
 
 test("preview prose uses reader typography while markdown code stays monospaced", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   await page.getByLabel("Paste Markdown").fill("# Typography\n\nReadable prose with `inlineCode`.\n\n```ts\nconst value = 1;\n```");
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
   await page.getByRole("tab", { name: "Read" }).click();
@@ -926,7 +980,7 @@ test("preview prose uses reader typography while markdown code stays monospaced"
 
 
 test("reader table of contents is inert when closed and keyboard safe when open", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   await page.getByLabel("Paste Markdown").fill("# Quiet shell\n\n## Mode behavior\n\nReader copy.");
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
   await clickVisibleButtonIfAvailable(page, "Read");
@@ -940,7 +994,7 @@ test("reader table of contents is inert when closed and keyboard safe when open"
   await expect(toc).toHaveAttribute("inert", "");
 });
 test("imports markdown from a file", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   await page.getByLabel("Choose Markdown files").setInputFiles({
     name: "Release Notes.md",
     mimeType: "text/markdown",
@@ -973,7 +1027,7 @@ test("imports a public GitHub repository through preview and persists its source
     });
   });
 
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
@@ -1029,7 +1083,7 @@ test("shows a typed GitHub error and lets the preview retry", async ({ page }) =
     });
   });
 
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
@@ -1044,7 +1098,7 @@ test("shows a typed GitHub error and lets the preview retry", async ({ page }) =
 });
 
 test("routes malformed GitHub URLs through app validation", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("not a repository");
@@ -1088,7 +1142,7 @@ test("confirms manual GitHub refresh before replacing source-owned pages", async
     });
   });
 
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   await dialog.getByRole("tab", { name: "GitHub repository" }).click();
   await dialog.getByRole("textbox", { name: "Public repository URL" }).fill("https://github.com/openai/codex");
@@ -1121,7 +1175,7 @@ test("confirms manual GitHub refresh before replacing source-owned pages", async
 });
 
 test("exports the selected document as markdown", async ({ page }) => {
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
+  await openShelfImport(page);
   await page.getByLabel("Paste Markdown").fill("# Export Me\n\nSaved as markdown.");
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
 
@@ -1167,7 +1221,7 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
   await showShelfIfAvailable(page);
-  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  await openShelfImport(page);
   await page.getByLabel("Choose Markdown files").setInputFiles({
     name: "Checklist.md",
     mimeType: "text/markdown",

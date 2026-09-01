@@ -78,6 +78,7 @@ export function ShelfActionsMenu(props: ShelfActionsMenuProps) {
   function select(action: MenuAction) {
     if (action.disabled) return;
     setOpen(false);
+    triggerRef.current?.focus();
     action.onSelect();
   }
 
