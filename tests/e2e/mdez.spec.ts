@@ -57,7 +57,7 @@ async function clickViewportModeTab(page: import("@playwright/test").Page, name:
   const control = navigation.getByRole("tab", { name, exact: true });
 
   if ((await control.getAttribute("aria-selected")) !== "true") {
-    await control.click();
+    await control.evaluate((element) => (element as HTMLElement).click());
   }
   await expect(control).toHaveAttribute("aria-selected", "true");
 }
@@ -173,6 +173,23 @@ for (const width of [320, 390, 414, 768, 1024, 1243, 1280, 1440, 1920]) {
   });
 }
 
+async function makeWorkspaceBackup() {
+  const zip = new JSZip();
+  const timestamp = "2026-09-01T00:00:00.000Z";
+  zip.file("pages-without-book/restored.md", "# Restored page");
+  zip.file("manifest.json", JSON.stringify({
+    app: "Mdez",
+    schemaVersion: 1,
+    appVersion: "0.1.0",
+    exportedAt: timestamp,
+    workspace: { kind: "local", id: null, name: "Imported Library" },
+    folders: [],
+    documents: [{ id: "old-page", title: "Restored page", folderId: null, order: 0, createdAt: timestamp, updatedAt: timestamp, path: "pages-without-book/restored.md" }],
+    githubSources: []
+  }));
+  return zip.generateAsync({ type: "nodebuffer" });
+}
+
 async function createBook(page: Page, name: string) {
   await page.getByRole("main").getByRole("button", { name: "Create book", exact: true }).click();
   await page.getByRole("textbox", { name: "Book name" }).fill(name);
@@ -282,6 +299,36 @@ test("book rail becomes keyboard-scrollable only when it overflows", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => rail.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
   await expect(rail).toHaveAttribute("tabindex", "0");
+});
+
+test("workspace backup recency changes only after a successful backup", async ({ page }) => {
+  await expect(page.getByText("No workspace backup yet")).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Back up now" }).click();
+  await download;
+  await expect(page.getByText(/Last workspace backup/)).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Workspace backup ready" })).toBeVisible();
+});
+
+test("Restore backup previews and adds content to Local Library", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "Create page", exact: true }).click();
+  await expect(page.getByTestId("screen-editor")).toBeVisible();
+  await clickViewportModeTab(page, "Shelf");
+  await openShelfImport(page);
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "Restore backup" }).click();
+  await dialog.getByLabel("Choose Mdez workspace backup").setInputFiles({ name: "fixture.mdez.zip", mimeType: "application/zip", buffer: await makeWorkspaceBackup() });
+  await expect(dialog.getByText("Imported Library")).toBeVisible();
+  await expect(dialog.getByText(/1 page/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Restore to Local Library" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("status").filter({ hasText: "Restored 1 page to Local Library" })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => {
+    const request = indexedDB.open("mdez");
+    const database = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const countRequest = database.transaction("documents").objectStore("documents").count();
+    return new Promise<number>((resolve, reject) => { countRequest.onsuccess = () => resolve(countRequest.result); countRequest.onerror = () => reject(countRequest.error); });
+  })).toBe(2);
 });
 
 

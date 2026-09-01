@@ -157,8 +157,13 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
   }, []);
 
   const refreshContent = useCallback(async (preferredDocumentId?: string | null) => {
-    await loadContent(preferredDocumentId);
-  }, [loadContent]);
+    const content = await loadContent(preferredDocumentId);
+    if (preferredDocumentId !== undefined) {
+      const preferred = content.documents.find((document) => document.id === preferredDocumentId) ?? null;
+      setSelectedFolderId(preferred?.folderId ?? null);
+      expandFolderAncestors(preferred?.folderId ?? null, content.folders, true);
+    }
+  }, [expandFolderAncestors, loadContent]);
 
   const createBook = useCallback(async (parentId: string | null, name: string) => {
     try {

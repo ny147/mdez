@@ -796,6 +796,39 @@ a:focus-visible {
 .shelf-menu-title { display: block; font-size: 0.875rem; font-weight: 800; }
 .shelf-menu-description { display: block; margin-top: 0.125rem; color: var(--color-muted); font-size: 0.75rem; line-height: 1.35; }
 
+.storage-trust {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-read) 30%, var(--color-rule));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-panel) 72%, var(--color-paper));
+}
+
+.storage-trust-summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.75rem;
+}
+
+.storage-trust-details { border-top: 1px solid var(--color-rule); }
+.storage-trust-details summary {
+  display: flex;
+  min-height: 2.75rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.625rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.8125rem;
+  font-weight: 750;
+  list-style: none;
+}
+.storage-trust-details summary::-webkit-details-marker { display: none; }
+.storage-trust-details[open] summary svg { transform: rotate(180deg); }
+.storage-trust-details p { max-width: 75ch; padding: 0 0.75rem 0.875rem; color: var(--color-muted); font-size: 0.8125rem; line-height: 1.55; }
+
 
 @media (max-width: 1023px) {
   .workspace-sidebar {
@@ -835,6 +868,8 @@ a:focus-visible {
   .shelf-create-book-button { display: none; }
   .shelf-more-button span { display: none; }
   .shelf-more-button { width: 2.75rem; min-width: 2.75rem; padding-inline: 0; }
+  .storage-trust-summary { grid-template-columns: max-content minmax(0, 1fr); }
+  .storage-trust-summary .secondary-button { grid-column: 1 / -1; justify-self: stretch; }
 }
 .editor-toolbar {
   display: grid;

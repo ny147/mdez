@@ -1,7 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, useCallback, useRef, useState } from "react";
-import { ClipboardPaste, FileText, Github } from "lucide-react";
+import { ArchiveRestore, ClipboardPaste, FileText, Github } from "lucide-react";
 
 import type { Folder } from "@/types/content";
 import type { GitHubImportSession } from "@/types/github";
@@ -10,9 +10,11 @@ import { FileImportPanel } from "@/components/mdez/import/FileImportPanel";
 import { GitHubImportPanel } from "@/components/mdez/import/GitHubImportPanel";
 import { ImportDialogBusyProvider, ImportDialogShell } from "@/components/mdez/import/ImportDialogShell";
 import { PasteImportPanel } from "@/components/mdez/import/PasteImportPanel";
+import { BackupImportPanel } from "@/components/mdez/import/BackupImportPanel";
+import type { ParsedWorkspaceBackup } from "@/types/backup";
 
 type ImportItem = { title: string; body: string };
-type ImportSource = "paste" | "files" | "github";
+type ImportSource = "paste" | "files" | "github" | "backup";
 
 type ImportDialogProps = {
   folders: Folder[];
@@ -21,12 +23,14 @@ type ImportDialogProps = {
   onImport: (items: ImportItem[], folderId: string | null) => Promise<void>;
   onRequestGitHubPreview: (url: string) => Promise<GitHubImportSession>;
   onImportGitHub: (session: GitHubImportSession) => Promise<void>;
+  onRestoreBackup: (parsed: ParsedWorkspaceBackup) => Promise<{ folderCount: number; documentCount: number }>;
 };
 
 const sourceOptions: { value: ImportSource; label: string; icon: typeof ClipboardPaste }[] = [
   { value: "paste", label: "Paste text", icon: ClipboardPaste },
   { value: "files", label: "Choose files", icon: FileText },
-  { value: "github", label: "GitHub repository", icon: Github }
+  { value: "github", label: "GitHub repository", icon: Github },
+  { value: "backup", label: "Restore backup", icon: ArchiveRestore }
 ];
 
 export function ImportDialog({
@@ -35,7 +39,8 @@ export function ImportDialog({
   onClose,
   onImport,
   onRequestGitHubPreview,
-  onImportGitHub
+  onImportGitHub,
+  onRestoreBackup
 }: ImportDialogProps) {
   const [source, setSource] = useState<ImportSource>("paste");
   const [pasteBody, setPasteBody] = useState("");
@@ -43,7 +48,7 @@ export function ImportDialog({
   const [githubUrl, setGitHubUrl] = useState("");
   const [githubPreview, setGitHubPreview] = useState<GitHubImportSession | null>(null);
   const [message, setMessage] = useState("");
-  const [busyAction, setBusyAction] = useState<"local" | "preview" | "github" | null>(null);
+  const [busyAction, setBusyAction] = useState<"local" | "preview" | "github" | "backup" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
   const githubRef = useRef<HTMLInputElement>(null);
@@ -219,7 +224,7 @@ export function ImportDialog({
         returnFocus={returnFocus}
         onClose={closeDialog}
       >
-        <div className="mt-4 grid grid-cols-3 gap-1 rounded-md border border-border bg-panel p-1" role="tablist" aria-label="Import source">
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-md border border-border bg-panel p-1 sm:grid-cols-4" role="tablist" aria-label="Import source">
           {sourceOptions.map((option) => {
             const Icon = option.icon;
 
@@ -244,7 +249,7 @@ export function ImportDialog({
           })}
         </div>
 
-        {source !== "github" ? (
+        {source !== "github" && source !== "backup" ? (
           <label className="mt-5 grid gap-2 text-sm font-bold text-ink" htmlFor="import-target-folder">
             Add pages to
             <select
@@ -291,7 +296,7 @@ export function ImportDialog({
             url={githubUrl}
             preview={githubPreview}
             message={source === "github" ? message : ""}
-            busyAction={busyAction === "local" ? null : busyAction}
+            busyAction={busyAction === "preview" || busyAction === "github" ? busyAction : null}
             onUrlChange={(url) => {
               setGitHubUrl(url);
               setGitHubPreview(null);
@@ -300,6 +305,17 @@ export function ImportDialog({
             onPreview={() => void previewGitHubRepository()}
             onImport={() => void importGitHubRepository()}
           />
+        </div>
+
+        <div hidden={source !== "backup"}>
+          {source === "backup" ? (
+            <BackupImportPanel
+              disabled={busy && busyAction !== "backup"}
+              onBusyChange={(nextBusy) => setBusyAction(nextBusy ? "backup" : null)}
+              onRestore={onRestoreBackup}
+              onRestored={() => onClose()}
+            />
+          ) : null}
         </div>
 
         <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">

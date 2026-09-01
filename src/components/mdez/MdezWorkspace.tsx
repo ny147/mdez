@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent }
 import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
-import { renameDocument, updateDocumentBody } from "@/lib/repository";
+import { renameDocument, restoreWorkspaceBackup as persistWorkspaceRestore, updateDocumentBody } from "@/lib/repository";
 import type { ViewMode } from "@/types/content";
 import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
@@ -30,6 +30,9 @@ import { GroupConflictDialog } from "@/components/mdez/GroupConflictDialog";
 import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
 import { BookDialog, type BookDialogIntent } from "@/components/mdez/BookDialog";
 import type { Folder } from "@/types/content";
+import type { ParsedWorkspaceBackup } from "@/types/backup";
+import { createWorkspaceBackupBlob, prepareWorkspaceRestore } from "@/lib/workspace-backup";
+import { readBackupRecency, writeBackupRecency } from "@/lib/backup-recency";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -79,6 +82,7 @@ const mobileIcons = {
 };
 
 const workspacePanelId = "workspace-mode-panel";
+const APP_VERSION = "0.1.0";
 
 function modeTabId(location: "desktop" | "mobile", mode: ViewMode) {
   return `${location}-workspace-mode-${mode}`;
@@ -104,13 +108,24 @@ export function MdezWorkspace() {
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
   const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
+  const workspaceIdentity = activeGroupId
+    ? { kind: "group" as const, id: activeGroupId, name: groupLibrary.group?.name ?? "Key Group" }
+    : { kind: "local" as const, id: null, name: "Local Library" };
   useEffect(() => { void reloadRememberedGroups(); }, []);
+  useEffect(() => {
+    const recencyWorkspace = activeGroupId
+      ? { kind: "group" as const, id: activeGroupId }
+      : { kind: "local" as const, id: null };
+    setLastBackupAt(readBackupRecency(recencyWorkspace)?.preparedAt ?? null);
+  }, [activeGroupId]);
   useEffect(() => {
     const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
     if (savedSidebar === "hidden") {
@@ -338,6 +353,50 @@ export function MdezWorkspace() {
   }
   function handleOpenImport() {
     setIsImportOpen(true);
+  }
+
+  async function handleBackupWorkspace() {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    library.setError(null);
+    setOperationStatus({ message: "Preparing workspace backup", state: "loading" });
+    try {
+      const blob = await createWorkspaceBackupBlob({
+        appVersion: APP_VERSION,
+        workspace: workspaceIdentity,
+        folders: library.folders,
+        documents: liveDocuments,
+        githubSources: activeGroupId ? [] : library.sources
+      });
+      const fileName = makeMarkdownFileName(workspaceIdentity.name).replace(/\.md$/i, ".mdez.zip");
+      downloadBlob(blob, fileName);
+      const preparedAt = new Date().toISOString();
+      writeBackupRecency(workspaceIdentity, preparedAt);
+      setLastBackupAt(preparedAt);
+      setOperationStatus({ message: "Workspace backup ready", state: "saved" });
+    } catch {
+      library.setError("Mdez could not prepare the workspace backup. Try again.");
+      setOperationStatus({ message: "Workspace backup failed", state: "error" });
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function handleRestoreBackup(parsed: ParsedWorkspaceBackup) {
+    const prepared = prepareWorkspaceRestore(parsed, localLibrary.folders);
+    try {
+      const result = await persistWorkspaceRestore(prepared);
+      setActiveGroupId(null);
+      await localLibrary.refreshContent(result.firstDocumentId);
+      setViewMode(result.firstDocumentId ? "editor" : "shelf");
+      localLibrary.setError(null);
+      setOperationStatus({ message: `Restored ${result.documentCount} ${result.documentCount === 1 ? "page" : "pages"} to Local Library`, state: "saved" });
+      return { folderCount: result.folderCount, documentCount: result.documentCount };
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error("Mdez could not restore this backup. Your existing pages were not changed.");
+      localLibrary.setError(error.message);
+      throw error;
+    }
   }
 
   function handleRequestCreateBook(parentId: string | null) {
@@ -578,7 +637,10 @@ export function MdezWorkspace() {
                 onCreateFolder={handleRequestCreateBook}
                 onOpenImport={handleOpenImport}
                 onExportFolder={() => void handleSidebarFolderExport()}
-                onBackupWorkspace={() => undefined}
+                onBackupWorkspace={() => void handleBackupWorkspace()}
+                workspaceKind={workspaceIdentity.kind}
+                lastBackupAt={lastBackupAt}
+                backupBusy={backupBusy}
               />
             ) : viewMode === "split" ? (
               <SplitWorkspace
@@ -636,6 +698,7 @@ export function MdezWorkspace() {
           onImport={handleImport}
           onRequestGitHubPreview={handleRequestGitHubPreview}
           onImportGitHub={handleImportGitHub}
+          onRestoreBackup={handleRestoreBackup}
         />
       ) : null}
       {isQuickShareOpen && liveSelectedDocument ? (

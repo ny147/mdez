@@ -6,6 +6,7 @@ import { ArrowUpRight, BookOpen, FilePlus } from "lucide-react";
 import type { Document, Folder } from "@/types/content";
 import { WORKSPACE_COPY, formatRelativeTime, getBookExportCopy } from "@/lib/workspace-copy";
 import { ShelfActionsMenu } from "@/components/mdez/ShelfActionsMenu";
+import { StorageTrust } from "@/components/mdez/StorageTrust";
 
 type ShelfPaneProps = {
   folders: Folder[];
@@ -20,6 +21,9 @@ type ShelfPaneProps = {
   onOpenImport: () => void;
   onExportFolder: () => void;
   onBackupWorkspace: () => void;
+  workspaceKind: "local" | "group";
+  lastBackupAt: string | null;
+  backupBusy: boolean;
 };
 
 function getBookPageCount(documents: Document[], folderId: string) {
@@ -61,7 +65,10 @@ export function ShelfPane({
   onCreateFolder,
   onOpenImport,
   onExportFolder,
-  onBackupWorkspace
+  onBackupWorkspace,
+  workspaceKind,
+  lastBackupAt,
+  backupBusy
 }: ShelfPaneProps) {
   const sortedFolders = folders.filter((folder) => folder.parentId === null).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
   const openBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
@@ -117,6 +124,8 @@ export function ShelfPane({
           </div>
         </div>
       </div>
+
+      <StorageTrust workspaceKind={workspaceKind} lastBackupAt={lastBackupAt} busy={backupBusy} onBackup={onBackupWorkspace} />
 
       <section className="workspace-section min-w-0" aria-labelledby="bookshelf-title">
         <div className="mb-4 flex items-center justify-between gap-3">
