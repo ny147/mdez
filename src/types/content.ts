@@ -22,3 +22,8 @@ export type Document = {
 export type SaveStatus = "Saved" | "Saving..." | "Unsaved";
 
 export type ViewMode = "shelf" | "editor" | "preview" | "split";
+
+export type TitleFocusRequest = {
+  documentId: string;
+  requestId: number;
+} | null;

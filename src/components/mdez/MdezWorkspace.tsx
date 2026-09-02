@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
 import { renameDocument, restoreWorkspaceBackup as persistWorkspaceRestore, updateDocumentBody } from "@/lib/repository";
-import type { ViewMode } from "@/types/content";
+import type { TitleFocusRequest, ViewMode } from "@/types/content";
 import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
@@ -112,9 +112,11 @@ export function MdezWorkspace() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [titleFocusRequest, setTitleFocusRequest] = useState<TitleFocusRequest>(null);
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  const titleFocusRequestIdRef = useRef(0);
   const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
   const workspaceIdentity = activeGroupId
     ? { kind: "group" as const, id: activeGroupId, name: groupLibrary.group?.name ?? "Key Group" }
@@ -164,7 +166,6 @@ export function MdezWorkspace() {
     saveStatus,
     changeBody: handleDraftBodyChange,
     changeTitle: handleDraftTitleChange,
-    renameTitleById: renameDraftTitle,
     discardDraft
   } = useDocumentDrafts({
     documents: library.documents,
@@ -230,11 +231,21 @@ export function MdezWorkspace() {
     setIsDrawerOpen(false);
   }
 
+  function requestTitleFocus(documentId: string) {
+    titleFocusRequestIdRef.current += 1;
+    setTitleFocusRequest({ documentId, requestId: titleFocusRequestIdRef.current });
+  }
+
+  function handleTitleFocusHandled(requestId: number) {
+    setTitleFocusRequest((current) => current?.requestId === requestId ? null : current);
+  }
+
   async function handleCreateDocument() {
     try {
-      await library.createPage();
+      const document = await library.createPage();
       setViewMode("editor");
       setIsDrawerOpen(false);
+      if (document) requestTitleFocus(document.id);
     } catch {
       // The controller owns the exact user-facing error.
     }
@@ -320,16 +331,6 @@ export function MdezWorkspace() {
     }
   }
 
-  async function handleRenameDocument(documentId: string, title: string) {
-    try {
-      const updated = await renameDraftTitle(documentId, title);
-      if (!updated) return;
-      await library.renamePage(documentId, title);
-    } catch {
-      library.setError("Could not rename page.");
-    }
-  }
-
   async function handleSidebarFolderExport() {
     if (!library.selectedFolderId) {
       library.setError("Open a book before preparing a ZIP.");
@@ -357,6 +358,7 @@ export function MdezWorkspace() {
 
   function handleRequestRenameDocument(documentId: string) {
     handleSelectDocument(documentId);
+    requestTitleFocus(documentId);
   }
 
   async function handleBackupWorkspace() {
@@ -470,6 +472,7 @@ export function MdezWorkspace() {
       body={draftBody}
       saveStatus={saveStatus}
       viewMode={viewMode}
+      titleFocusRequest={titleFocusRequest}
       rightSlot={
         <ExportControls
           selectedDocument={liveSelectedDocument}
@@ -483,6 +486,7 @@ export function MdezWorkspace() {
       onViewModeChange={handleViewModeChange}
       onBodyChange={handleDraftBodyChange}
       onRename={handleDraftTitleChange}
+      onTitleFocusHandled={handleTitleFocusHandled}
     />
   );
   const readerPane = (

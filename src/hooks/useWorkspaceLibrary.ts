@@ -39,7 +39,7 @@ export type WorkspaceLibraryController = {
   createBook: (parentId: string | null, name: string) => Promise<Folder>;
   renameBook: (folderId: string, name: string) => Promise<Folder>;
   deleteBook: (folderId: string) => Promise<void>;
-  createPage: () => Promise<void>;
+  createPage: () => Promise<Document | null>;
   importPages: (items: { title: string; body: string }[], folderId: string | null) => Promise<void>;
   renamePage: (documentId: string, title: string) => Promise<void>;
   movePage: (documentId: string, folderId: string | null) => Promise<void>;
@@ -231,6 +231,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
       setError(null);
       setSelectedDocumentId(document.id);
       await loadContent(document.id);
+      return document;
     } catch (cause) {
       setError("Could not create page.");
       throw cause;

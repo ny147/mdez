@@ -4,10 +4,10 @@ import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorView, keymap } from "@codemirror/view";
 import { FilePlus, Share2, Upload } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useRef } from "react";
+import React, { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
-import type { Document, SaveStatus, ViewMode } from "@/types/content";
+import type { Document, SaveStatus, TitleFocusRequest, ViewMode } from "@/types/content";
 
 type EditorPaneProps = {
   document: Document | null;
@@ -16,12 +16,14 @@ type EditorPaneProps = {
   saveStatus: SaveStatus;
   viewMode: ViewMode;
   rightSlot?: ReactNode;
+  titleFocusRequest: TitleFocusRequest;
   onCreateDocument: () => void;
   onOpenImport: () => void;
   onQuickShare: () => void;
   onViewModeChange: (viewMode: ViewMode) => void;
   onBodyChange: (body: string) => void;
   onRename: (title: string) => void;
+  onTitleFocusHandled: (requestId: number) => void;
 };
 
 export function EditorPane({
@@ -31,17 +33,27 @@ export function EditorPane({
   saveStatus,
   viewMode,
   rightSlot,
+  titleFocusRequest,
   onCreateDocument,
   onOpenImport,
   onQuickShare,
   onViewModeChange,
   onBodyChange,
-  onRename
+  onRename,
+  onTitleFocusHandled
 }: EditorPaneProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   void saveStatus;
   void viewMode;
   void onViewModeChange;
+
+  useEffect(() => {
+    if (!document || titleFocusRequest?.documentId !== document.id) return;
+    titleInputRef.current?.focus();
+    titleInputRef.current?.select();
+    onTitleFocusHandled(titleFocusRequest.requestId);
+  }, [document, onTitleFocusHandled, titleFocusRequest]);
 
   const applyFormat = useCallback((action: FormatAction) => {
     const view = editorRef.current?.view;
@@ -130,6 +142,7 @@ export function EditorPane({
       <label className="min-w-0">
         <span className="text-sm font-semibold text-accent">Page title</span>
         <input
+          ref={titleInputRef}
           aria-label="Page title"
           value={title}
           onChange={(event) => onRename(event.target.value)}

@@ -707,6 +707,32 @@ test("sidebar page rows reveal management actions on demand", async ({ page }) =
   await expect(pageRow.getByRole("button", { name: "Delete untitled.md" })).toBeVisible();
 });
 
+test("create and sidebar rename select the complete page title", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "Create page", exact: true }).click();
+  const title = page.getByRole("textbox", { name: "Page title" });
+
+  async function expectWholeTitleSelected() {
+    await expect(title).toBeFocused();
+    await expect.poll(() => title.evaluate((input: HTMLInputElement) => ({
+      start: input.selectionStart,
+      end: input.selectionEnd,
+      length: input.value.length
+    }))).toEqual({ start: 0, end: 11, length: 11 });
+  }
+
+  await expectWholeTitleSelected();
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await clickViewportModeTab(page, "Shelf");
+    await openShelfDrawerIfAvailable(page);
+    const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+    const row = sidebar.locator(".sidebar-page-row").filter({ hasText: "untitled.md" });
+    await row.getByRole("button", { name: "Manage untitled.md" }).click();
+    await row.getByRole("button", { name: "Rename untitled.md" }).click();
+    await expectWholeTitleSelected();
+  }
+});
+
 test("an open book explains filtering and export scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Writing"));
