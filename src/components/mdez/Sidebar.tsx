@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { X } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
@@ -8,6 +8,8 @@ import type { GitHubSource } from "@/types/github";
 import { DocumentList } from "@/components/mdez/DocumentList";
 import { FolderTree } from "@/components/mdez/FolderTree";
 import { GitHubSourcePanel } from "@/components/mdez/GitHubSourcePanel";
+import { SidebarSearch } from "@/components/mdez/SidebarSearch";
+import { normalizeSidebarQuery } from "@/lib/sidebar-search";
 
 type SidebarProps = {
   folders: Folder[];
@@ -18,9 +20,12 @@ type SidebarProps = {
   error: string | null;
   githubSource: GitHubSource | null;
   refreshingSourceId: string | null;
+  isReady: boolean;
+  workspaceKey: string;
   isHidden: boolean;
   isOverlay: boolean;
   sidebarRef: RefObject<HTMLElement | null>;
+  searchInputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
   onSelectFolder: (folderId: string | null) => void;
   onToggleFolder: (folderId: string) => void;
@@ -44,9 +49,12 @@ export function Sidebar({
   error,
   githubSource,
   refreshingSourceId,
+  isReady,
+  workspaceKey,
   isHidden,
   isOverlay,
   sidebarRef,
+  searchInputRef,
   onClose,
   onSelectFolder,
   onToggleFolder,
@@ -60,6 +68,13 @@ export function Sidebar({
   onDeleteDocument,
   onRefreshGitHub
 }: SidebarProps) {
+  const [query, setQuery] = useState("");
+  const isSearching = Boolean(normalizeSidebarQuery(query));
+
+  useEffect(() => {
+    setQuery("");
+  }, [workspaceKey]);
+
   return (
     <aside
       id="library-shelf"
@@ -77,7 +92,18 @@ export function Sidebar({
           </button>
         </div>
 
-        {githubSource ? (
+        <SidebarSearch
+          folders={folders}
+          documents={documents}
+          query={query}
+          disabled={!isReady}
+          inputRef={searchInputRef}
+          onQueryChange={setQuery}
+          onSelectFolder={onSelectFolder}
+          onSelectDocument={onSelectDocument}
+        />
+
+        {!isSearching && githubSource ? (
           <GitHubSourcePanel
             source={githubSource}
             isRefreshing={refreshingSourceId === githubSource.id}
@@ -85,13 +111,14 @@ export function Sidebar({
           />
         ) : null}
 
-        {error ? (
+        {!isSearching && error ? (
           <p className="rounded border border-accent-files/40 bg-panel p-3 text-sm font-semibold leading-6 text-ink">
             {error}
           </p>
         ) : null}
 
-        <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border bg-surface/80 p-3">
+        {!isSearching ? <div className="sidebar-library-scroll min-h-0 flex-1 overflow-auto rounded-md border border-border bg-surface/80 p-3">
+          {!isReady ? <p role="status" className="sidebar-loading-state">Loading library…</p> : (
           <div className="space-y-5">
             <FolderTree
               folders={folders}
@@ -118,7 +145,8 @@ export function Sidebar({
               />
             </div>
           </div>
-        </div>
+          )}
+        </div> : null}
       </div>
     </aside>
   );

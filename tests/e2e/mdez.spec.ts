@@ -733,6 +733,39 @@ test("create and sidebar rename select the complete page title", async ({ page }
   }
 });
 
+test("sidebar search finds pages and the global shortcut reveals it", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "Create page", exact: true }).click();
+  const title = page.getByRole("textbox", { name: "Page title" });
+  await title.fill("Launch plan");
+  await clickViewportModeTab(page, "Shelf");
+  await page.locator(".workspace-context").click();
+
+  await page.keyboard.press("Control+K");
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const search = sidebar.getByRole("searchbox", { name: "Search books and pages" });
+  await expect(sidebar).toHaveAttribute("aria-hidden", "false");
+  await expect(search).toBeFocused();
+
+  await search.fill("launch");
+  await expect(sidebar.getByRole("heading", { name: "Pages" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Open Launch plan in Pages without a book" })).toBeVisible();
+  await expect(sidebar.locator(".sidebar-page-list")).toHaveCount(0);
+
+  await search.fill("missing");
+  await expect(sidebar.getByText("No books or pages match “missing”.")).toBeVisible();
+  await sidebar.getByRole("button", { name: "Clear search", exact: true }).click();
+  await expect(search).toHaveValue("");
+  await expect(sidebar.locator(".sidebar-page-list")).toBeVisible();
+});
+
+test("sidebar shortcut does not steal focus from editable content", async ({ page }) => {
+  await page.getByRole("main").getByRole("button", { name: "Create page", exact: true }).click();
+  const title = page.getByRole("textbox", { name: "Page title" });
+  await title.focus();
+  await page.keyboard.press("Control+K");
+  await expect(title).toBeFocused();
+});
+
 test("an open book explains filtering and export scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Writing"));

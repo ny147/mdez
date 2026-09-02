@@ -115,6 +115,8 @@ export function MdezWorkspace() {
   const [titleFocusRequest, setTitleFocusRequest] = useState<TitleFocusRequest>(null);
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarSearchRef = useRef<HTMLInputElement>(null);
+  const sidebarSearchFocusPendingRef = useRef(false);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const titleFocusRequestIdRef = useRef(0);
   const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
@@ -140,12 +142,54 @@ export function MdezWorkspace() {
       return;
     }
 
-    window.setTimeout(() => sidebarRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(), 0);
+    window.setTimeout(() => {
+      if (sidebarSearchFocusPendingRef.current) {
+        sidebarSearchFocusPendingRef.current = false;
+        sidebarSearchRef.current?.focus();
+        return;
+      }
+      sidebarRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    }, 0);
   }, [isDrawerOpen, isTabletLayout]);
 
   useEffect(() => {
+    function focusSidebarSearch(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey) || event.altKey || event.shiftKey) {
+        return;
+      }
+
+      const target = event.target;
+      if (target instanceof Element && target.closest("input, textarea, select, [contenteditable='true'], .cm-editor, [role='dialog']")) {
+        return;
+      }
+
+      event.preventDefault();
+      if (isTabletLayout) {
+        if (!isDrawerOpen) {
+          sidebarSearchFocusPendingRef.current = true;
+        }
+        setIsDrawerOpen(true);
+        if (isDrawerOpen) {
+          window.requestAnimationFrame(() => sidebarSearchRef.current?.focus());
+        }
+        return;
+      }
+      if (!isSidebarVisible) {
+        setIsSidebarVisible(true);
+        window.localStorage.setItem("mdez-sidebar-state", "visible");
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => sidebarSearchRef.current?.focus());
+      });
+    }
+
+    document.addEventListener("keydown", focusSidebarSearch);
+    return () => document.removeEventListener("keydown", focusSidebarSearch);
+  }, [isDrawerOpen, isSidebarVisible, isTabletLayout]);
+
+  useEffect(() => {
     function closeOverlays(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !isDrawerOpen) {
+      if (event.defaultPrevented || event.key !== "Escape" || !isDrawerOpen) {
         return;
       }
 
@@ -585,9 +629,12 @@ export function MdezWorkspace() {
           error={library.error}
           githubSource={activeGitHubSource}
           refreshingSourceId={refreshingSourceId}
+          isReady={library.isReady}
+          workspaceKey={activeGroupId ? `group:${activeGroupId}` : "local"}
           isHidden={sidebarIsHidden}
           isOverlay={isTabletLayout}
           sidebarRef={sidebarRef}
+          searchInputRef={sidebarSearchRef}
           onClose={() => setIsDrawerOpen(false)}
           onSelectFolder={handleSelectFolder}
           onToggleFolder={library.toggleFolder}
