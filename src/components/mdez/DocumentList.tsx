@@ -1,6 +1,7 @@
 "use client";
 
-import { FilePlus } from "lucide-react";
+import React from "react";
+import { FilePlus, FileText } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import { DocumentActions } from "@/components/mdez/DocumentActions";
@@ -13,7 +14,7 @@ type DocumentListProps = {
   selectedDocumentId: string | null;
   onSelectDocument: (documentId: string) => void;
   onCreateDocument: () => void;
-  onRenameDocument: (documentId: string, title: string) => void;
+  onRequestRenameDocument: (documentId: string) => void;
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
 };
@@ -25,7 +26,7 @@ export function DocumentList({
   selectedDocumentId,
   onSelectDocument,
   onCreateDocument,
-  onRenameDocument,
+  onRequestRenameDocument,
   onMoveDocument,
   onDeleteDocument
 }: DocumentListProps) {
@@ -33,73 +34,58 @@ export function DocumentList({
     .filter((document) => document.folderId === selectedFolderId)
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   const selectedBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
+  const contextName = selectedBook?.name ?? WORKSPACE_COPY.pagesWithoutBook;
   const createPageLabel = selectedBook ? `Create page in ${selectedBook.name}` : "Create page";
 
-  function renameDocument(document: Document) {
-    const nextTitle = window.prompt("Rename page", document.title);
-
-    if (nextTitle !== null) {
-      onRenameDocument(document.id, nextTitle);
-    }
-  }
-
   return (
-    <section className="min-h-0">
-      <div className="mb-3 grid gap-2">
-        <h3 className="font-display text-sm font-black text-ink">Pages</h3>
-        <button
-          type="button"
-          data-visual-priority="secondary"
-          onClick={onCreateDocument}
-          aria-label={createPageLabel}
-          className="secondary-button sidebar-create-button min-h-9 w-full px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
-        >
+    <section className="sidebar-section" aria-labelledby="sidebar-pages-heading">
+      <div className="sidebar-section-header">
+        <div className="sidebar-section-heading">
+          <h3 id="sidebar-pages-heading">Pages</h3>
+          <span className="sidebar-section-count">{visibleDocuments.length} {visibleDocuments.length === 1 ? "page" : "pages"}</span>
+        </div>
+        <button type="button" onClick={onCreateDocument} aria-label={createPageLabel} className="sidebar-header-action">
           <FilePlus aria-hidden="true" className="h-4 w-4" />
-          {createPageLabel}
+          <span>{visibleDocuments.length === 0 && selectedBook ? "Add first page" : "Create page"}</span>
         </button>
       </div>
 
       {visibleDocuments.length === 0 ? (
-        <div className="rounded border border-border bg-panel p-3">
-          <p className="text-sm font-semibold leading-6 text-muted">
-            Create a page in {selectedBook ? selectedBook.name : WORKSPACE_COPY.pagesWithoutBook} or import Markdown here.
-          </p>
+        <div className="sidebar-empty-state">
+          <strong>{selectedBook ? `No pages in ${selectedBook.name} yet` : "No pages here yet"}</strong>
+          <span>{selectedBook ? "Add the first page to start writing." : "Create a page or import Markdown from the Shelf."}</span>
         </div>
       ) : (
-        <div className="space-y-2">
-          {visibleDocuments.map((document) => (
-            <article
-              key={document.id}
-              className="dogear-card rounded border border-border bg-surface p-2 shadow-soft transition hover:border-accent-files"
-            >
-              <button
-                type="button"
-                onClick={() => onSelectDocument(document.id)}
-                aria-pressed={selectedDocumentId === document.id}
-                className={`w-full rounded border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-accent ${
-                  selectedDocumentId === document.id
-                    ? "border-accent bg-panel text-ink shadow-soft"
-                    : "border-transparent text-ink hover:bg-panel"
-                }`}
-              >
-                <span className="page-title-clamp font-display text-sm font-black" title={document.title}>
-                  {document.title}
-                </span>
-                <span className="mt-1 block truncate text-xs font-semibold opacity-70">
-                  Updated {formatRelativeTime(document.updatedAt)}
-                </span>
-              </button>
-
-              <DocumentActions
-                document={document}
-                folders={folders}
-                onRename={() => renameDocument(document)}
-                onMove={(folderId) => onMoveDocument(document.id, folderId)}
-                onDelete={() => onDeleteDocument(document.id)}
-              />
-            </article>
-          ))}
-        </div>
+        <ul className="sidebar-page-list" aria-label={`Pages in ${contextName}`}>
+          {visibleDocuments.map((document) => {
+            const isSelected = selectedDocumentId === document.id;
+            const absoluteDate = Number.isNaN(Date.parse(document.updatedAt))
+              ? "Recently updated"
+              : new Date(document.updatedAt).toLocaleString();
+            return (
+              <li key={document.id} className="sidebar-page-row" data-selected={isSelected}>
+                <FileText aria-hidden="true" className="sidebar-page-icon" />
+                <button
+                  type="button"
+                  onClick={() => onSelectDocument(document.id)}
+                  aria-label={`Open ${document.title}`}
+                  aria-current={isSelected ? "page" : undefined}
+                  className="sidebar-page-select"
+                >
+                  <span className="sidebar-item-title" title={document.title}>{document.title}</span>
+                  <time dateTime={document.updatedAt} title={absoluteDate}>Updated {formatRelativeTime(document.updatedAt)}</time>
+                </button>
+                <DocumentActions
+                  document={document}
+                  folders={folders}
+                  onRename={() => onRequestRenameDocument(document.id)}
+                  onMove={(folderId) => onMoveDocument(document.id, folderId)}
+                  onDelete={() => onDeleteDocument(document.id)}
+                />
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

@@ -29,7 +29,7 @@ type SidebarProps = {
   onDeleteFolder: (folderId: string) => void;
   onSelectDocument: (documentId: string) => void;
   onCreateDocument: () => void;
-  onRenameDocument: (documentId: string, title: string) => void;
+  onRequestRenameDocument: (documentId: string) => void;
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
   onRefreshGitHub: (source: GitHubSource) => void;
@@ -55,7 +55,7 @@ export function Sidebar({
   onDeleteFolder,
   onSelectDocument,
   onCreateDocument,
-  onRenameDocument,
+  onRequestRenameDocument,
   onMoveDocument,
   onDeleteDocument,
   onRefreshGitHub
@@ -112,7 +112,7 @@ export function Sidebar({
                 selectedDocumentId={selectedDocumentId}
                 onSelectDocument={onSelectDocument}
                 onCreateDocument={onCreateDocument}
-                onRenameDocument={onRenameDocument}
+                onRequestRenameDocument={onRequestRenameDocument}
                 onMoveDocument={onMoveDocument}
                 onDeleteDocument={onDeleteDocument}
               />

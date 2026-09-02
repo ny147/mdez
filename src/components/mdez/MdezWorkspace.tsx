@@ -355,6 +355,10 @@ export function MdezWorkspace() {
     setIsImportOpen(true);
   }
 
+  function handleRequestRenameDocument(documentId: string) {
+    handleSelectDocument(documentId);
+  }
+
   async function handleBackupWorkspace() {
     if (backupBusy) return;
     setBackupBusy(true);
@@ -588,7 +592,7 @@ export function MdezWorkspace() {
           onDeleteFolder={library.deleteBook}
           onSelectDocument={handleSelectDocument}
           onCreateDocument={handleCreateDocument}
-          onRenameDocument={handleRenameDocument}
+          onRequestRenameDocument={handleRequestRenameDocument}
           onMoveDocument={library.movePage}
           onDeleteDocument={library.deletePage}
           onRefreshGitHub={(source) => void handleRefreshGitHub(source)}

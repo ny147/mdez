@@ -693,11 +693,15 @@ test("sidebar page rows reveal management actions on demand", async ({ page }) =
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  const pageRow = sidebar.getByRole("article").filter({ hasText: "untitled.md" });
-  await expect(pageRow.getByText(/minute ago|Recently updated/)).toBeVisible();
+  const pageRow = sidebar.locator(".sidebar-page-row").filter({ hasText: "untitled.md" });
+  await expect(pageRow).toHaveRole("listitem");
+  await expect(pageRow.getByRole("button", { name: "Open untitled.md" })).toHaveAttribute("aria-current", "page");
+  await expect(pageRow.locator("time[datetime]")).toContainText(/minute ago|Recently updated/);
+  expect((await pageRow.boundingBox())!.height).toBeLessThanOrEqual(56);
   await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeHidden();
 
   await pageRow.getByRole("button", { name: "Manage untitled.md" }).click();
+  await expect(pageRow.getByRole("group", { name: "Manage untitled.md" })).toBeVisible();
   await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeVisible();
   await expect(pageRow.getByRole("combobox", { name: "Move untitled.md page" })).toBeVisible();
   await expect(pageRow.getByRole("button", { name: "Delete untitled.md" })).toBeVisible();
