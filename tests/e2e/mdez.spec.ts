@@ -276,6 +276,20 @@ test("Add first page opens an empty book in the editor", async ({ page }) => {
   await expect(page.getByTestId("screen-editor")).toBeVisible();
 });
 
+test("compact book navigator discloses management actions safely", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await createBook(page, "Writing");
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.getByText("1 book", { exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Pages without a book, 0 pages, closed" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Writing book, 0 pages, open" })).toHaveAttribute("aria-pressed", "true");
+  await expect(sidebar.getByRole("menuitem", { name: "Delete Writing" })).toHaveCount(0);
+
+  await sidebar.getByRole("button", { name: "Manage Writing" }).click();
+  await expect(sidebar.getByRole("menuitem", { name: "Delete Writing" })).toBeVisible();
+});
+
 test("Shelf exposes complete book and timestamp values", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await createBookWithPages(page, "Research notes for the September launch", 2);

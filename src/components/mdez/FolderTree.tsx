@@ -1,10 +1,11 @@
 "use client";
 
-import { BookOpen, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import React, { type CSSProperties } from "react";
+import { BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 
+import { BookActionsMenu } from "@/components/mdez/BookActionsMenu";
 import type { Document, Folder } from "@/types/content";
 import { buildFolderTree, type FolderNode } from "@/lib/tree";
-import { IconButton } from "@/components/ui/IconButton";
 import { WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 type FolderTreeProps = {
@@ -19,6 +20,10 @@ type FolderTreeProps = {
   onDeleteFolder: (folderId: string) => void;
 };
 
+function countLabel(count: number) {
+  return `${count} ${count === 1 ? "page" : "pages"}`;
+}
+
 export function FolderTree({
   folders,
   documents,
@@ -31,43 +36,43 @@ export function FolderTree({
   onDeleteFolder
 }: FolderTreeProps) {
   const tree = buildFolderTree(folders);
+  const rootPageCount = documents.filter((document) => document.folderId === null).length;
 
   return (
-    <section className="min-h-0">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-display text-sm font-black text-ink">{WORKSPACE_COPY.books}</h3>
-        <button
-          type="button"
-          onClick={() => onCreateFolder(null)}
-          aria-label="Create book"
-          className="secondary-button inline-flex min-h-9 items-center justify-center gap-2 px-3 py-1.5 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-accent"
-        >
+    <section className="sidebar-section" aria-labelledby="sidebar-books-heading">
+      <div className="sidebar-section-header">
+        <div className="sidebar-section-heading">
+          <h3 id="sidebar-books-heading">{WORKSPACE_COPY.books}</h3>
+          <span className="sidebar-section-count">{folders.length} {folders.length === 1 ? "book" : "books"}</span>
+        </div>
+        <button type="button" onClick={() => onCreateFolder(null)} aria-label="Create book" className="sidebar-header-action">
           <BookOpen aria-hidden="true" className="h-4 w-4" />
-          Create book
+          <span>Create book</span>
         </button>
       </div>
 
-      <ul className="m-0 list-none space-y-1 p-0" aria-label="Books and pages">
-        <li>
-          <button
-            type="button"
-            onClick={() => onSelectFolder(null)}
-            aria-pressed={selectedFolderId === null}
-            className={`w-full rounded border px-3 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
-              selectedFolderId === null
-                ? "border-accent-files bg-accent-files text-accent-on shadow-soft"
-                : "border-transparent text-muted hover:border-border hover:bg-panel hover:text-ink"
-            }`}
-          >
-            {WORKSPACE_COPY.pagesWithoutBook}
-          </button>
+      <ul className="sidebar-book-list" aria-label="Books and pages">
+        <li className="sidebar-book-item">
+          <div className="sidebar-book-row" data-selected={selectedFolderId === null}>
+            <span aria-hidden="true" className="sidebar-disclosure-spacer" />
+            <button
+              type="button"
+              onClick={() => onSelectFolder(null)}
+              aria-label={`${WORKSPACE_COPY.pagesWithoutBook}, ${countLabel(rootPageCount)}, ${selectedFolderId === null ? "open" : "closed"}`}
+              aria-pressed={selectedFolderId === null}
+              className="sidebar-item-select"
+            >
+              <span className="sidebar-item-title" title={WORKSPACE_COPY.pagesWithoutBook}>{WORKSPACE_COPY.pagesWithoutBook}</span>
+              <span className="sidebar-item-count" aria-hidden="true">{rootPageCount}</span>
+            </button>
+            <span aria-hidden="true" className="sidebar-actions-spacer" />
+          </div>
         </li>
 
         {tree.length === 0 ? (
-          <li>
-            <p className="rounded border border-border bg-panel px-3 py-2 text-xs font-semibold leading-5 text-muted">
-              No books yet. Create a book to group related pages.
-            </p>
+          <li className="sidebar-empty-state">
+            <strong>No books yet</strong>
+            <span>Create one to group related pages.</span>
           </li>
         ) : null}
 
@@ -91,10 +96,7 @@ export function FolderTree({
   );
 }
 
-type FolderTreeRowProps = Omit<FolderTreeProps, "folders"> & {
-  node: FolderNode;
-  depth: number;
-};
+type FolderTreeRowProps = Omit<FolderTreeProps, "folders"> & { node: FolderNode; depth: number };
 
 function FolderTreeRow({
   node,
@@ -113,68 +115,47 @@ function FolderTreeRow({
   const hasChildren = children.length > 0;
   const isSelected = selectedFolderId === folder.id;
   const pageCount = documents.filter((document) => document.folderId === folder.id).length;
+  const rowStyle = { "--tree-depth": Math.min(depth, 4) } as CSSProperties;
 
   return (
-    <li>
-      <div className="group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
-        <button
-          type="button"
-          onClick={() => hasChildren && onToggleFolder(folder.id)}
-          disabled={!hasChildren}
-          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
-          aria-expanded={hasChildren ? isExpanded : undefined}
-          aria-controls={hasChildren ? `book-children-${folder.id}` : undefined}
-          title={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
-          className="flex h-9 w-7 shrink-0 items-center justify-center rounded text-muted transition hover:bg-surface-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
-        >
-          {hasChildren ? (
-            isExpanded ? (
-              <ChevronDown aria-hidden="true" className="h-4 w-4" />
-            ) : (
-              <ChevronRight aria-hidden="true" className="h-4 w-4" />
-            )
-          ) : (
-            <span aria-hidden="true" className="h-4 w-4" />
-          )}
-        </button>
+    <li className="sidebar-book-item">
+      <div className="sidebar-book-row" data-selected={isSelected} style={rowStyle}>
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={() => onToggleFolder(folder.id)}
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
+            aria-expanded={isExpanded}
+            aria-controls={`book-children-${folder.id}`}
+            title={`${isExpanded ? "Collapse" : "Expand"} ${folder.name}`}
+            className="sidebar-disclosure"
+          >
+            {isExpanded ? <ChevronDown aria-hidden="true" className="h-4 w-4" /> : <ChevronRight aria-hidden="true" className="h-4 w-4" />}
+          </button>
+        ) : <span aria-hidden="true" className="sidebar-disclosure-spacer" />}
 
         <button
           type="button"
           onClick={() => onSelectFolder(folder.id)}
-          aria-label={`${folder.name} book, ${pageCount} ${pageCount === 1 ? "page" : "pages"}, ${isSelected ? "open" : "closed"}`}
+          aria-label={`${folder.name} book, ${countLabel(pageCount)}, ${isSelected ? "open" : "closed"}`}
           aria-pressed={isSelected}
           title={`Open ${folder.name} book`}
-          className={`min-w-0 flex-1 rounded border px-2 py-2 text-left text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-accent ${
-            isSelected ? "border-accent-files bg-accent-files text-accent-on shadow-soft" : "border-transparent text-muted hover:text-ink"
-          }`}
+          className="sidebar-item-select"
         >
-          <span className="block truncate">{folder.name}</span>
+          <span className="sidebar-item-title" title={folder.name}>{folder.name}</span>
+          <span className="sidebar-item-count" aria-hidden="true">{pageCount}</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onRenameFolder(folder)}
-          className="rounded px-2 py-1 text-xs font-black text-muted opacity-100 transition hover:bg-panel hover:text-ink focus:outline-none focus:ring-2 focus:ring-accent-files sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
-          aria-label={`Rename ${folder.name}`}
-          title={`Rename ${folder.name}`}
-        >
-          Rename
-        </button>
-
-        <IconButton label={`Create book inside ${folder.name}`} onClick={() => onCreateFolder(folder.id)} className="h-8 w-8">
-          <BookOpen aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
-        <IconButton label={`Delete ${folder.name}`} onClick={() => onDeleteFolder(folder.id)} className="h-8 w-8">
-          <Trash2 aria-hidden="true" className="h-4 w-4" />
-        </IconButton>
+        <BookActionsMenu
+          folder={folder}
+          onCreateInside={() => onCreateFolder(folder.id)}
+          onRename={() => onRenameFolder(folder)}
+          onDelete={() => onDeleteFolder(folder.id)}
+        />
       </div>
 
       {hasChildren && isExpanded ? (
-        <ul
-          id={`book-children-${folder.id}`}
-          className="m-0 mt-1 list-none space-y-1 p-0"
-          aria-label={`Books inside ${folder.name}`}
-        >
+        <ul id={`book-children-${folder.id}`} className="sidebar-book-children" aria-label={`Books inside ${folder.name}`}>
           {children.map((child) => (
             <FolderTreeRow
               key={child.folder.id}
