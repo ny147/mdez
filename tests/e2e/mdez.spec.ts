@@ -192,8 +192,19 @@ async function makeWorkspaceBackup() {
 
 async function createBook(page: Page, name: string) {
   await page.getByRole("main").getByRole("button", { name: "Create book", exact: true }).click();
+  await submitBookDialog(page, name);
+}
+
+async function submitBookDialog(page: Page, name: string) {
   await page.getByRole("textbox", { name: "Book name" }).fill(name);
   await page.getByRole("dialog").getByRole("button", { name: "Create book" }).click();
+}
+
+async function createNestedBook(page: Page, parentName: string, name: string) {
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await sidebar.getByRole("button", { name: `Manage ${parentName}` }).click();
+  await sidebar.getByRole("menuitem", { name: `Create book inside ${parentName}` }).click();
+  await submitBookDialog(page, name);
 }
 
 async function createBookWithPages(page: Page, name: string, pageCount: number) {
@@ -263,7 +274,7 @@ test("book dialog creates a named book without a native prompt", async ({ page }
   await dialog.getByRole("textbox", { name: "Book name" }).fill("Research");
   await dialog.getByRole("button", { name: "Create book" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("main").getByRole("button", { name: /Research book, 0 pages/ })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("button", { name: /Research book, Empty/ })).toBeVisible();
   expect(nativePrompts).toEqual([]);
 });
 
@@ -376,10 +387,11 @@ test("workspace polish distinguishes primary actions and active modes", async ({
   const shelfCreate = page.getByRole("main").getByRole("button", { name: "Create page", exact: true });
   const sidebarCreate = page
     .getByRole("complementary", { name: "Library shelf" })
-    .locator('button[data-visual-priority="secondary"]');
+    .getByRole("button", { name: "Create page", exact: true });
 
   await expect(shelfCreate).toHaveAttribute("data-visual-priority", "primary");
-  await expect(sidebarCreate).toHaveAttribute("data-visual-priority", "secondary");
+  await expect(sidebarCreate).toHaveClass(/sidebar-header-action/);
+  await expect(sidebarCreate).not.toHaveAttribute("data-visual-priority", "primary");
 
   const shelfTab = page.getByRole("tab", { name: "Shelf", exact: true }).first();
   await expect(shelfTab).toHaveAttribute("data-active-treatment", "filled");
@@ -437,13 +449,12 @@ test("book hierarchy uses nested lists with explicit selection and expansion sta
   await expect(books).toBeVisible();
   await expect(books.getByRole("button", { name: "Pages without a book" })).toHaveAttribute("aria-pressed", "true");
 
-  page.once("dialog", (dialog) => dialog.accept("Projects"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
+  await submitBookDialog(page, "Projects");
   const projects = books.getByTitle("Open Projects book");
   await expect(projects).toHaveAttribute("aria-pressed", "true");
 
-  page.once("dialog", (dialog) => dialog.accept("Launch"));
-  await sidebar.getByRole("button", { name: "Create book inside Projects" }).click();
+  await createNestedBook(page, "Projects", "Launch");
 
   await expect(projects).toHaveAttribute("aria-pressed", "false");
   const expandProjects = books.getByRole("button", { name: "Collapse Projects" });
@@ -563,8 +574,9 @@ test("workspace polish keeps localized titles and icon actions discoverable", as
   await showShelfIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  const sidebarTitle = sidebar.getByTitle(title);
-  await expect(sidebarTitle).toHaveCSS("-webkit-line-clamp", "2");
+  const sidebarTitle = sidebar.locator(".sidebar-page-row .sidebar-item-title").filter({ hasText: title });
+  await expect(sidebarTitle).toHaveCSS("white-space", "nowrap");
+  await expect(sidebarTitle).toHaveCSS("text-overflow", "ellipsis");
   await expect(sidebarTitle).toHaveAttribute("title", title);
 
   for (const name of ["Toggle sidebar", "Shared links", "Open library shelf"]) {
@@ -657,15 +669,17 @@ test("missing routes use the quiet Library recovery surface", async ({ page }) =
 });
 
 test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
-  const bookZipButton = page.getByRole("button", { name: "Export book (.zip)", exact: true }).last();
+  await page.getByRole("button", { name: "More Shelf actions" }).click();
+  const bookZipButton = page.getByRole("menuitem", { name: /Export book \(\.zip\)/ });
 
   await expect(bookZipButton).toBeVisible();
   await expect(bookZipButton).toBeDisabled();
 });
 
 test("global actions have one visible home", async ({ page }) => {
-  await expect(page.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(1);
-  await expect(page.getByRole("button", { name: /^(Export book \(.zip\)|Book ZIP for open book in Shelf)$/ })).toHaveCount(1);
+  await page.getByRole("button", { name: "More Shelf actions" }).click();
+  await expect(page.getByRole("menuitem", { name: /Import Markdown/ })).toHaveCount(1);
+  await expect(page.getByRole("menuitem", { name: /Export book \(\.zip\)/ })).toHaveCount(1);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await expect(sidebar.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(0);
@@ -768,15 +782,16 @@ test("sidebar shortcut does not steal focus from editable content", async ({ pag
 
 test("an open book explains filtering and export scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
-  page.once("dialog", (dialog) => dialog.accept("Writing"));
   await page.getByRole("button", { name: "Create book" }).first().click();
+  await submitBookDialog(page, "Writing");
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await sidebar.getByRole("button", { name: "Create page in Writing", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
 
   await expect(page.getByText("Showing recent pages in Writing. Return to Library to view recent pages from every book.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Export Writing (.zip)" })).toBeEnabled();
+  await page.getByRole("button", { name: "More Shelf actions" }).click();
+  await expect(page.getByRole("menuitem", { name: /Export Writing \(\.zip\)/ })).toBeEnabled();
 });
 
 
@@ -933,7 +948,7 @@ test("drawer, table of contents, and dialog share floating elevation", async ({ 
   await page.getByRole("button", { name: "Close table of contents" }).click();
 
   await showShelfIfAvailable(page);
-  await clickVisibleButtonIfAvailable(page, "Import Markdown");
+  await openShelfImport(page);
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   const dialogShadow = await dialog.evaluate((node) => getComputedStyle(node).boxShadow);
   expect(dialogShadow).toBe(tocShadow);
@@ -1032,15 +1047,15 @@ test("import source tabs support arrows and the dialog restores focus", async ({
   const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
   const pasteTab = dialog.getByRole("tab", { name: "Paste text" });
   const filesTab = dialog.getByRole("tab", { name: "Choose files" });
-  const githubTab = dialog.getByRole("tab", { name: "GitHub repository" });
+  const restoreTab = dialog.getByRole("tab", { name: "Restore backup" });
 
   await pasteTab.press("ArrowRight");
   await expect(filesTab).toHaveAttribute("aria-selected", "true");
   await expect(filesTab).toBeFocused();
 
   await filesTab.press("End");
-  await expect(githubTab).toHaveAttribute("aria-selected", "true");
-  await expect(githubTab).toBeFocused();
+  await expect(restoreTab).toHaveAttribute("aria-selected", "true");
+  await expect(restoreTab).toBeFocused();
 
   await dialog.getByRole("button", { name: "Close import dialog" }).click();
   await expect(trigger).toBeFocused();
@@ -1314,20 +1329,20 @@ test("exports the selected document as markdown", async ({ page }) => {
 
 test("creates nested folders and blocks deleting non-empty folder", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
-  page.once("dialog", (dialog) => dialog.accept("Projects"));
   await page.getByRole("button", { name: "Create book", exact: true }).first().click();
+  await submitBookDialog(page, "Projects");
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await expect(sidebar.getByRole("button", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
-  page.once("dialog", (dialog) => dialog.accept("Launch"));
-  await page.getByRole("button", { name: "Create book inside Projects" }).click();
+  await createNestedBook(page, "Projects", "Launch");
   await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
   await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Launch", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
   await openShelfDrawerIfAvailable(page);
-  await page.getByRole("button", { name: "Delete Projects" }).click();
+  await sidebar.getByRole("button", { name: "Manage Projects" }).click();
+  await sidebar.getByRole("menuitem", { name: "Delete Projects" }).click();
   await expect(
     page.getByRole("complementary", { name: "Library shelf" }).getByText("Move or delete nested books and pages", { exact: false })
   ).toBeVisible();
@@ -1335,13 +1350,12 @@ test("creates nested folders and blocks deleting non-empty folder", async ({ pag
 
 test("exports a nested folder ZIP rooted at the selected folder", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
-  page.once("dialog", (dialog) => dialog.accept("Projects"));
   await page.getByRole("button", { name: "Create book", exact: true }).first().click();
+  await submitBookDialog(page, "Projects");
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await expect(sidebar.getByRole("button", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
 
-  page.once("dialog", (dialog) => dialog.accept("Launch"));
-  await page.getByRole("button", { name: "Create book inside Projects" }).click();
+  await createNestedBook(page, "Projects", "Launch");
   await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
 
   await showShelfIfAvailable(page);
@@ -1355,7 +1369,8 @@ test("exports a nested folder ZIP rooted at the selected folder", async ({ page 
   await showShelfIfAvailable(page);
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export Launch (.zip)", exact: true }).click();
+  await page.getByRole("button", { name: "More Shelf actions" }).click();
+  await page.getByRole("menuitem", { name: /Export Launch \(\.zip\)/ }).click();
   const download = await downloadPromise;
   const zip = await JSZip.loadAsync(await readFile((await download.path())!));
 

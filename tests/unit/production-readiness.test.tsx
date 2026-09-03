@@ -62,10 +62,11 @@ describe("production readiness", () => {
   it("routes sidebar renames through the document draft title queue", () => {
     const workspaceSource = readFileSync(resolve(process.cwd(), "src/components/mdez/MdezWorkspace.tsx"), "utf8");
 
-    expect(workspaceSource).toContain("renameTitleById: renameDraftTitle");
-    expect(workspaceSource).toContain("await renameDraftTitle(documentId, title)");
+    expect(workspaceSource).toContain("changeTitle: handleDraftTitleChange");
+    expect(workspaceSource).toContain("onRename={handleDraftTitleChange}");
+    expect(workspaceSource).toContain("function handleRequestRenameDocument(documentId: string)");
+    expect(workspaceSource).toContain("requestTitleFocus(documentId)");
     expect(workspaceSource).not.toContain("const updated = await renameDocument(documentId, title)");
-    expect(workspaceSource).toContain('setError("Could not rename page.")');
   });
 
   it("composes repository-backed library orchestration through a named controller", () => {

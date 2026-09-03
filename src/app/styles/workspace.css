@@ -405,6 +405,11 @@ a:focus-visible {
   font-size: 0.8125rem;
 }
 
+.sidebar-search-field input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+  appearance: none;
+}
+
 .sidebar-search-icon {
   position: absolute;
   z-index: 1;
