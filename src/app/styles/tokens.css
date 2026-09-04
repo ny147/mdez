@@ -39,6 +39,6 @@
   --radius-surface: 0.75rem;
   --topbar-h: 3rem;
   --status-h: 1.75rem;
-  --sidebar-w: 15rem;
+  --sidebar-w: clamp(17.75rem, 22.25vw, 19rem);
   --rail-w: 2.75rem;
 }

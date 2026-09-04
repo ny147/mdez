@@ -173,6 +173,61 @@ for (const width of [320, 390, 414, 768, 1024, 1243, 1280, 1440, 1920]) {
   });
 }
 
+for (const width of [1024, 1280, 1440]) {
+  test(`desktop sidebar preserves built-in labels at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const toggle = page.getByRole("button", { name: "Toggle sidebar" });
+    if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
+
+    const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+    await expect(sidebar.locator(".sidebar-book-row-root .sidebar-item-title")).toBeVisible();
+    const evidence = await page.evaluate(() => {
+      const labelMetrics = (selector: string) => {
+        const element = document.querySelector<HTMLElement>(selector)!;
+        return { client: element.clientWidth, scroll: element.scrollWidth };
+      };
+      const headers = Array.from(document.querySelectorAll<HTMLElement>(".sidebar-section-header"));
+      const search = document.querySelector<HTMLInputElement>(".sidebar-search-field input")!;
+      const style = getComputedStyle(search);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d")!;
+      context.font = style.font;
+      const searchContentWidth = search.clientWidth
+        - Number.parseFloat(style.paddingLeft)
+        - Number.parseFloat(style.paddingRight);
+
+      return {
+        sidebarWidth: document.querySelector<HTMLElement>(".workspace-sidebar")!.getBoundingClientRect().width,
+        wordmark: labelMetrics(".workspace-wordmark"),
+        rootTitle: labelMetrics(".sidebar-book-row-root .sidebar-item-title"),
+        searchContentWidth,
+        searchTextWidth: context.measureText(search.placeholder).width,
+        headers: headers.map((header) => {
+          const [heading, action] = Array.from(header.children) as HTMLElement[];
+          return {
+            client: header.clientWidth,
+            scroll: header.scrollWidth,
+            headingClient: heading.clientWidth,
+            headingScroll: heading.scrollWidth,
+            gap: action.getBoundingClientRect().left - heading.getBoundingClientRect().right
+          };
+        })
+      };
+    });
+
+    expect(evidence.sidebarWidth).toBeGreaterThanOrEqual(272);
+    expect(evidence.sidebarWidth).toBeLessThanOrEqual(304);
+    expect(evidence.wordmark.client).toBeGreaterThanOrEqual(evidence.wordmark.scroll);
+    expect(evidence.rootTitle.client).toBeGreaterThanOrEqual(evidence.rootTitle.scroll);
+    expect(evidence.searchContentWidth).toBeGreaterThanOrEqual(evidence.searchTextWidth);
+    for (const header of evidence.headers) {
+      expect(header.scroll).toBeLessThanOrEqual(header.client);
+      expect(header.headingScroll).toBeLessThanOrEqual(header.headingClient);
+      expect(header.gap).toBeGreaterThanOrEqual(8);
+    }
+  });
+}
+
 async function makeWorkspaceBackup() {
   const zip = new JSZip();
   const timestamp = "2026-09-01T00:00:00.000Z";
