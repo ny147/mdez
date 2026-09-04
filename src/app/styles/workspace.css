@@ -654,11 +654,11 @@ a:focus-visible {
 .sidebar-book-row:hover { background: color-mix(in srgb, var(--color-shelf) 6%, var(--color-paper)); }
 
 .sidebar-book-row[data-selected="true"] {
-  background: color-mix(in srgb, var(--color-shelf) 12%, var(--color-paper));
+  background: color-mix(in srgb, var(--color-shelf) 8%, var(--color-paper));
   color: var(--color-ink);
 }
 
-.sidebar-book-row[data-selected="true"]::before { background: var(--color-shelf-text); }
+.sidebar-book-row[data-selected="true"]::before { width: 2px; background: var(--color-shelf-text); }
 
 .sidebar-disclosure,
 .sidebar-disclosure-spacer,
@@ -695,7 +695,7 @@ a:focus-visible {
   text-align: left;
 }
 
-.sidebar-item-select[aria-pressed="true"] { color: var(--color-ink); font-weight: 800; }
+.sidebar-item-select[aria-pressed="true"] { color: var(--color-ink); font-weight: 700; }
 
 .sidebar-item-title {
   min-width: 0;

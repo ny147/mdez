@@ -15,6 +15,7 @@ import {
   refreshGitHubSource,
   renameFolder
 } from "@/lib/repository";
+import { nextUntitledPageTitle } from "@/lib/document-titles";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession, GitHubSource } from "@/types/github";
 
@@ -227,7 +228,8 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
 
   const createPage = useCallback(async () => {
     try {
-      const document = await createDocument({ title: "untitled.md", body: "# Untitled\n", folderId: selectedFolderId });
+      const title = nextUntitledPageTitle(documents, selectedFolderId);
+      const document = await createDocument({ title, body: "# Untitled\n", folderId: selectedFolderId });
       setError(null);
       setSelectedDocumentId(document.id);
       await loadContent(document.id);
@@ -236,7 +238,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
       setError("Could not create page.");
       throw cause;
     }
-  }, [loadContent, selectedFolderId]);
+  }, [documents, loadContent, selectedFolderId]);
 
   const importPages = useCallback(async (items: { title: string; body: string }[], folderId: string | null) => {
     try {

@@ -656,6 +656,43 @@ test("narrow mobile drawer preserves sidebar labels without horizontal overflow"
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(295);
 });
+
+test("new pages receive distinct default names within their book", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+
+  await page.getByRole("main").getByRole("button", { name: "Create page", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("untitled.md");
+  await sidebar.getByRole("button", { name: "Create page", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("untitled-2.md");
+
+  await expect(sidebar.getByRole("button", { name: "Open untitled.md" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Open untitled-2.md" })).toBeVisible();
+});
+
+test("book selection stays quieter than the active page", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("main").getByRole("button", { name: "Create page", exact: true }).click();
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.locator(".sidebar-book-row[data-selected='true']")).toBeVisible();
+  await expect(sidebar.locator(".sidebar-page-row[data-selected='true']")).toBeVisible();
+  const hierarchy = await sidebar.evaluate((sidebar) => {
+    const bookRow = sidebar.querySelector<HTMLElement>(".sidebar-book-row[data-selected='true']");
+    const bookSelect = bookRow?.querySelector<HTMLElement>(".sidebar-item-select");
+    const pageRow = sidebar.querySelector<HTMLElement>(".sidebar-page-row[data-selected='true']");
+    const pageTitle = pageRow?.querySelector<HTMLElement>(".sidebar-item-title");
+    return {
+      bookIndicatorWidth: Number.parseFloat(getComputedStyle(bookRow!, "::before").width),
+      bookWeight: Number.parseInt(getComputedStyle(bookSelect!).fontWeight, 10),
+      pageIndicatorWidth: Number.parseFloat(getComputedStyle(pageRow!, "::before").width),
+      pageWeight: Number.parseInt(getComputedStyle(pageTitle!).fontWeight, 10)
+    };
+  });
+
+  expect(hierarchy.bookIndicatorWidth).toBeLessThan(hierarchy.pageIndicatorWidth);
+  expect(hierarchy.bookWeight).toBeLessThan(hierarchy.pageWeight);
+});
 test("library copy explains page and book scope", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
   await openShelfDrawerIfAvailable(page);
