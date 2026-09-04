@@ -636,6 +636,12 @@ a:focus-visible {
   transition: background-color 150ms ease, color 150ms ease;
 }
 
+.sidebar-book-row-root {
+  grid-template-columns: 1.75rem minmax(0, 1fr) 0;
+}
+
+.sidebar-book-row-root .sidebar-actions-spacer { display: none; }
+
 .sidebar-book-row::before {
   position: absolute;
   inset: 0 auto 0 0;
@@ -887,6 +893,7 @@ a:focus-visible {
   .sidebar-disclosure,
   .sidebar-item-actions-trigger { width: 2.75rem; height: 2.75rem; }
   .sidebar-book-row { grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; min-height: 2.75rem; }
+  .sidebar-book-row-root { grid-template-columns: 2.75rem minmax(0, 1fr) 0; }
   .sidebar-page-row { grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem; min-height: 3.25rem; }
 }
 
@@ -1021,7 +1028,7 @@ a:focus-visible {
     position: fixed;
     inset: var(--topbar-h) auto var(--status-h) 0;
     z-index: 70;
-    width: min(19rem, 86vw);
+    width: min(20rem, calc(100vw - 0.75rem));
 
     transform: translateX(0);
   }
@@ -1029,6 +1036,17 @@ a:focus-visible {
   .workspace-sidebar[aria-hidden="true"] {
     transform: translateX(-105%);
   }
+
+  .sidebar-book-row,
+  .sidebar-page-row {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  }
+
+  .sidebar-book-row-root {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 0;
+  }
+
+  .sidebar-item-actions { width: 100%; }
 
   .workspace-scrim {
     position: fixed;

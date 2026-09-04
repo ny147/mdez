@@ -629,6 +629,33 @@ test("mobile drawer makes the workspace inert", async ({ page }) => {
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
   await expect(trigger).toBeFocused();
 });
+
+test("narrow mobile drawer preserves sidebar labels without horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 295, height: 844 });
+  await page.getByRole("button", { name: "Open library shelf" }).click();
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const rootTitle = sidebar.locator(".sidebar-book-row .sidebar-item-title").first();
+  const libraryScroll = sidebar.locator(".sidebar-library-scroll");
+  const metrics = await sidebar.evaluate((element) => {
+    const title = element.querySelector<HTMLElement>(".sidebar-book-row .sidebar-item-title");
+    return {
+      right: element.getBoundingClientRect().right,
+      titleClientWidth: title?.clientWidth ?? 0,
+      titleScrollWidth: title?.scrollWidth ?? 0,
+      viewportWidth: window.innerWidth
+    };
+  });
+
+  await expect(rootTitle).toHaveText("Pages without a book");
+  await expect(page.locator(".workspace-wordmark")).toBeHidden();
+  expect(metrics.right).toBeLessThanOrEqual(metrics.viewportWidth);
+  expect(metrics.titleClientWidth).toBeGreaterThanOrEqual(metrics.titleScrollWidth);
+  expect(await libraryScroll.evaluate((element) => element.scrollWidth)).toBe(
+    await libraryScroll.evaluate((element) => element.clientWidth)
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(295);
+});
 test("library copy explains page and book scope", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
   await openShelfDrawerIfAvailable(page);

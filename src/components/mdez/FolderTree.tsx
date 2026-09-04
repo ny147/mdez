@@ -53,7 +53,7 @@ export function FolderTree({
 
       <ul className="sidebar-book-list" aria-label="Books and pages">
         <li className="sidebar-book-item">
-          <div className="sidebar-book-row" data-selected={selectedFolderId === null}>
+          <div className="sidebar-book-row sidebar-book-row-root" data-selected={selectedFolderId === null}>
             <span aria-hidden="true" className="sidebar-disclosure-spacer" />
             <button
               type="button"
