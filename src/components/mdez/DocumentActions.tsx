@@ -43,6 +43,7 @@ export function DocumentActions({ document, folders, onRename, onMove, onDelete 
 
   function select(action: () => void) {
     setOpen(false);
+    triggerRef.current?.focus();
     action();
   }
 

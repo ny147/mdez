@@ -54,6 +54,15 @@ describe("workspace backups", () => {
     await expect(previewWorkspaceBackup(new File(["nope"], "library.zip"))).rejects.toThrow("Choose an Mdez workspace backup ending in .mdez.zip.");
   });
 
+  it("rejects a highly compressed Markdown page that inflates beyond the safe entry limit", async () => {
+    const { zip, manifest } = await editableBackup();
+    zip.file(manifest.documents[0].path, "A".repeat(10 * 1024 * 1024 + 1));
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 9 } });
+    expect(blob.size).toBeLessThan(1024 * 1024);
+
+    await expect(previewWorkspaceBackup(new File([blob], "library.mdez.zip"))).rejects.toThrow("A file in the backup expands beyond 10 MB.");
+  });
+
   it("rejects unsafe and undeclared archive paths", async () => {
     const { zip } = await editableBackup();
     zip.file("undeclared.md", "unsafe");

@@ -56,10 +56,10 @@ async function clickViewportModeTab(page: import("@playwright/test").Page, name:
   const navigation = page.locator(viewportWidth <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
   const control = navigation.getByRole("tab", { name, exact: true });
 
-  if ((await control.getAttribute("aria-selected")) !== "true") {
-    await control.evaluate((element) => (element as HTMLElement).click());
-  }
-  await expect(control).toHaveAttribute("aria-selected", "true");
+  await expect(async () => {
+    if ((await control.getAttribute("aria-selected")) !== "true") await control.click();
+    expect(await control.getAttribute("aria-selected")).toBe("true");
+  }).toPass({ timeout: 5_000 });
 }
 
 async function expectModeReady(page: import("@playwright/test").Page, mode: "Shelf" | "Edit" | "Read" | "Split") {
@@ -225,6 +225,33 @@ for (const width of [1024, 1280, 1440]) {
       expect(header.headingScroll).toBeLessThanOrEqual(header.headingClient);
       expect(header.gap).toBeGreaterThanOrEqual(8);
     }
+  });
+}
+
+for (const width of [768, 900]) {
+  test(`tablet topbar keeps brand, modes, and actions in one contained row at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const topbar = page.locator(".workspace-topbar");
+    const brand = topbar.locator(".workspace-brand");
+    const modes = topbar.locator(".workspace-mode-nav");
+    const actions = topbar.locator(".workspace-actions");
+    const [topbarBox, brandBox, modesBox, actionsBox] = await Promise.all([
+      topbar.boundingBox(),
+      brand.boundingBox(),
+      modes.boundingBox(),
+      actions.boundingBox()
+    ]);
+
+    expect(topbarBox).not.toBeNull();
+    expect(brandBox).not.toBeNull();
+    expect(modesBox).not.toBeNull();
+    expect(actionsBox).not.toBeNull();
+    for (const child of [brandBox!, modesBox!, actionsBox!]) {
+      expect(child.y).toBeGreaterThanOrEqual(topbarBox!.y);
+      expect(child.y + child.height).toBeLessThanOrEqual(topbarBox!.y + topbarBox!.height);
+    }
+    expect(brandBox!.x + brandBox!.width).toBeLessThanOrEqual(modesBox!.x);
+    expect(modesBox!.x + modesBox!.width).toBeLessThanOrEqual(actionsBox!.x);
   });
 }
 

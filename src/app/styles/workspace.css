@@ -1365,14 +1365,6 @@ a:focus-visible {
     background: var(--color-paper);
   }
 
-  .workspace-topbar {
-    grid-template-columns: minmax(0, 1fr) max-content;
-  }
-
-  .workspace-actions {
-    grid-column: 2;
-  }
-
   .workspace-brand {
     overflow: hidden;
   }

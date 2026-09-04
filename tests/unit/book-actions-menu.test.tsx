@@ -53,4 +53,5 @@ it("closes before invoking the selected action", () => {
 
   expect(onRename).toHaveBeenCalledOnce();
   expect(screen.queryByRole("menu", { name: "Writing actions" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Manage Writing" })).toHaveFocus();
 });

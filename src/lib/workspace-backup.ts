@@ -8,6 +8,26 @@ import type { ParsedWorkspaceBackup, PreparedWorkspaceRestore, WorkspaceBackupMa
 
 const MAX_COMPRESSED_BYTES = 100 * 1024 * 1024;
 const MAX_ENTRIES = 10_000;
+const MAX_ENTRY_UNCOMPRESSED_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
+
+type SizedZipObject = JSZip.JSZipObject & {
+  _data?: { uncompressedSize?: number };
+};
+
+function validateUncompressedSizes(entries: JSZip.JSZipObject[]) {
+  let totalBytes = 0;
+  for (const entry of entries) {
+    if (entry.dir) continue;
+    const entryBytes = (entry as SizedZipObject)._data?.uncompressedSize;
+    if (!Number.isSafeInteger(entryBytes) || entryBytes === undefined || entryBytes < 0) {
+      throw new Error("Mdez could not verify the expanded size of this backup.");
+    }
+    if (entryBytes > MAX_ENTRY_UNCOMPRESSED_BYTES) throw new Error("A file in the backup expands beyond 10 MB.");
+    totalBytes += entryBytes;
+    if (totalBytes > MAX_TOTAL_UNCOMPRESSED_BYTES) throw new Error("The backup expands beyond 100 MB.");
+  }
+}
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   if (typeof blob.arrayBuffer === "function") return blob.arrayBuffer();
@@ -127,6 +147,7 @@ export async function previewWorkspaceBackup(file: File): Promise<WorkspaceBacku
   catch { throw new Error("Mdez could not read this backup archive."); }
   const entries = Object.values(zip.files);
   if (entries.length > MAX_ENTRIES) throw new Error("The backup contains more than 10,000 files.");
+  validateUncompressedSizes(entries);
   const manifestEntry = zip.file("manifest.json");
   if (!manifestEntry) throw new Error("The backup is missing manifest.json.");
   let rawManifest: unknown;

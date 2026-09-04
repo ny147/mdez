@@ -61,6 +61,7 @@ export function BookActionsMenu({ folder, onCreateInside, onRename, onDelete }: 
 
   function select(action: () => void) {
     setOpen(false);
+    triggerRef.current?.focus();
     action();
   }
 

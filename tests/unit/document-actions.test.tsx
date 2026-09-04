@@ -59,5 +59,7 @@ it("closes the popover after moving a page", () => {
   fireEvent.change(screen.getByRole("combobox", { name: "Move Notes page" }), { target: { value: "writing" } });
 
   expect(onMove).toHaveBeenCalledWith("writing");
-  expect(screen.getByRole("button", { name: "Manage Notes" })).toHaveAttribute("aria-expanded", "false");
+  const trigger = screen.getByRole("button", { name: "Manage Notes" });
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(trigger).toHaveFocus();
 });
