@@ -9,10 +9,7 @@ min-height: 100%;
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--color-shelf) 8%, transparent), transparent 26rem),
-    radial-gradient(circle at 86% 10%, color-mix(in srgb, var(--color-edit) 10%, transparent), transparent 22rem),
-    linear-gradient(135deg, var(--color-canvas), var(--color-lavender));
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-ui);
 }
@@ -203,9 +200,7 @@ a:focus-visible {
   height: 100dvh;
   overflow: hidden;
   color: var(--color-ink);
-  background:
-    repeating-linear-gradient(90deg, transparent 0, transparent calc(8.333vw - 1px), color-mix(in srgb, var(--color-rule) 28%, transparent) calc(8.333vw - 1px), color-mix(in srgb, var(--color-rule) 28%, transparent) 8.333vw),
-    linear-gradient(135deg, var(--color-canvas), color-mix(in srgb, var(--color-lavender) 58%, var(--color-canvas)));
+  background: var(--color-canvas);
 }
 
 .workspace-shell[data-mode="shelf"] { --mode-accent: var(--color-shelf); }
@@ -223,7 +218,7 @@ a:focus-visible {
   align-items: center;
   min-width: 0;
   border-bottom: 1px solid var(--color-rule);
-  background: color-mix(in srgb, var(--color-panel) 94%, transparent);
+  background: var(--color-canvas);
 }
 
 .workspace-brand,
@@ -347,8 +342,8 @@ a:focus-visible {
   border: 0;
   border-right: 1px solid var(--color-rule);
   border-radius: 0;
-  background: color-mix(in srgb, var(--color-panel) 92%, transparent);
-  padding: 0.75rem;
+  background: var(--color-panel);
+  padding: 1.25rem;
   opacity: 1;
   transition: opacity 180ms ease, transform 200ms cubic-bezier(0.2, 0, 0, 1);
 }
@@ -408,7 +403,7 @@ a:focus-visible {
 }
 
 .sidebar-collection-button:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-edit);
   outline-offset: 1px;
 }
 
@@ -464,7 +459,7 @@ a:focus-visible {
 
 .sidebar-page-open:focus-visible,
 .page-actions-trigger:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-edit);
   outline-offset: 1px;
 }
 
@@ -525,16 +520,18 @@ a:focus-visible {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding: 1rem;
+  padding: 0 2.75rem;
 }
 
 .workspace-surface {
+  width: min(100%, 77.5rem);
   min-height: 100%;
-  border: 1px solid var(--color-rule);
-  border-radius: var(--radius-surface);
-  background: color-mix(in srgb, var(--color-paper) 94%, transparent);
+  margin-inline: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-canvas);
   box-shadow: none;
-  padding: var(--space-4);
+  padding: 2.75rem 0 1.5625rem;
 }
 
 .workspace-status {
@@ -637,7 +634,7 @@ a:focus-visible {
   }
 
   .workspace-main {
-    padding: 0.75rem;
+    padding: 0 1.5rem;
   }
 
   .split-workspace[data-orientation="horizontal"] {
@@ -865,8 +862,9 @@ a:focus-visible {
 }
 
 @media (max-width: 767px) {
-  .workspace-shell { background: linear-gradient(135deg, var(--color-canvas), var(--color-lavender)); }
-  .workspace-surface { border-radius: var(--radius-control); padding: var(--space-3); }
+  .workspace-shell { background: var(--color-canvas); }
+  .workspace-main { padding: 0 1rem; }
+  .workspace-surface { border-radius: 0; padding: 1.5rem 0 var(--space-3); }
 }
 .editor-toolbar {
   display: grid;

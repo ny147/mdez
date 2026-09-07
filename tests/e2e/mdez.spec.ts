@@ -137,7 +137,7 @@ test.beforeEach(async ({ page }) => {
 
 
 
-test("uses the renewed light library shell and mode accents", async ({ page }) => {
+test("uses the accepted spacious library shell and typography", async ({ page }) => {
   const shell = page.getByTestId("workspace-shell");
 
   await expect(shell).toBeVisible();
@@ -146,18 +146,26 @@ test("uses the renewed light library shell and mode accents", async ({ page }) =
 
   const colors = await shell.evaluate((node) => {
     const style = getComputedStyle(node);
-    return ["--color-canvas", "--color-edit", "--color-read", "--color-shelf"].map((name) => style.getPropertyValue(name).trim());
+    return ["--color-canvas", "--color-panel", "--color-ink", "--color-muted", "--color-edit", "--color-rule"].map((name) =>
+      style.getPropertyValue(name).trim()
+    );
   });
 
-  expect(colors).toEqual(["#fff7fc", "#8053c8", "#177f71", "#b8487a"]);
+  expect(colors).toEqual(["#fbfafc", "#f3f0f8", "#292735", "#706c7c", "#7052b8", "#e9e6ee"]);
 
-  const fonts = await page.evaluate(() => ({
+  const presentation = await page.evaluate(() => ({
     body: getComputedStyle(document.body).fontFamily,
-    heading: getComputedStyle(document.querySelector("h1")!).fontFamily
+    heading: getComputedStyle(document.querySelector("h1")!).fontFamily,
+    topbarHeight: getComputedStyle(document.querySelector(".workspace-topbar")!).height,
+    sidebarWidth: getComputedStyle(document.querySelector(".workspace-sidebar")!).width
   }));
 
-  expect(fonts.body).toContain("Inter");
-  expect(fonts.heading).toContain("Space Grotesk");
+  expect(presentation.body).toContain("DM Sans");
+  expect(presentation.heading).toContain("Manrope");
+  expect(presentation.topbarHeight).toBe("80px");
+  if (await page.evaluate(() => window.innerWidth >= 1024)) {
+    expect(presentation.sidebarWidth).toBe("238px");
+  }
 });
 
 test("workspace polish distinguishes primary actions and active modes", async ({ page }) => {
