@@ -129,4 +129,6 @@ Do not rename domain Folder/Document types to Book/Page merely to match UI label
 
 ## Delivery order
 
+User-confirmed implementation setup: first fetch/pull the latest `origin/main` while preserving local checkpoint commits; then create `codex/library-redesign` from the updated main in an isolated worktree. Revalidate code assumptions after pulling. No application work takes place on main. Follow plan section 0 for the exact sequence and conflict/restart handling. Planning itself does not execute this setup.
+
 Implement the shell first, metadata/search selectors next, covers and full shelf wiring next, then editor chrome and the final regression pass. Commit after each verified slice. Detailed execution checklist: `../plans/2026-09-06-library-redesign.md`.

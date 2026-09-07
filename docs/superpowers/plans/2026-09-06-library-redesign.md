@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-06-library-redesign.md`
 
+**Execution status:** planning complete; no remote update, feature branch creation, or application implementation has been performed. Execute section 0 only when implementation begins.
+
 ## Global constraints
 
 - Reference `mdez-redesign.html`; use real application records, never seed prototype content.
@@ -19,11 +21,40 @@
 - Preserve current persistence, draft recovery, Markdown, nested operations, imports, exports, sharing, and groups.
 - Every slice must leave a checkpoint and an explicit record of checks run. Do not begin a broad slice when the remaining usage allowance is too small to verify and save it.
 
+## 0. Update main, then create the implementation branch
+
+User-confirmed startup order: obtain latest remote main, preserve local design checkpoints, then create `codex/library-redesign` in an isolated worktree. These are execution instructions, not actions to perform while preparing this plan.
+
+- [ ] Read `docs/REDESIGN-RESUME.md`, this plan, the spec, and applicable repository instructions. Use the using-git-worktrees skill. Inspect `git status --short`, `git branch --show-current`, `git remote -v`, and `git worktree list`. Expected remote: `origin` at `https://github.com/ny147/mdez.git`. Preserve unrelated changes; do not automatically stash or discard them.
+- [ ] Record current main HEAD with `git rev-parse main`. Confirm the design/checkpoint history (`a7d43bf`, `d1d8dc0`, and subsequent planning commits) remains reachable. From a clean main checkout, run these commands sequentially, inspecting each result before continuing:
+
+```powershell
+git switch main
+git fetch origin
+git log --oneline --left-right main...origin/main
+git pull --no-rebase origin main
+git merge-base --is-ancestor origin/main main
+git status --short
+```
+
+`pull --no-rebase` preserves local checkpoint commits, fast-forwards when possible, and merges when local and remote main have diverged. Do not reset main to origin/main, force-push, or rebase away the checkpoints. A fetch/pull failure or unresolved conflict blocks branch creation; diagnose and resolve it without dropping either side's content, and record the result. Main must contain the fetched origin/main and have a clean working tree before the next step. No push is part of this startup.
+
+- [ ] Check that `codex/library-redesign` does not already exist and that `D:/Developer/mdez/.worktrees/library-redesign` is unused. Confirm `.worktrees` is Git-ignored with `git check-ignore .worktrees/`; follow the worktree skill if it is not. Create the requested branch only after updating main:
+
+```powershell
+git worktree add -b codex/library-redesign D:/Developer/mdez/.worktrees/library-redesign main
+```
+
+If the branch/path already exists, inspect it for an earlier implementation run and resume that work when it matches; never overwrite it or silently invent a different branch.
+
+- [ ] In the new worktree, verify `git branch --show-current` returns `codex/library-redesign`, `git merge-base --is-ancestor origin/main HEAD` succeeds, `git status --short` is clean, and the HTML/spec/plan/glossary are present. Record the fetched origin/main SHA and implementation starting SHA in the resume file. Recheck code assumptions against the updated source, particularly Dexie versions: if version 5 is now used, choose the next unused additive version and update the spec/tests before coding.
+- [ ] Run `npm ci` in the implementation worktree. Perform every subsequent application edit and test there, not in the main checkout. Save checkpoints after each verified slice. This plan does not authorize merging the completed feature into main or deploying it.
+
 ## 1. Establish baseline and apply shell
 
 Files: `src/app/layout.tsx`, `src/app/styles/tokens.css`, `src/app/styles/workspace.css`, `src/components/mdez/MdezWorkspace.tsx`, `Sidebar.tsx`, `WorkspaceSwitcher.tsx`; existing `tests/e2e/mdez.spec.ts` and `tests/unit/useWorkspaceViewport.test.tsx`.
 
-- [ ] Read the spec, HTML, active library and draft hooks, then `git status --short`. Create an isolated implementation branch/worktree at execution time if needed; never overwrite unrelated changes.
+- [ ] Confirm section 0 completed and work is running in the `codex/library-redesign` worktree. Read the spec, HTML, active library and draft hooks, then `git status --short`; never overwrite unrelated changes.
 - [ ] Run `npm run test`, `npm run lint`, `npm run typecheck` and save baseline results in the resume file. A failing baseline is evidence to investigate, not permission to drop coverage.
 - [ ] Load Manrope and DM Sans through next/font; map current semantic font roles, retaining code and multilingual reader fonts.
 - [ ] Apply the spec's token values and shell geometry. Preserve workspace switcher/group actions, semantic modes, existing drawer refs/inert state, and safe view handlers. Allow shelf scrolling without clipping; keep editor panes bounded.
