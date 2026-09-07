@@ -1,6 +1,22 @@
 # Mdez library redesign — implementation specification
 
-Status: design accepted for implementation planning; application implementation has not started.
+Status: ready for implementation following the user decision review on 2026-09-07. Application implementation has not started. Product decisions below are confirmed; technical details are the implementation recommendations derived from current source.
+
+## Confirmed decisions
+
+Confirmed 2026-09-07: the user approved the recommended first-release scope: apply the visual redesign and include search, bookmarks, and resume writing while preserving every current feature. The behavior and control-placement decisions are recorded below.
+
+Confirmed 2026-09-07: bookmarks are personal to this browser and scoped separately to each workspace, including groups. They are not shared with group members, do not modify shared pages, and do not follow the user to another device. The Personal bookmarks section implements this confirmed ownership decision.
+
+The first draft included assumptions beyond a visual redesign. The user resolved them in the following review:
+
+1. Resolved: visual integration plus search, bookmarks, and resume writing in the first release; preserve all existing features.
+2. Resolved: browser-personal bookmarks, isolated by workspace; no shared-page mutation or cross-device synchronization.
+3. Resolved: header search covers the entire active workspace even when a book is open; results show book paths. Draft-safe navigation remains required.
+4. Resolved: resume targets the last page this user opened in this browser, scoped per workspace; edits by another member do not change it.
+5. Resolved: contextual controls in the new layout—workspace switching/group management in the sidebar, page sharing/export beside the open page, and GitHub refresh beside the imported book. Preserve all existing operations.
+
+Code evidence checked: `Document` has no bookmark field; `ShelfPane` shows top-level books and caps recent pages at eight; the active library controller exposes nested books, unsorted documents, imports, and mutations; `WorkspaceSwitcher` offers Local Library plus create/join/select group actions. The redesign must distinguish additions from restyling existing capabilities. Keep the HTML's visual approval separate from approval of these behavioral changes.
 
 ## Outcome and authority
 
@@ -41,9 +57,9 @@ Retain existing responsive boundaries: mobile at 767px, tablet at 1023px. Use tw
 
 ### Shell and sidebar
 
-Header: library breadcrumb, labeled search, and actual workspace actions. Sidebar: brand, existing WorkspaceSwitcher, My library, Recent pages, Bookmarks, nested book navigation, New book, and storage/help information. Preserve GitHub source controls and group management controls in their existing contextual flows. Do not show a fake personal avatar or universal local-only assurance in a shared workspace.
+Header: library breadcrumb, labeled search, and actual workspace actions. Sidebar: brand, existing WorkspaceSwitcher, My library, Recent pages, Bookmarks, nested book navigation, New book, and storage/help information. Confirmed 2026-09-07: put workspace switching and group management in a labeled sidebar workspace menu; page sharing and Markdown export in the open-page action area; GitHub source refresh beside its imported book. Shared-link management remains reachable from the workspace menu even without an open page. Group refresh/settings remain in the active-group context. Keep import and New page directly visible on the shelf, book ZIP export in the selected-book actions, and nested create/rename/move/delete controls on their respective book/page menus. Preserve existing confirmation, conflict and permission behavior. Menus must work by keyboard and touch and cannot rely on hover. Do not show a fake personal avatar or universal local-only assurance in a shared workspace.
 
-One selected-folder source of truth remains in the active library hook. Selecting My library, Recent pages, or Bookmarks clears the selected folder; selecting a book shows its direct pages and child books. Show an Unsorted pages entry. Preserve existing parent navigation and move operations.
+One selected-folder source of truth remains in the active library hook. Selecting My library, Recent pages, or Bookmarks clears the selected folder; selecting a book shows its direct pages and child books. Show an Unsorted pages entry with an explicit unsorted filter, distinct from My library even though both use a null selected-folder ID. With no search query, that entry shows only pages whose folderId is null and no book covers. Preserve existing parent navigation and move operations.
 
 ### Shelf and lists
 
@@ -55,17 +71,19 @@ My library shows the bookshelf and recent pages. Recent pages hides covers and s
 
 ### Search
 
-Search is client-side against the active workspace's loaded records, never a server query. Trim and case-fold the query; match page title/body and book name. In book context, scope results to that book's direct pages/children. In Bookmarks, intersect results with favorites. Do not search across workspaces or expose group keys. Search changes must never clear an active editor draft: submit/search navigation goes through the existing safe view transition. Ctrl/Cmd+K focuses search; Escape clears a nonempty query, otherwise closes a drawer as applicable. Provide explicit zero-results copy and a clear-search action.
+Search is client-side against the active workspace's loaded records, never a server query. Trim and case-fold the query; match page title/body and book name. Confirmed 2026-09-07: header search covers all books, nested books, and Unsorted pages in the active workspace, even when a book is open. Each page result shows its full book path, or Unsorted pages. A nonempty header query is a workspace-wide search, independent of the selected book or Bookmarks filter; clearing it restores the previous browsing context. Empty-query browsing retains the selected book/filter. Match book results across the workspace as well. Page matching uses title/body; book-name matching returns books rather than implicitly returning every page they contain. Show full book paths on both kinds of result to disambiguate duplicate names. Resolve paths with a visited-ID guard and a safe missing-parent fallback. Do not search across workspaces or expose group keys. Search changes must never clear an active editor draft: submit/search navigation goes through the existing safe view transition. In a shelf view, typing updates results immediately. In Edit/Read/Split, typing prepares the query; Enter submits through safe navigation to the shelf results so typing alone never ejects the editor. Ctrl/Cmd+K focuses search; Escape clears a nonempty query, otherwise closes a drawer as applicable. Provide explicit zero-results copy and a clear-search action.
 
 ### Resume writing
 
-At My library with an empty query, show the active workspace's most recently updated page. Use actual title/book and a computed reading estimate (at least one minute, 200 whitespace-separated words per minute). Label as “Continue writing”; do not claim last-opened tracking. Hide for no records, non-root context, or search results. Open via the existing document-selection/draft flow, never by directly replacing editor state.
+Confirmed 2026-09-07: at My library with an empty query, show the last page the user successfully opened in this browser within the active workspace. Opening in Edit, Read, or Split counts; passive selection during data loading, background refresh, and another member’s edits do not. Creating or importing a page counts when it actually opens in a document view. Use the actual title/book and computed reading estimate (at least one minute, 200 whitespace-separated words per minute). Label as ‘Continue writing’ and open through the existing document-selection/draft flow. Hide when no personal history exists, the target is missing, or the current context is non-root/search. Do not substitute the most recently edited page. Retain the remembered target across temporary loading/offline errors; never silently open a different page when it becomes unavailable.
+
+Persist a separate browser-local resume record per workspace alongside bookmark metadata: add `workspaceResume: "workspaceId"` in the same additive Dexie v5 migration, with `{ workspaceId: string; documentId: string; openedAt: string }`. Use the same non-secret workspace IDs as bookmarks. Failed metadata writes must not prevent opening the page or imply document-save failure; report that resume history could not be saved. Serialize updates per workspace and guard stale reads so rapid navigation cannot restore an older target. No group document/revision mutation or cross-device synchronization.
 
 ### Personal bookmarks
 
 Bookmarks do not exist on the current Document type. Implement them as browser-local UI metadata for both local and group workspaces. They are not shared edits and do not increment group revisions or change document updatedAt.
 
-Add an additive Dexie table in version 5: `pageBookmarks: "[workspaceId+documentId], workspaceId"`. Records are `{ workspaceId: string; documentId: string; createdAt: string }`. Workspace IDs are `local` or `group:<groupId>`; never include a group key. Preserve every version-4 store declaration. Migration creates the table without changing existing data.
+Add an additive Dexie table in version 5: `pageBookmarks: "[workspaceId+documentId], workspaceId"`. Records are `{ workspaceId: string; documentId: string; createdAt: string }`. Workspace IDs are `local` or `group:<groupId>`; never include a group key. Preserve every version-4 store declaration. Migration creates the bookmark and resume tables without changing existing data.
 
 Bookmark count and rendering intersect metadata with live records. Toggle writes are awaited and display recoverable errors; an unsuccessful write must not claim success. Missing/deleted documents are ignored; stale rows can be deleted only after authoritative successful load, never because a group is loading or offline. Same document ID in two workspaces must not leak bookmark state. Filter/query state resets on workspace switching. No cloud bookmark synchronization is included.
 
@@ -94,7 +112,7 @@ Use the existing CodeMirror editor, MarkdownReader pipeline, syntax highlighting
 | New `BookCover.tsx`, `LibraryPageList.tsx`, `LibrarySearch.tsx` | Reusable cover, list, search presentation; no data writes |
 | `EditorPane.tsx`, `EditorToolbar.tsx`, `PreviewPane.tsx`, `SplitWorkspace.tsx`, `WorkspaceStatus.tsx` | Apply chrome while preserving existing responsibilities |
 | New `src/lib/library-view.ts` | Pure filtering, stable sorting, cover variant and reading estimate helpers |
-| `src/lib/db.ts`, new `src/lib/page-bookmarks.ts`, new `src/hooks/usePageBookmarks.ts` | Additive bookmark metadata persistence and reactive scoped state |
+| `src/lib/db.ts`, new `src/lib/page-bookmarks.ts`, new `src/hooks/usePageBookmarks.ts`, new `src/lib/workspace-resume.ts`, new `src/hooks/useWorkspaceResume.ts` | Additive personal metadata persistence and reactive scoped state |
 | `src/lib/workspace-copy.ts` | Context-correct UI copy |
 
 Do not rename domain Folder/Document types to Book/Page merely to match UI labels. Keep business operations in existing library hooks/repositories. Any newly extracted component must have typed props, not references to window globals from the prototype.
@@ -102,7 +120,7 @@ Do not rename domain Folder/Document types to Book/Page merely to match UI label
 ## Acceptance gates
 
 1. Desktop and mobile visual review against the reference covers filled/empty shelf, selected book, search, bookmarks, Edit/Read/Split, and long titles.
-2. Existing IndexedDB version-4 records survive migration unchanged; bookmark changes survive reload and remain workspace-scoped.
+2. Existing IndexedDB version-4 records survive migration unchanged; bookmark changes and last-opened history survive reload and remain workspace-scoped.
 3. Search/filter/resume never lose pending edits, and controls preserve selection semantics.
 4. Existing nested operations, file/paste/GitHub import, manual refresh, Markdown/ZIP export, Markdown/math, recovery, shared links, and group conflict tests remain passing.
 5. Keyboard drawer, tab navigation, dialog naming, focus return, 390px overflow, tablet, and 200% zoom checks pass.
@@ -111,4 +129,4 @@ Do not rename domain Folder/Document types to Book/Page merely to match UI label
 
 ## Delivery order
 
-Implement the shell and covers first, metadata/search next, full shelf wiring next, then editor chrome and the final regression pass. Commit after each verified slice. Detailed execution checklist: `../plans/2026-09-06-library-redesign.md`.
+Implement the shell first, metadata/search selectors next, covers and full shelf wiring next, then editor chrome and the final regression pass. Commit after each verified slice. Detailed execution checklist: `../plans/2026-09-06-library-redesign.md`.

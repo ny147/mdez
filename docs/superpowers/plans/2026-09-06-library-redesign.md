@@ -4,7 +4,7 @@
 
 **Goal:** Apply the accepted single-page visual design to the existing application without data or feature regressions.
 
-**Architecture:** Keep MdezWorkspace and the two existing library hooks as coordinators. Extract presentational library components, add pure view selectors, and persist personal bookmarks in a separate additive Dexie table. Keep CodeMirror, MarkdownReader, draft handling, imports, exports, groups, and sharing intact.
+**Architecture:** Keep MdezWorkspace and the two existing library hooks as coordinators. Extract presentational library components, add pure view selectors, and persist personal bookmarks and resume history in separate additive Dexie tables. Keep CodeMirror, MarkdownReader, draft handling, imports, exports, groups, and sharing intact.
 
 **Tech Stack:** Existing Next.js 15, React 19, TypeScript, Tailwind/CSS, Dexie, Lucide, CodeMirror, Vitest, Playwright.
 
@@ -30,24 +30,26 @@ Files: `src/app/layout.tsx`, `src/app/styles/tokens.css`, `src/app/styles/worksp
 - [ ] Verify `npm run test -- tests/unit/useWorkspaceViewport.test.tsx tests/unit/sidebar-library.test.tsx` and `npm run test:e2e -- tests/e2e/mdez.spec.ts`. Inspect shell at 1440, 1024, 768, and 390px before saving.
 - [ ] Commit only slice files with message `style: apply redesigned workspace shell` and update resume progress.
 
-## 2. Implement view selectors and bookmark persistence
+## 2. Implement view selectors, bookmarks, and resume history
 
-Files: new `src/lib/library-view.ts`, `src/lib/page-bookmarks.ts`, `src/hooks/usePageBookmarks.ts`; modify `src/lib/db.ts`; new `tests/unit/library-view.test.ts`, `tests/unit/page-bookmarks.test.ts`.
+Files: new `src/lib/library-view.ts`, `src/lib/page-bookmarks.ts`, `src/hooks/usePageBookmarks.ts`; modify `src/lib/db.ts`; new `tests/unit/library-view.test.ts`, `tests/unit/page-bookmarks.test.ts`. Also create `src/lib/workspace-resume.ts`, `src/hooks/useWorkspaceResume.ts`, and `tests/unit/workspace-resume.test.ts` for the confirmed last-opened behavior.
 
 Define these interfaces (Document and Folder remain imported from `@/types/content`):
 
 ```ts
-export type LibraryFilter = 'all' | 'recent' | 'bookmarks';
+export type LibraryFilter = 'all' | 'recent' | 'bookmarks' | 'unsorted';
 export type LibraryViewInput = {
   documents: Document[]; folders: Folder[];
   selectedFolderId: string | null; filter: LibraryFilter;
   query: string; bookmarkedIds: ReadonlySet<string>;
+  lastOpenedDocumentId: string | null;
 };
 export function selectLibraryView(input: LibraryViewInput): {
   pages: Document[]; books: Folder[]; resumePage: Document | null;
 };
 export function getCoverVariant(folderId: string): 0 | 1 | 2 | 3;
 export function estimateReadingMinutes(body: string): number;
+export function getBookPath(folderId: string | null, folders: Folder[]): string;
 export type PageBookmark = {
   workspaceId: string; documentId: string; createdAt: string;
 };
@@ -62,12 +64,13 @@ export function usePageBookmarks(workspaceId: string): {
 };
 ```
 
-- [ ] Add selector tests for whitespace/case matching, title/body/book matching, selected-folder scope, favorites intersection, stable equal-time sorting, uncapped results, and no-record resume. Include `expect(estimateReadingMinutes('')).toBe(1)` and deterministic cover variant assertions.
-- [ ] Add fake-indexeddb tests that create a database with the version-4 schema, insert a folder and document, reopen with MdezDatabase v5, and assert exact record equality plus empty bookmark table. Exercise duplicate toggle, removal, failed write, and same document ID under `local` and `group:test` scopes.
+- [ ] Add selector tests for whitespace/case matching, title/body/book matching, workspace-wide search from a selected book or Bookmarks view, nested/unsorted matches, distinct empty-query Unsorted versus My library views, full result book paths with duplicate names/missing parents/cycles, restoration of selected-folder/favorites browsing after clearing search, stable equal-time sorting, uncapped results, and resume from lastOpenedDocumentId (including null/deleted target, with no most-recently-edited fallback). Include `expect(estimateReadingMinutes('')).toBe(1)` and deterministic cover variant assertions.
+- [ ] Add fake-indexeddb tests that create a database with the version-4 schema, insert a folder and document, reopen with MdezDatabase v5, and assert exact record equality plus empty bookmark and workspaceResume tables. Exercise duplicate toggle, removal, failed write, and same document ID under `local` and `group:test` scopes.
 - [ ] Run `npm run test -- tests/unit/library-view.test.ts tests/unit/page-bookmarks.test.ts`; record expected missing-module failures before implementation.
-- [ ] Implement the specified helpers and additive v5 table. Do not alter existing store definitions or GroupSnapshot. Use deterministic ID tie-breaking and folder order/name sorting. Await transactions and reject on failure.
-- [ ] Implement the hook with stale-result protection when workspace IDs change. Never let a previous workspace's asynchronous read overwrite current bookmarks. Surface failed mutation state rather than claiming success.
-- [ ] Rerun the two focused test files and `npm run typecheck`; commit `feat: add scoped library views and personal bookmarks`.
+- [ ] Implement the specified helpers and additive v5 bookmark and resume tables. Do not alter existing store definitions or GroupSnapshot. Use deterministic ID tie-breaking and folder order/name sorting. Await transactions and reject on failure.
+- [ ] Implement `useWorkspaceResume(workspaceId)` returning `{ lastOpenedDocumentId: string | null; isReady: boolean; error: string | null; recordOpened: (documentId: string) => Promise<void> }`. Persist one `{ workspaceId, documentId, openedAt }` record through a per-workspace serialized write queue. Test reload, workspace isolation, failed writes, rapid opens A then B, missing targets, and unchanged history after remote edits. Run `npm run test -- tests/unit/workspace-resume.test.ts`.
+- [ ] Implement the bookmark hook with stale-result protection when workspace IDs change. Never let a previous workspace's asynchronous read overwrite current bookmarks. Surface failed mutation state rather than claiming success.
+- [ ] Rerun all three focused test files (library-view, page-bookmarks, workspace-resume) and `npm run typecheck`; commit `feat: add scoped library views and personal bookmarks`.
 
 ## 3. Build and wire library presentation
 
@@ -78,8 +81,8 @@ Interfaces: BookCover consumes a Folder, direct page count, selected boolean, an
 - [ ] Add UI behavior tests for independent bookmark/page targets, real zero-page states, selecting a child book, a long Unicode title, no search results with Clear search, and unavailable bookmark persistence with an error message.
 - [ ] Run `npm run test -- tests/unit/library-view-ui.test.tsx` and confirm the new contract fails before wiring.
 - [ ] Build geometric covers with stable variants, true titles/counts, and a responsive grid. Preserve nested tree and unsorted navigation; display child books in selected context.
-- [ ] Implement full recent rows, favorites, resume panel, and empty/loading/error states. Keep current book export and import actions available.
-- [ ] In MdezWorkspace, derive workspaceId from activeGroupId, own query/filter state, and use the new hook/selectors. Query/filter resets on workspace switch; selection and resume use existing safe draft/navigation handlers. Wire search shortcut with cleanup and preserve editor drafts when entering search.
+- [ ] Implement full recent rows, favorites, resume panel, and empty/loading/error states. Place workspace/group and shared-link management in the sidebar workspace menu, page sharing/Markdown export beside the open page, GitHub refresh beside the imported book, and ZIP export in selected-book actions. Keep import/New page visible. Preserve nested operation menus, confirmations, conflicts, and keyboard/touch access. Add UI tests verifying each action remains reachable in its applicable local/group/source context, including no selected page.
+- [ ] In MdezWorkspace, derive workspaceId from activeGroupId, own query/filter state, and use the new hook/selectors. Query/filter resets on workspace switch; selection and resume use existing safe draft/navigation handlers. Record a successful explicit document open, including creation/import that opens a page, through useWorkspaceResume; never record passive loading/refresh selection. Metadata failures must not block opening a document. Wire search shortcut with cleanup and preserve editor drafts when entering search. Shelf queries update live; document-view typing prepares a query and Enter submits via safe navigation. Implement getBookPath with cycle and missing-parent guards; page title/body matches and book-name matches are distinct result sets. A nonempty query searches every active-workspace record independently of the selected folder/filter; keep the prior browsing context for query clearing and display full book paths in results.
 - [ ] Test saving an edit followed immediately by resume/search/book/workspace navigation, then reloading; assert the edited body remains. Test bookmark toggle/reload and group/local separation. Run UI unit tests and existing sidebar/library/draft suites.
 - [ ] Commit `feat: wire redesigned bookshelf and library navigation`.
 
