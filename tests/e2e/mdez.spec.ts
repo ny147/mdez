@@ -233,7 +233,7 @@ test("book hierarchy uses nested lists with explicit selection and expansion sta
   const books = sidebar.getByRole("list", { name: "Books and pages" });
 
   await expect(books).toBeVisible();
-  await expect(books.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages, closed/ })).toHaveAttribute("aria-pressed", "false");
 
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
@@ -532,6 +532,7 @@ test("search, bookmarks, and resume preserve an edited page across reload", asyn
   await page.keyboard.press("Control+k");
   const search = page.getByRole("searchbox", { name: "Search pages and books" });
   await expect(search).toBeFocused();
+  await expect(page.locator(".cm-content")).not.toContainText("(url)");
   await search.fill("durable spark");
   await search.press("Enter");
 
@@ -1022,7 +1023,7 @@ test("imports a public GitHub repository through preview and persists its source
 
   await page.reload();
   await openShelfDrawerIfAvailable(page);
-  await expect(page.getByRole("button", { name: /docs book/ })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Library shelf" }).getByTitle("Open docs book")).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh from GitHub" })).toBeVisible();
 });
 

@@ -70,8 +70,7 @@ export function EditorPane({
   const formattingShortcuts = useMemo(
     () => keymap.of([
       { key: "Mod-b", run: () => { applyFormat("bold"); return true; } },
-      { key: "Mod-i", run: () => { applyFormat("italic"); return true; } },
-      { key: "Mod-k", run: () => { applyFormat("link"); return true; } }
+      { key: "Mod-i", run: () => { applyFormat("italic"); return true; } }
     ]),
     [applyFormat]
   );

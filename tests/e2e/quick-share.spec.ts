@@ -11,7 +11,7 @@ async function resetBrowserStorage(page: Page) {
     });
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Library" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A little space for big ideas." })).toBeVisible();
 }
 
 async function createLocalPage(page: Page) {
@@ -30,6 +30,14 @@ async function openEditMode(page: Page) {
     }
   }
   throw new Error("No visible Edit tab was available");
+}
+
+async function openSharedLinks(page: Page) {
+  const sharedLinks = page.getByRole("button", { name: "Shared links" });
+  if (!await sharedLinks.isVisible().catch(() => false)) {
+    await page.getByRole("button", { name: "Open library shelf" }).click();
+  }
+  await sharedLinks.click();
 }
 
 async function mockShareApi(context: BrowserContext, deleteStatus = 204) {
@@ -99,7 +107,7 @@ test("creates, opens, and deletes a view-only snapshot", async ({ page, context 
   await shared.close();
 
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Shared links" }).click();
+  await openSharedLinks(page);
   await page.getByRole("button", { name: "Delete untitled.md shared link" }).click();
   await page.getByRole("button", { name: "Delete link" }).click();
   await expect(page.getByText("No shared links yet")).toBeVisible();
@@ -130,7 +138,7 @@ test("failed deletion keeps its creator-owned local row", async ({ page, context
   await expect(page.getByLabel("Public URL")).toHaveValue(/\/share\/share-1$/);
   await page.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Shared links" }).click();
+  await openSharedLinks(page);
   await page.getByRole("button", { name: "Delete untitled.md shared link" }).click();
   await page.getByRole("button", { name: "Delete link" }).click();
   await expect(page.getByRole("dialog").getByRole("alert"))
