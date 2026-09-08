@@ -24,9 +24,9 @@ export function PreviewPane({
   onOpenImport
 }: PreviewPaneProps) {
   return (
-    <article className="library-subpanel relative flex min-h-[24rem] h-full min-w-0 flex-col rounded-md p-4 text-ink">
-      <p className="text-sm font-semibold text-accent-read">Reader</p>
-      <div className={`mt-3 min-h-0 flex-1 overflow-auto px-1 py-5 ${previewOnly ? "mx-auto w-full max-w-[720px]" : ""}`}>
+    <article className="reader-pane library-subpanel relative flex min-h-[24rem] h-full min-w-0 flex-col rounded-md p-4 text-ink" data-preview-only={previewOnly}>
+      <p className="reader-pane-label">Reader</p>
+      <div className={`reader-pane-body mt-3 min-h-0 flex-1 overflow-auto px-1 py-5 ${previewOnly ? "mx-auto w-full max-w-[720px]" : ""}`}>
         {document ? (
           <MarkdownReader title={title} markdown={body} showTableOfContents />
         ) : (

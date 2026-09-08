@@ -555,6 +555,29 @@ test("search, bookmarks, and resume preserve an edited page across reload", asyn
   await expect(page.getByRole("list", { name: "Library pages" }).getByText(title, { exact: true })).toBeVisible();
 });
 
+test("editor and reader use the accepted quiet writing chrome", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  const title = page.getByRole("textbox", { name: "Page title" });
+
+  await expect(title).toHaveClass(/editor-page-title/);
+  const titleChrome = await title.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      background: styles.backgroundColor,
+      borderTop: styles.borderTopWidth,
+      fontSize: Number.parseFloat(styles.fontSize)
+    };
+  });
+  expect(titleChrome.background).toBe("rgba(0, 0, 0, 0)");
+  expect(titleChrome.borderTop).toBe("0px");
+  expect(titleChrome.fontSize).toBeGreaterThanOrEqual(28);
+  await expect(page.locator(".editor-frame")).toHaveCSS("box-shadow", "none");
+
+  await clickVisibleButtonIfAvailable(page, "Read");
+  await expect(page.locator(".reader-pane-body")).toBeVisible();
+  await expect(page.locator(".markdown-preview")).toHaveCSS("font-family", /Georgia/);
+});
+
 
 
 test("editor exposes formatting in one row without a disclosure", async ({ page }) => {
@@ -676,8 +699,8 @@ test("read mode exposes one workspace-level document heading", async ({ page }) 
 test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) => {
   const main = page.getByRole("main");
 
-  await expect(main.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
-  await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
+  await expect(main.getByRole("heading", { level: 1, name: "A little space for big ideas." })).toBeVisible();
+  await expect(main.locator(".library-intro h1, .workspace-title, .reader-document-title")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Edit");
@@ -867,7 +890,7 @@ test("imports markdown by paste and previews it", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "Imported 1 page" })).toBeVisible();
 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Hello Mdez");
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeTab(page, "Read");
   await expect(page.locator(".markdown-preview").getByRole("heading", { name: "Hello Mdez" })).toBeVisible();
 });
 
