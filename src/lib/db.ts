@@ -1,4 +1,4 @@
-import Dexie, { type EntityTable } from "dexie";
+import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubSource } from "@/types/github";
 import type { GroupSnapshot } from "@/types/key-group";
@@ -27,6 +27,18 @@ export type CachedGroupState = {
   cachedAt: string;
 };
 
+export type PageBookmark = {
+  workspaceId: string;
+  documentId: string;
+  createdAt: string;
+};
+
+export type WorkspaceResume = {
+  workspaceId: string;
+  documentId: string;
+  openedAt: string;
+};
+
 export class MdezDatabase extends Dexie {
   folders!: EntityTable<Folder, "id">;
   documents!: EntityTable<Document, "id">;
@@ -34,6 +46,8 @@ export class MdezDatabase extends Dexie {
   sharedLinks!: EntityTable<StoredSharedLink, "publicId">;
   rememberedGroups!: EntityTable<RememberedGroup, "groupId">;
   cachedGroups!: EntityTable<CachedGroupState, "groupId">;
+  pageBookmarks!: Table<PageBookmark, [string, string]>;
+  workspaceResume!: EntityTable<WorkspaceResume, "workspaceId">;
 
   constructor(databaseName = "mdez") {
     super(databaseName);
@@ -63,6 +77,17 @@ export class MdezDatabase extends Dexie {
       sharedLinks: "publicId, createdAt, expiresAt",
       rememberedGroups: "groupId, lastOpenedAt",
       cachedGroups: "groupId, cachedAt"
+    });
+
+    this.version(5).stores({
+      folders: "id, parentId, sourceId, order, updatedAt",
+      documents: "id, folderId, sourceId, order, updatedAt",
+      githubSources: "id, &normalizedUrl, rootFolderId, updatedAt",
+      sharedLinks: "publicId, createdAt, expiresAt",
+      rememberedGroups: "groupId, lastOpenedAt",
+      cachedGroups: "groupId, cachedAt",
+      pageBookmarks: "[workspaceId+documentId], workspaceId",
+      workspaceResume: "workspaceId"
     });
   }
 }

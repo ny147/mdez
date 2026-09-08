@@ -17,6 +17,7 @@ type FolderTreeProps = {
   onCreateFolder: (parentId: string | null) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  showUnsorted?: boolean;
 };
 
 export function FolderTree({
@@ -28,7 +29,8 @@ export function FolderTree({
   onToggleFolder,
   onCreateFolder,
   onRenameFolder,
-  onDeleteFolder
+  onDeleteFolder,
+  showUnsorted = true
 }: FolderTreeProps) {
   const tree = buildFolderTree(folders);
   const unsortedPageCount = documents.filter((document) => document.folderId === null).length;
@@ -50,7 +52,7 @@ export function FolderTree({
       </div>
 
       <ul className="m-0 list-none space-y-1 p-0" aria-label="Books and pages">
-        <li>
+        {showUnsorted ? <li>
           <button
             type="button"
             onClick={() => onSelectFolder(null)}
@@ -70,7 +72,7 @@ export function FolderTree({
               {unsortedPageCount}
             </span>
           </button>
-        </li>
+        </li> : null}
 
         {tree.length === 0 ? (
           <li>
@@ -133,7 +135,7 @@ function FolderTreeRow({
 
   return (
     <li>
-      <div className="group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
+      <div className="folder-tree-row group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
         <button
           type="button"
           onClick={() => hasChildren && onToggleFolder(folder.id)}

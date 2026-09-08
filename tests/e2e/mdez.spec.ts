@@ -137,7 +137,7 @@ test.beforeEach(async ({ page }) => {
 
 
 
-test("uses the renewed light library shell and mode accents", async ({ page }) => {
+test("uses the accepted spacious library shell and typography", async ({ page }) => {
   const shell = page.getByTestId("workspace-shell");
 
   await expect(shell).toBeVisible();
@@ -146,18 +146,26 @@ test("uses the renewed light library shell and mode accents", async ({ page }) =
 
   const colors = await shell.evaluate((node) => {
     const style = getComputedStyle(node);
-    return ["--color-canvas", "--color-edit", "--color-read", "--color-shelf"].map((name) => style.getPropertyValue(name).trim());
+    return ["--color-canvas", "--color-panel", "--color-ink", "--color-muted", "--color-edit", "--color-rule"].map((name) =>
+      style.getPropertyValue(name).trim()
+    );
   });
 
-  expect(colors).toEqual(["#fff7fc", "#8053c8", "#177f71", "#b8487a"]);
+  expect(colors).toEqual(["#fbfafc", "#f3f0f8", "#292735", "#706c7c", "#7052b8", "#e9e6ee"]);
 
-  const fonts = await page.evaluate(() => ({
+  const presentation = await page.evaluate(() => ({
     body: getComputedStyle(document.body).fontFamily,
-    heading: getComputedStyle(document.querySelector("h1")!).fontFamily
+    heading: getComputedStyle(document.querySelector("h1")!).fontFamily,
+    topbarHeight: getComputedStyle(document.querySelector(".workspace-topbar")!).height,
+    sidebarWidth: getComputedStyle(document.querySelector(".workspace-sidebar")!).width
   }));
 
-  expect(fonts.body).toContain("Inter");
-  expect(fonts.heading).toContain("Space Grotesk");
+  expect(presentation.body).toContain("DM Sans");
+  expect(presentation.heading).toContain("Manrope");
+  expect(presentation.topbarHeight).toBe("80px");
+  if (await page.evaluate(() => window.innerWidth >= 1024)) {
+    expect(presentation.sidebarWidth).toBe("238px");
+  }
 });
 
 test("workspace polish distinguishes primary actions and active modes", async ({ page }) => {
@@ -225,7 +233,7 @@ test("book hierarchy uses nested lists with explicit selection and expansion sta
   const books = sidebar.getByRole("list", { name: "Books and pages" });
 
   await expect(books).toBeVisible();
-  await expect(books.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages, closed/ })).toHaveAttribute("aria-pressed", "false");
 
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
@@ -408,13 +416,61 @@ test("mobile drawer makes the workspace inert", async ({ page }) => {
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
   await expect(trigger).toBeFocused();
 });
+
+test("very narrow library drawer keeps its content inside the viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 240, height: 844 });
+  await page.getByRole("button", { name: "Open library shelf" }).click();
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const scrollArea = sidebar.locator(".sidebar-library-scroll");
+  await expect(sidebar).toHaveAttribute("aria-hidden", "false");
+
+  page.once("dialog", async (dialog) => dialog.accept("memory"));
+  await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
+  await expect(sidebar.getByRole("button", { name: "memory book, 0 pages, open", exact: true })).toBeVisible();
+
+  const overflow = await scrollArea.evaluate((element) => {
+    const boundary = element.getBoundingClientRect();
+    const row = element.querySelector<HTMLElement>(".folder-tree-row");
+    const rowStyle = row ? getComputedStyle(row) : null;
+    const wideDescendants = Array.from(element.querySelectorAll<HTMLElement>("*"))
+      .map((node) => {
+        const box = node.getBoundingClientRect();
+        return {
+          target: node.getAttribute("aria-label") ?? node.className ?? node.tagName,
+          width: Math.round(box.width),
+          right: Math.round(box.right)
+        };
+      })
+      .filter((node) => node.right > Math.ceil(boundary.right));
+
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      boundary: { left: Math.round(boundary.left), right: Math.round(boundary.right), width: Math.round(boundary.width) },
+      row: row ? {
+        left: Math.round(row.getBoundingClientRect().left),
+        right: Math.round(row.getBoundingClientRect().right),
+        width: Math.round(row.getBoundingClientRect().width),
+        display: rowStyle?.display,
+        columns: rowStyle?.gridTemplateColumns,
+        paddingLeft: rowStyle?.paddingLeft
+      } : null,
+      wideDescendants
+    };
+  });
+
+  expect(overflow.scrollWidth, JSON.stringify(overflow, null, 2)).toBeLessThanOrEqual(overflow.clientWidth);
+});
 test("library copy explains page and book scope", async ({ page }) => {
-  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "A little space for big ideas." })).toBeVisible();
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toBeVisible();
-  await expect(sidebar.getByText("Not added to a book yet")).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages, closed/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /My library/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Recent pages/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Bookmarks/ })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
   await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
   await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
@@ -448,16 +504,13 @@ test("missing routes use the quiet Library recovery surface", async ({ page }) =
   await expect(page.locator(".recovery-content")).toHaveCSS("border-top-width", "1px");
 });
 
-test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
-  const bookZipButton = page.getByRole("button", { name: "Export book (.zip)", exact: true }).last();
-
-  await expect(bookZipButton).toBeVisible();
-  await expect(bookZipButton).toBeDisabled();
+test("root selection keeps book ZIP export with selected-book actions", async ({ page }) => {
+  await expect(page.getByRole("button", { name: /Export .*\.zip|Book ZIP/ })).toHaveCount(0);
 });
 
 test("global actions have one visible home", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(1);
-  await expect(page.getByRole("button", { name: /^(Export book \(.zip\)|Book ZIP for open book in Shelf)$/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^(Export book \(.zip\)|Book ZIP for open book in Shelf)$/ })).toHaveCount(0);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await expect(sidebar.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(0);
@@ -510,8 +563,66 @@ test("an open book explains filtering and export scope", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
 
-  await expect(page.getByText("Showing recent pages in Writing. Return to Library to view recent pages from every book.")).toBeVisible();
+  await expect(page.getByText("A collection of thoughts inside Writing.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Export Writing (.zip)" })).toBeEnabled();
+});
+
+test("search, bookmarks, and resume preserve an edited page across reload", async ({ page }) => {
+  const title = "Searchable field note";
+  const body = "# Searchable field note\n\nA durable spark from the library redesign.";
+
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("textbox", { name: "Page title" }).fill(title);
+  await page.locator(".cm-content").fill(body);
+
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("searchbox", { name: "Search pages and books" });
+  await expect(search).toBeFocused();
+  await expect(page.locator(".cm-content")).not.toContainText("(url)");
+  await search.fill("durable spark");
+  await search.press("Enter");
+
+  const result = page.getByRole("list", { name: "Library pages" }).getByRole("listitem").filter({ hasText: title });
+  await expect(result).toBeVisible();
+  await result.getByRole("button", { name: `Bookmark ${title}` }).click();
+  await expect(result.getByRole("button", { name: `Remove bookmark from ${title}` })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 2, name: "Continue writing" })).toBeVisible();
+  await expect(page.locator(".library-resume").getByText(title, { exact: true })).toBeVisible();
+  await page.locator(".library-resume").getByRole("button", { name: "Open page" }).click();
+  await expect(page.locator(".cm-content")).toContainText("A durable spark from the library redesign.");
+
+  await showShelfIfAvailable(page);
+  await openShelfDrawerIfAvailable(page);
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await sidebar.getByRole("button", { name: /Bookmarks/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Your favorite ideas." })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Library pages" }).getByText(title, { exact: true })).toBeVisible();
+});
+
+test("editor and reader use the accepted quiet writing chrome", async ({ page }) => {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  const title = page.getByRole("textbox", { name: "Page title" });
+
+  await expect(title).toHaveClass(/editor-page-title/);
+  const titleChrome = await title.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return {
+      background: styles.backgroundColor,
+      borderTop: styles.borderTopWidth,
+      fontSize: Number.parseFloat(styles.fontSize)
+    };
+  });
+  expect(titleChrome.background).toBe("rgba(0, 0, 0, 0)");
+  expect(titleChrome.borderTop).toBe("0px");
+  expect(titleChrome.fontSize).toBeGreaterThanOrEqual(28);
+  await expect(page.locator(".editor-frame")).toHaveCSS("box-shadow", "none");
+
+  await clickVisibleButtonIfAvailable(page, "Read");
+  await expect(page.locator(".reader-pane-body")).toBeVisible();
+  await expect(page.locator(".markdown-preview")).toHaveCSS("font-family", /Georgia/);
 });
 
 
@@ -635,8 +746,8 @@ test("read mode exposes one workspace-level document heading", async ({ page }) 
 test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) => {
   const main = page.getByRole("main");
 
-  await expect(main.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
-  await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
+  await expect(main.getByRole("heading", { level: 1, name: "A little space for big ideas." })).toBeVisible();
+  await expect(main.locator(".library-intro h1, .workspace-title, .reader-document-title")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
   await clickViewportModeTab(page, "Edit");
@@ -826,7 +937,7 @@ test("imports markdown by paste and previews it", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "Imported 1 page" })).toBeVisible();
 
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Hello Mdez");
-  await page.getByRole("tab", { name: "Read" }).click();
+  await clickViewportModeTab(page, "Read");
   await expect(page.locator(".markdown-preview").getByRole("heading", { name: "Hello Mdez" })).toBeVisible();
 });
 
@@ -958,7 +1069,7 @@ test("imports a public GitHub repository through preview and persists its source
 
   await page.reload();
   await openShelfDrawerIfAvailable(page);
-  await expect(page.getByRole("button", { name: /docs book/ })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Library shelf" }).getByTitle("Open docs book")).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh from GitHub" })).toBeVisible();
 });
 

@@ -1,13 +1,14 @@
 "use client";
 
-import type { RefObject } from "react";
-import { X } from "lucide-react";
+import type { ReactNode, RefObject } from "react";
+import { Clock3, Library, Star, X } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import type { GitHubSource } from "@/types/github";
 import { DocumentList } from "@/components/mdez/DocumentList";
 import { FolderTree } from "@/components/mdez/FolderTree";
 import { GitHubSourcePanel } from "@/components/mdez/GitHubSourcePanel";
+import type { LibraryFilter } from "@/lib/library-view";
 
 type SidebarProps = {
   folders: Folder[];
@@ -33,6 +34,10 @@ type SidebarProps = {
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
   onRefreshGitHub: (source: GitHubSource) => void;
+  filter: LibraryFilter;
+  bookmarkCount: number;
+  onSelectFilter: (filter: LibraryFilter) => void;
+  workspaceControls: ReactNode;
 };
 
 export function Sidebar({
@@ -58,7 +63,11 @@ export function Sidebar({
   onRenameDocument,
   onMoveDocument,
   onDeleteDocument,
-  onRefreshGitHub
+  onRefreshGitHub,
+  filter,
+  bookmarkCount,
+  onSelectFilter,
+  workspaceControls
 }: SidebarProps) {
   return (
     <aside
@@ -76,6 +85,14 @@ export function Sidebar({
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
+
+        <div className="sidebar-workspace-controls">{workspaceControls}</div>
+
+        <nav className="sidebar-primary-nav" aria-label="Library views">
+          <button type="button" data-selected={filter === "all" && selectedFolderId === null} aria-pressed={filter === "all" && selectedFolderId === null} onClick={() => onSelectFilter("all")}><Library aria-hidden="true" />My library<span>{documents.length}</span></button>
+          <button type="button" data-selected={filter === "recent"} aria-pressed={filter === "recent"} onClick={() => onSelectFilter("recent")}><Clock3 aria-hidden="true" />Recent pages</button>
+          <button type="button" data-selected={filter === "bookmarks"} aria-pressed={filter === "bookmarks"} onClick={() => onSelectFilter("bookmarks")}><Star aria-hidden="true" />Bookmarks<span>{bookmarkCount}</span></button>
+        </nav>
 
         {githubSource ? (
           <GitHubSourcePanel
@@ -103,7 +120,19 @@ export function Sidebar({
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
+              showUnsorted={false}
             />
+            <button
+              type="button"
+              className="sidebar-unsorted"
+              data-selected={filter === "unsorted"}
+              aria-label={`Unsorted pages, ${documents.filter((document) => document.folderId === null).length} pages, ${filter === "unsorted" ? "open" : "closed"}`}
+              aria-pressed={filter === "unsorted"}
+              onClick={() => onSelectFilter("unsorted")}
+            >
+              Unsorted pages
+              <span>{documents.filter((document) => document.folderId === null).length}</span>
+            </button>
             <div className="border-t border-border pt-4">
               <DocumentList
                 folders={folders}

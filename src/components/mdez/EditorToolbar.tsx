@@ -18,7 +18,7 @@ type FormatActionConfig = {
 const actions: FormatActionConfig[] = [
   { action: "bold", label: "Bold", glyph: "B", ariaKeyShortcuts: "Control+B Meta+B", shortcutLabel: "Ctrl/⌘ B" },
   { action: "italic", label: "Italic", glyph: "I", ariaKeyShortcuts: "Control+I Meta+I", shortcutLabel: "Ctrl/⌘ I" },
-  { action: "link", label: "Insert link", glyph: "↗", ariaKeyShortcuts: "Control+K Meta+K", shortcutLabel: "Ctrl/⌘ K" },
+  { action: "link", label: "Insert link", glyph: "↗" },
   { action: "image", label: "Insert image", glyph: "▧" },
   { action: "inlineCode", label: "Inline code", glyph: "`" },
   { action: "codeBlock", label: "Code block", glyph: "</>" },

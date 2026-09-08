@@ -14,7 +14,9 @@ To provide a friction-free markdown experience where users can organize, edit, a
 ## Core Features
 - **Local-First Persistence:** Automatic saving to browser storage via IndexedDB; no accounts or cloud sync required.
 - **Library Management:** Nested books with Markdown pages, paste import, and file import support.
+- **Library Retrieval:** Workspace-wide page/body/book search, Recent and Unsorted views, personal per-workspace bookmarks, and a last-opened resume card.
 - **Public GitHub Import:** Preview and import the default branch of a public Markdown repository as a book, then refresh it manually. GitHub remains the source of truth, and refresh replaces local edits inside that imported book while preserving unrelated local content.
+- **Optional Sharing:** Key groups copy a local library into an explicitly joined shared workspace, while Quick Share creates creator-managed, view-only page snapshots. Personal bookmark and resume metadata stays browser-local and never changes shared document revisions.
 - **Workspace Modes:**
     - **Shelf:** Central library organization with books, pages, bookmarks, and contextual export.
     - **Edit:** Focused writing console with CodeMirror and syntax highlighting.
@@ -41,16 +43,16 @@ The product feels like a polished writing library: friendly enough to invite exp
 - Brief, state-driven motion with reduced-motion support.
 
 ## Current Delivery Priorities
-1. Keep the shipped public GitHub import and manual refresh flow safe, preview-first, and local-first.
-2. Improve import comprehension, reading comfort, responsive use, and accessibility without redesigning the renewed workspace.
-3. Verify and deploy the application to production on Vercel.
+1. Preserve the verified library redesign across local libraries, key groups, Quick Share, and GitHub-backed books.
+2. Keep search, bookmarks, resume history, drafts, and exports predictable across workspace and view changes.
+3. Maintain the responsive and accessibility gates before any separate deployment decision.
 
 ## Deferred Scope
 - Private GitHub repositories and GitHub authentication.
 - Background or two-way GitHub synchronization.
 - Branch, tag, commit, and repository-subfolder selection.
 - Obsidian attachments, plugins, configuration, wikilink conversion, and embed conversion.
-- Accounts, backend document storage, sharing, and real-time collaboration.
+- User accounts, general-purpose backend document storage, and real-time collaborative editing.
 
 ## Anti-References
 - No sterile corporate productivity UI or generic SaaS dashboards.

@@ -40,7 +40,6 @@ export function EditorPane({
   onRename
 }: EditorPaneProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
-  void saveStatus;
   void viewMode;
   void onViewModeChange;
 
@@ -71,8 +70,7 @@ export function EditorPane({
   const formattingShortcuts = useMemo(
     () => keymap.of([
       { key: "Mod-b", run: () => { applyFormat("bold"); return true; } },
-      { key: "Mod-i", run: () => { applyFormat("italic"); return true; } },
-      { key: "Mod-k", run: () => { applyFormat("link"); return true; } }
+      { key: "Mod-i", run: () => { applyFormat("italic"); return true; } }
     ]),
     [applyFormat]
   );
@@ -108,15 +106,19 @@ export function EditorPane({
   }
 
   return (
-    <article className="library-subpanel flex min-h-[24rem] h-full min-w-0 flex-col rounded-md p-4">
+    <article className="editor-pane library-subpanel flex min-h-[24rem] h-full min-w-0 flex-col rounded-md p-4">
       <h1 className="sr-only">Edit {title}</h1>
-      <label className="min-w-0">
-        <span className="text-sm font-semibold text-accent">Page title</span>
+      <div className="editor-pane-heading" aria-hidden="true">
+        <span>Writing</span>
+        <span>{saveStatus}</span>
+      </div>
+      <label className="editor-title-field min-w-0">
+        <span className="sr-only">Page title</span>
         <input
           aria-label="Page title"
           value={title}
           onChange={(event) => onRename(event.target.value)}
-          className="workspace-input mt-2 w-full min-w-0 px-4 py-3 font-display text-xl font-bold placeholder:text-muted focus:ring-0"
+          className="editor-page-title workspace-input w-full min-w-0 font-display font-bold placeholder:text-muted focus:ring-0"
         />
       </label>
 
@@ -127,7 +129,7 @@ export function EditorPane({
         quickShareDisabled={!document}
       />
 
-      <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface shadow-soft">
+      <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface">
         <CodeMirror
           ref={editorRef}
           aria-label="Markdown editor"

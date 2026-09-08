@@ -1,184 +1,82 @@
 "use client";
 
 import { BookOpen, Download, FilePlus, Upload } from "lucide-react";
-
+import React from "react";
+import { BookCover } from "@/components/mdez/BookCover";
+import { LibraryPageList } from "@/components/mdez/LibraryPageList";
+import { estimateReadingMinutes, getBookPath, type LibraryFilter } from "@/lib/library-view";
+import { WORKSPACE_COPY, getBookExportCopy } from "@/lib/workspace-copy";
 import type { Document, Folder } from "@/types/content";
-import { WORKSPACE_COPY, formatRelativeTime, getBookExportCopy } from "@/lib/workspace-copy";
 
 type ShelfPaneProps = {
-  folders: Folder[];
-  documents: Document[];
-  selectedFolderId: string | null;
-  selectedDocumentId: string | null;
-  isReady: boolean;
-  onSelectFolder: (folderId: string | null) => void;
-  onSelectDocument: (documentId: string) => void;
-  onCreateDocument: () => void;
-  onCreateFolder: (parentId: string | null) => void;
-  onOpenImport: () => void;
-  onExportFolder: () => void;
+  folders: Folder[]; documents: Document[]; books: Folder[]; pages: Document[];
+  selectedFolderId: string | null; selectedDocumentId: string | null;
+  filter: LibraryFilter; query: string; bookmarkedIds: ReadonlySet<string>;
+  resumePage: Document | null; metadataError: string | null; isReady: boolean;
+  onSelectFolder: (folderId: string | null) => void; onSelectDocument: (documentId: string) => void;
+  onToggleBookmark: (documentId: string) => void; onCreateDocument: () => void;
+  onCreateFolder: (parentId: string | null) => void; onOpenImport: () => void;
+  onExportFolder: () => void; onClearSearch: () => void;
 };
 
-function getBookPageCount(documents: Document[], folderId: string) {
-  return documents.filter((document) => document.folderId === folderId).length;
+function viewTitle(filter: LibraryFilter, openBook: Folder | null, query: string) {
+  if (query.trim()) return `Results for “${query.trim()}”`;
+  if (openBook) return openBook.name;
+  if (filter === "recent") return "Fresh from your notebook.";
+  if (filter === "bookmarks") return "Your favorite ideas.";
+  if (filter === "unsorted") return WORKSPACE_COPY.pagesWithoutBook;
+  return "A little space for big ideas.";
 }
 
-export function ShelfPane({
-  folders,
-  documents,
-  selectedFolderId,
-  selectedDocumentId,
-  isReady,
-  onSelectFolder,
-  onSelectDocument,
-  onCreateDocument,
-  onCreateFolder,
-  onOpenImport,
-  onExportFolder
-}: ShelfPaneProps) {
-  const sortedFolders = folders.filter((folder) => folder.parentId === null).sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+export function ShelfPane({ folders, documents, books, pages, selectedFolderId, selectedDocumentId, filter, query, bookmarkedIds, resumePage, metadataError, isReady, onSelectFolder, onSelectDocument, onToggleBookmark, onCreateDocument, onCreateFolder, onOpenImport, onExportFolder, onClearSearch }: ShelfPaneProps) {
   const openBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
-  const visiblePages = documents
-    .filter((document) => (openBook ? document.folderId === openBook.id : true))
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 8);
-  const createPageLabel = openBook ? `Create page in ${openBook.name}` : "Create page";
   const exportCopy = getBookExportCopy(openBook?.name ?? null);
+  const showBooks = books.length > 0 || (!query && filter === "all");
+  const showResume = !query.trim() && filter === "all" && selectedFolderId === null && resumePage;
+  const hasResults = books.length > 0 || pages.length > 0;
 
   return (
-    <div className="grid min-h-0 flex-1 gap-5 overflow-hidden">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="library-view">
+      <header className="library-intro">
         <div>
-          <p className="max-w-2xl text-sm font-semibold leading-6 text-muted">
-            {openBook
-              ? `Showing recent pages in ${openBook.name}. Return to Library to view recent pages from every book.`
-              : "Open a book to see its recent pages. Library shows recent pages from every book."}
-          </p>
+          <h1>{viewTitle(filter, openBook, query)}</h1>
+          <p>{query ? "Search covers every book and page in this workspace." : openBook ? `A collection of thoughts inside ${openBook.name}.` : "Your notes, stories, and sparks of inspiration. All together."}</p>
         </div>
-        <div className="grid gap-2 md:justify-items-end">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              data-visual-priority="primary"
-              onClick={onCreateDocument}
-              aria-label={createPageLabel}
-              className="primary-button px-4 py-2"
-            >
-              <FilePlus aria-hidden="true" className="h-4 w-4" />
-              {createPageLabel}
-            </button>
-            <button type="button" onClick={() => onCreateFolder(null)} className="secondary-button px-4 py-2 text-sm font-extrabold">
-              <BookOpen aria-hidden="true" className="h-4 w-4" />
-              Create book
-            </button>
-            <button type="button" onClick={onOpenImport} aria-label={WORKSPACE_COPY.importMarkdown} className="secondary-button px-4 py-2 text-sm font-extrabold">
-              <Upload aria-hidden="true" className="h-4 w-4" />
-              {WORKSPACE_COPY.importMarkdown}
-            </button>
-            <button
-              type="button"
-              onClick={onExportFolder}
-              disabled={exportCopy.disabled}
-              aria-label={exportCopy.label}
-              className="secondary-button px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              <Download aria-hidden="true" className="h-4 w-4" />
-              {exportCopy.label}
-            </button>
-          </div>
-          <p className="max-w-md text-xs font-semibold leading-5 text-muted">{exportCopy.hint}</p>
+        <div className="library-actions">
+          <button type="button" onClick={onOpenImport} aria-label={WORKSPACE_COPY.importMarkdown} className="secondary-button"><Upload aria-hidden="true" />Import</button>
+          <button type="button" data-visual-priority="primary" onClick={onCreateDocument} aria-label={openBook ? `Create page in ${openBook.name}` : "Create page"} className="primary-button"><FilePlus aria-hidden="true" />New page</button>
+          <button type="button" onClick={() => onCreateFolder(selectedFolderId)} className="secondary-button"><BookOpen aria-hidden="true" />New book</button>
         </div>
-      </div>
+      </header>
 
-      <section className="workspace-section min-w-0" aria-labelledby="bookshelf-title">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="bookshelf-title" className="font-display text-xl font-black text-ink">
-            {WORKSPACE_COPY.books}
-          </h2>
-          <span className="rounded border border-border bg-panel px-3 py-1 text-xs font-bold text-muted">
-            {sortedFolders.length} {sortedFolders.length === 1 ? "book" : "books"}
-          </span>
-        </div>
+      {metadataError ? <p className="library-metadata-error">{metadataError}</p> : null}
+      {showResume ? (
+        <section className="library-resume" aria-labelledby="continue-writing-title">
+          <div><h2 id="continue-writing-title">Continue writing</h2><strong title={resumePage.title}>{resumePage.title}</strong><p>{getBookPath(resumePage.folderId, folders)} · {estimateReadingMinutes(resumePage.body)} min read</p><button type="button" onClick={() => onSelectDocument(resumePage.id)}>Open page</button></div>
+          <div className="library-resume-art" aria-hidden="true"><span /><span /></div>
+        </section>
+      ) : null}
 
-        {sortedFolders.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-panel p-6 text-center">
-            <p className="font-semibold text-muted">{isReady ? "No books yet. Create a book to group related pages." : "Indexing local library..."}</p>
+      {!isReady ? <p className="library-loading">Indexing this workspace…</p> : null}
+      {isReady && query && !hasResults ? <section className="library-empty"><h2>Nothing found yet.</h2><p>Try another title, phrase, or book name.</p><button type="button" onClick={onClearSearch}>Clear search</button></section> : null}
+      {isReady && !query && filter === "bookmarks" && pages.length === 0 ? <section className="library-empty"><h2>No bookmarks yet.</h2><p>Use the star beside any page to keep it close.</p></section> : null}
+
+      {showBooks && isReady ? (
+        <section className="library-section" aria-labelledby="bookshelf-title">
+          <div className="library-section-heading"><h2 id="bookshelf-title">{openBook ? "Books inside" : WORKSPACE_COPY.books}</h2><span>{books.length} {books.length === 1 ? "book" : "books"}</span></div>
+          {books.length ? <div className="library-books">{books.map((folder) => <BookCover key={folder.id} folder={folder} directPageCount={documents.filter((document) => document.folderId === folder.id).length} selected={folder.id === selectedFolderId} onSelect={onSelectFolder} />)}</div> : <div className="library-empty compact"><p>No books yet. Create a book to group related pages.</p></div>}
+        </section>
+      ) : null}
+
+      {isReady && (hasResults || (!query && filter !== "bookmarks")) ? (
+        <section className="library-section" aria-labelledby="library-pages-title">
+          <div className="library-section-heading">
+            <h2 id="library-pages-title">{query ? "Matching pages" : filter === "recent" ? "Recent pages" : filter === "bookmarks" ? "Bookmarked pages" : openBook ? "Pages in this book" : filter === "unsorted" ? "Unsorted pages" : "Recent pages"}</h2>
+            {openBook ? <button type="button" onClick={onExportFolder} disabled={exportCopy.disabled} aria-label={exportCopy.label} title={exportCopy.hint} className="library-export"><Download aria-hidden="true" />Export book</button> : null}
           </div>
-        ) : (
-          <div className="overflow-x-auto pb-3">
-            <div className="flex min-w-max items-end gap-3 border-b-4 border-accent-files/25 px-2 pb-2">
-              {sortedFolders.map((folder) => {
-                const pageCount = getBookPageCount(documents, folder.id);
-                const isOpen = selectedFolderId === folder.id;
-                const height = Math.min(11.5, 7.5 + pageCount * 0.8);
-                const width = Math.min(5.25, 3 + pageCount * 0.45);
-
-                return (
-                  <button
-                    key={folder.id}
-                    type="button"
-                    aria-label={`${folder.name} book, ${pageCount} ${pageCount === 1 ? "page" : "pages"}, ${isOpen ? "open" : "closed"}`}
-                    aria-pressed={isOpen}
-                    aria-expanded={isOpen}
-                    onClick={() => onSelectFolder(folder.id)}
-                    className={`book-spine ${isOpen ? "book-spine-open" : ""}`}
-                    style={{ height: `${height}rem`, width: `${width}rem` }}
-                  >
-                    <span className="writing-mode-vertical truncate">{folder.name}</span>
-                    <span className="mt-auto text-[0.68rem] font-bold">{pageCount}p</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="workspace-section min-h-0 overflow-hidden" aria-labelledby="recent-pages-title">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 id="recent-pages-title" className="font-display text-xl font-black text-ink">
-            {WORKSPACE_COPY.recentPages}
-          </h2>
-          {openBook ? <span className="text-sm font-semibold text-muted">{openBook.name}</span> : null}
-        </div>
-
-        {visiblePages.length === 0 ? (
-          <div className="rounded border border-dashed border-border bg-panel p-6 text-center">
-            <p className="font-semibold text-muted">
-              {openBook
-                ? "No pages in this book yet. Create a page or import Markdown here."
-                : "No pages yet. Create a page or import Markdown to begin."}
-            </p>
-          </div>
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label={WORKSPACE_COPY.recentPages}>
-            {visiblePages.map((document) => {
-              const parentBook = folders.find((folder) => folder.id === document.folderId)?.name ?? WORKSPACE_COPY.pagesWithoutBook;
-              const updated = formatRelativeTime(document.updatedAt);
-
-              return (
-                <li key={document.id}>
-                  <button
-                    type="button"
-                    aria-label={`${document.title} page in ${parentBook}, updated ${updated}`}
-                    aria-pressed={selectedDocumentId === document.id}
-                    onClick={() => onSelectDocument(document.id)}
-                    className={`dogear-card w-full rounded-md border bg-surface p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-files focus:outline-none focus:ring-2 focus:ring-accent-files ${
-                      selectedDocumentId === document.id ? "border-accent bg-panel" : "border-border"
-                    }`}
-                  >
-                    <span className="page-title-clamp font-display text-base font-black text-ink" title={document.title}>
-                      {document.title}
-                    </span>
-                    <span className="mt-2 block truncate text-sm font-semibold text-muted">{parentBook}</span>
-                    <span className="mt-3 block text-xs font-bold text-accent-files">Updated {updated}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+          {pages.length ? <LibraryPageList documents={pages} folders={folders} bookmarkedIds={bookmarkedIds} selectedDocumentId={selectedDocumentId} onSelectDocument={onSelectDocument} onToggleBookmark={onToggleBookmark} /> : <div className="library-empty compact"><p>{openBook ? "No pages in this book yet. Create a page or import Markdown here." : "No pages yet. Create a page or import Markdown to begin."}</p></div>}
+        </section>
+      ) : null}
     </div>
   );
 }
