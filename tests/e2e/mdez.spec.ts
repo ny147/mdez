@@ -416,6 +416,52 @@ test("mobile drawer makes the workspace inert", async ({ page }) => {
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
   await expect(trigger).toBeFocused();
 });
+
+test("very narrow library drawer keeps its content inside the viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 240, height: 844 });
+  await page.getByRole("button", { name: "Open library shelf" }).click();
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  const scrollArea = sidebar.locator(".sidebar-library-scroll");
+  await expect(sidebar).toHaveAttribute("aria-hidden", "false");
+
+  page.once("dialog", async (dialog) => dialog.accept("memory"));
+  await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
+  await expect(sidebar.getByRole("button", { name: "memory book, 0 pages, open", exact: true })).toBeVisible();
+
+  const overflow = await scrollArea.evaluate((element) => {
+    const boundary = element.getBoundingClientRect();
+    const row = element.querySelector<HTMLElement>(".folder-tree-row");
+    const rowStyle = row ? getComputedStyle(row) : null;
+    const wideDescendants = Array.from(element.querySelectorAll<HTMLElement>("*"))
+      .map((node) => {
+        const box = node.getBoundingClientRect();
+        return {
+          target: node.getAttribute("aria-label") ?? node.className ?? node.tagName,
+          width: Math.round(box.width),
+          right: Math.round(box.right)
+        };
+      })
+      .filter((node) => node.right > Math.ceil(boundary.right));
+
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      boundary: { left: Math.round(boundary.left), right: Math.round(boundary.right), width: Math.round(boundary.width) },
+      row: row ? {
+        left: Math.round(row.getBoundingClientRect().left),
+        right: Math.round(row.getBoundingClientRect().right),
+        width: Math.round(row.getBoundingClientRect().width),
+        display: rowStyle?.display,
+        columns: rowStyle?.gridTemplateColumns,
+        paddingLeft: rowStyle?.paddingLeft
+      } : null,
+      wideDescendants
+    };
+  });
+
+  expect(overflow.scrollWidth, JSON.stringify(overflow, null, 2)).toBeLessThanOrEqual(overflow.clientWidth);
+});
 test("library copy explains page and book scope", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "A little space for big ideas." })).toBeVisible();
   await openShelfDrawerIfAvailable(page);

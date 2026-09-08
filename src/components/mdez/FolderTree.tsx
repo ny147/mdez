@@ -135,7 +135,7 @@ function FolderTreeRow({
 
   return (
     <li>
-      <div className="group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
+      <div className="folder-tree-row group flex items-center gap-1 rounded transition hover:bg-panel" style={{ paddingLeft: `${depth * 0.75}rem` }}>
         <button
           type="button"
           onClick={() => hasChildren && onToggleFolder(folder.id)}
