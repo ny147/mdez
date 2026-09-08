@@ -417,12 +417,14 @@ test("mobile drawer makes the workspace inert", async ({ page }) => {
   await expect(trigger).toBeFocused();
 });
 test("library copy explains page and book scope", async ({ page }) => {
-  await expect(page.getByRole("heading", { level: 1, name: "Library" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "A little space for big ideas." })).toBeVisible();
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages?, open/ })).toBeVisible();
-  await expect(sidebar.getByText("Not added to a book yet")).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages, closed/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /My library/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Recent pages/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /Bookmarks/ })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
   await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
   await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
@@ -456,16 +458,13 @@ test("missing routes use the quiet Library recovery surface", async ({ page }) =
   await expect(page.locator(".recovery-content")).toHaveCSS("border-top-width", "1px");
 });
 
-test("root selection labels folder ZIP export but keeps it disabled", async ({ page }) => {
-  const bookZipButton = page.getByRole("button", { name: "Export book (.zip)", exact: true }).last();
-
-  await expect(bookZipButton).toBeVisible();
-  await expect(bookZipButton).toBeDisabled();
+test("root selection keeps book ZIP export with selected-book actions", async ({ page }) => {
+  await expect(page.getByRole("button", { name: /Export .*\.zip|Book ZIP/ })).toHaveCount(0);
 });
 
 test("global actions have one visible home", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(1);
-  await expect(page.getByRole("button", { name: /^(Export book \(.zip\)|Book ZIP for open book in Shelf)$/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^(Export book \(.zip\)|Book ZIP for open book in Shelf)$/ })).toHaveCount(0);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   await expect(sidebar.getByRole("button", { name: /^Import markdown$/i })).toHaveCount(0);
@@ -518,8 +517,42 @@ test("an open book explains filtering and export scope", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
 
-  await expect(page.getByText("Showing recent pages in Writing. Return to Library to view recent pages from every book.")).toBeVisible();
+  await expect(page.getByText("A collection of thoughts inside Writing.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Export Writing (.zip)" })).toBeEnabled();
+});
+
+test("search, bookmarks, and resume preserve an edited page across reload", async ({ page }) => {
+  const title = "Searchable field note";
+  const body = "# Searchable field note\n\nA durable spark from the library redesign.";
+
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("textbox", { name: "Page title" }).fill(title);
+  await page.locator(".cm-content").fill(body);
+
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("searchbox", { name: "Search pages and books" });
+  await expect(search).toBeFocused();
+  await search.fill("durable spark");
+  await search.press("Enter");
+
+  const result = page.getByRole("list", { name: "Library pages" }).getByRole("listitem").filter({ hasText: title });
+  await expect(result).toBeVisible();
+  await result.getByRole("button", { name: `Bookmark ${title}` }).click();
+  await expect(result.getByRole("button", { name: `Remove bookmark from ${title}` })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 2, name: "Continue writing" })).toBeVisible();
+  await expect(page.locator(".library-resume").getByText(title, { exact: true })).toBeVisible();
+  await page.locator(".library-resume").getByRole("button", { name: "Open page" }).click();
+  await expect(page.locator(".cm-content")).toContainText("A durable spark from the library redesign.");
+
+  await showShelfIfAvailable(page);
+  await openShelfDrawerIfAvailable(page);
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await sidebar.getByRole("button", { name: /Bookmarks/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Your favorite ideas." })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Library pages" }).getByText(title, { exact: true })).toBeVisible();
 });
 
 

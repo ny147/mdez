@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
@@ -11,6 +11,7 @@ import { requestGitHubImportPreview } from "@/lib/github-import";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
 import { Sidebar } from "@/components/mdez/Sidebar";
 import { ShelfPane } from "@/components/mdez/ShelfPane";
+import { LibrarySearch } from "@/components/mdez/LibrarySearch";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
 import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
@@ -28,6 +29,9 @@ import type { RememberedGroup } from "@/lib/db";
 import type { GroupConflict } from "@/types/key-group";
 import { GroupConflictDialog } from "@/components/mdez/GroupConflictDialog";
 import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
+import { selectLibraryView, type LibraryFilter } from "@/lib/library-view";
+import { usePageBookmarks } from "@/hooks/usePageBookmarks";
+import { useWorkspaceResume } from "@/hooks/useWorkspaceResume";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -98,6 +102,8 @@ export function MdezWorkspace() {
   const [isQuickShareOpen, setIsQuickShareOpen] = useState(false);
   const [isSharedLinksOpen, setIsSharedLinksOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
+  const [libraryFilter, setLibraryFilter] = useState<LibraryFilter>("all");
+  const [libraryQuery, setLibraryQuery] = useState("");
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
   const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
@@ -105,8 +111,17 @@ export function MdezWorkspace() {
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  const librarySearchRef = useRef<HTMLInputElement>(null);
+  const recordNextSelectionRef = useRef(false);
+  const workspaceId = activeGroupId ? `group:${activeGroupId}` : "local";
+  const bookmarkMetadata = usePageBookmarks(workspaceId);
+  const resumeMetadata = useWorkspaceResume(workspaceId);
   const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
   useEffect(() => { void reloadRememberedGroups(); }, []);
+  useEffect(() => {
+    setLibraryFilter("all");
+    setLibraryQuery("");
+  }, [workspaceId]);
   useEffect(() => {
     const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
     if (savedSidebar === "hidden") {
@@ -137,6 +152,21 @@ export function MdezWorkspace() {
     document.addEventListener("keydown", closeOverlays);
     return () => document.removeEventListener("keydown", closeOverlays);
   }, [isDrawerOpen, isTabletLayout]);
+
+  useEffect(() => {
+    function handleLibraryShortcut(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase("en-US") === "k") {
+        event.preventDefault();
+        librarySearchRef.current?.focus();
+        return;
+      }
+      if (event.key === "Escape" && libraryQuery) {
+        setLibraryQuery("");
+      }
+    }
+    document.addEventListener("keydown", handleLibraryShortcut);
+    return () => document.removeEventListener("keydown", handleLibraryShortcut);
+  }, [libraryQuery]);
 
   const {
     liveDocuments,
@@ -193,12 +223,30 @@ export function MdezWorkspace() {
   const liveSelectedDocument = liveDocuments.find(
     (document) => document.id === library.selectedDocumentId
   ) ?? null;
+  const libraryView = useMemo(() => selectLibraryView({
+    documents: liveDocuments,
+    folders: library.folders,
+    selectedFolderId: library.selectedFolderId,
+    filter: libraryFilter,
+    query: libraryQuery,
+    bookmarkedIds: bookmarkMetadata.bookmarkedIds,
+    lastOpenedDocumentId: resumeMetadata.lastOpenedDocumentId
+  }), [bookmarkMetadata.bookmarkedIds, library.folders, library.selectedFolderId, libraryFilter, libraryQuery, liveDocuments, resumeMetadata.lastOpenedDocumentId]);
+
+  useEffect(() => {
+    if (!recordNextSelectionRef.current || !library.selectedDocumentId) return;
+    recordNextSelectionRef.current = false;
+    void resumeMetadata.recordOpened(library.selectedDocumentId).catch(() => {
+      setOperationStatus({ message: "Resume history could not be saved", state: "error" });
+    });
+  }, [library.selectedDocumentId, resumeMetadata]);
 
   const showShelf = viewMode === "shelf";
   const showEditor = viewMode === "split" || viewMode === "editor";
   const showReader = viewMode === "split" || viewMode === "preview";
 
   function handleSelectFolder(folderId: string | null) {
+    setLibraryFilter("all");
     library.selectFolder(folderId);
     setViewMode("shelf");
     setIsDrawerOpen(false);
@@ -207,21 +255,27 @@ export function MdezWorkspace() {
   function handleSelectDocument(documentId: string) {
     if (!library.documents.some((document) => document.id === documentId)) return;
     library.selectDocument(documentId);
+    void resumeMetadata.recordOpened(documentId).catch(() => {
+      setOperationStatus({ message: "Resume history could not be saved", state: "error" });
+    });
     setViewMode("editor");
     setIsDrawerOpen(false);
   }
 
   async function handleCreateDocument() {
     try {
+      recordNextSelectionRef.current = true;
       await library.createPage();
       setViewMode("editor");
       setIsDrawerOpen(false);
     } catch {
+      recordNextSelectionRef.current = false;
       // The controller owns the exact user-facing error.
     }
   }
 
   async function handleImport(items: { title: string; body: string }[], folderId: string | null) {
+    recordNextSelectionRef.current = true;
     await library.importPages(items, folderId);
     setViewMode("editor");
     setIsDrawerOpen(false);
@@ -255,6 +309,7 @@ export function MdezWorkspace() {
     setOperationStatus({ message: "Importing GitHub repository", state: "loading" });
 
     try {
+      recordNextSelectionRef.current = true;
       const result = await library.importGitHub(session);
       setViewMode("editor");
       setIsDrawerOpen(false);
@@ -263,6 +318,7 @@ export function MdezWorkspace() {
         state: "saved"
       });
     } catch (importError) {
+      recordNextSelectionRef.current = false;
       const message = importError instanceof Error ? importError.message : "Mdez could not import this repository.";
       library.setError(message);
       setOperationStatus({ message: "GitHub import failed", state: "error" });
@@ -336,9 +392,33 @@ export function MdezWorkspace() {
     setIsImportOpen(true);
   }
 
+  function handleLibraryFilter(nextFilter: LibraryFilter) {
+    setLibraryFilter(nextFilter);
+    library.selectFolder(null);
+    setViewMode("shelf");
+    setIsDrawerOpen(false);
+  }
+
+  function handleLibrarySearchSubmit() {
+    if (!libraryQuery.trim()) return;
+    setViewMode("shelf");
+    setIsDrawerOpen(false);
+  }
+
+  function handleToggleBookmark(documentId: string) {
+    void bookmarkMetadata.toggleBookmark(documentId).catch(() => {
+      setOperationStatus({ message: "Bookmark could not be saved", state: "error" });
+    });
+  }
+
   function handleViewModeChange(nextMode: ViewMode) {
     setViewMode(nextMode);
     setIsDrawerOpen(false);
+    if (nextMode !== "shelf" && library.selectedDocumentId) {
+      void resumeMetadata.recordOpened(library.selectedDocumentId).catch(() => {
+        setOperationStatus({ message: "Resume history could not be saved", state: "error" });
+      });
+    }
   }
 
   function handleModeTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, options: { value: ViewMode }[]) {
@@ -364,13 +444,14 @@ export function MdezWorkspace() {
   }
 
   const sidebarIsHidden = isTabletLayout ? !isDrawerOpen : !isSidebarVisible;
-  const statusMessage = library.error
+  const metadataError = bookmarkMetadata.error ?? resumeMetadata.error;
+  const statusMessage = library.error ?? metadataError
     ?? (saveStatus === "Saving..."
       ? "Saving changes..."
       : saveStatus === "Unsaved"
         ? "Unsaved changes"
         : operationStatus?.message ?? "Saved in this browser");
-  const statusState = library.error
+  const statusState = library.error || metadataError
     ? "error"
     : saveStatus === "Saving..." || saveStatus === "Unsaved"
       ? "saving"
@@ -427,47 +508,11 @@ export function MdezWorkspace() {
             {isSidebarVisible ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}
           </button>
           <span className="workspace-wordmark">Mdez</span>
-          <WorkspaceSwitcher
-            activeGroupId={activeGroupId}
-            groups={rememberedGroups}
-            onSelect={setActiveGroupId}
-            onCreate={() => setIsCreateGroupOpen(true)}
-            onJoin={() => setIsJoinGroupOpen(true)}
-          />
         </div>
 
-        <div className="workspace-mode-nav" role="tablist" aria-label="Workspace modes">
-          {readerViewOptions.map((option) => (
-            <button
-              key={option.value}
-              id={modeTabId("desktop", option.value)}
-              type="button"
-              role="tab"
-              data-active-treatment="filled"
-              aria-selected={viewMode === option.value}
-              aria-controls={workspacePanelId}
-              tabIndex={viewMode === option.value ? 0 : -1}
-              onClick={() => handleViewModeChange(option.value)}
-              onKeyDown={(event) => handleModeTabKeyDown(event, readerViewOptions)}
-              className="workspace-mode-button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <LibrarySearch query={libraryQuery} onQueryChange={setLibraryQuery} onSubmit={handleLibrarySearchSubmit} hasResults={libraryView.books.length + libraryView.pages.length > 0} onClear={() => setLibraryQuery("")} inputRef={librarySearchRef} />
 
         <div className="workspace-actions">
-          {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" title="Refresh group" className="workspace-icon-button"><RefreshCw aria-hidden="true" className="h-4 w-4" /></button> : null}
-          {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" title="Group settings" className="workspace-icon-button"><Settings aria-hidden="true" className="h-4 w-4" /></button> : null}
-          <button
-            type="button"
-            onClick={() => setIsSharedLinksOpen(true)}
-            aria-label="Shared links"
-            title="Shared links"
-            className="workspace-icon-button"
-          >
-            <Link2 aria-hidden="true" className="h-4 w-4" />
-          </button>
           <button
             ref={drawerTriggerRef}
             type="button"
@@ -508,6 +553,19 @@ export function MdezWorkspace() {
           onMoveDocument={library.movePage}
           onDeleteDocument={library.deletePage}
           onRefreshGitHub={(source) => void handleRefreshGitHub(source)}
+          filter={libraryFilter}
+          bookmarkCount={bookmarkMetadata.bookmarkedIds.size}
+          onSelectFilter={handleLibraryFilter}
+          workspaceControls={(
+            <div className="sidebar-workspace-menu">
+              <WorkspaceSwitcher activeGroupId={activeGroupId} groups={rememberedGroups} onSelect={setActiveGroupId} onCreate={() => setIsCreateGroupOpen(true)} onJoin={() => setIsJoinGroupOpen(true)} />
+              <div className="sidebar-workspace-actions">
+                {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" title="Refresh group"><RefreshCw aria-hidden="true" /></button> : null}
+                {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" title="Group settings"><Settings aria-hidden="true" /></button> : null}
+                <button type="button" onClick={() => setIsSharedLinksOpen(true)} aria-label="Shared links" title="Shared links"><Link2 aria-hidden="true" /></button>
+              </div>
+            </div>
+          )}
         />
 
         {isTabletLayout && isDrawerOpen ? (
@@ -531,28 +589,34 @@ export function MdezWorkspace() {
             aria-labelledby={modeTabId(isMobileLayout ? "mobile" : "desktop", viewMode)}
           >
             <div className="workspace-context">
-              <div className="min-w-0">
-                <p className="workspace-context-label">
-                  {library.selectedFolder ? `${library.selectedFolder.name} book` : WORKSPACE_COPY.library}
-                </p>
-                {showShelf ? <h1 className="workspace-title truncate">{WORKSPACE_COPY.library}</h1> : null}
+              <p className="workspace-context-label">Workspace <span aria-hidden="true">/</span> <strong>{library.selectedFolder?.name ?? (libraryFilter === "bookmarks" ? "Bookmarks" : libraryFilter === "recent" ? "Recent pages" : libraryFilter === "unsorted" ? "Unsorted pages" : "My library")}</strong></p>
+              <div className="workspace-mode-nav" role="tablist" aria-label="Workspace modes">
+                {readerViewOptions.map((option) => <button key={option.value} id={modeTabId("desktop", option.value)} type="button" role="tab" data-active-treatment="filled" aria-selected={viewMode === option.value} aria-controls={workspacePanelId} tabIndex={viewMode === option.value ? 0 : -1} onClick={() => handleViewModeChange(option.value)} onKeyDown={(event) => handleModeTabKeyDown(event, readerViewOptions)} className="workspace-mode-button">{option.label}</button>)}
               </div>
-              {!showShelf ? <p className="workspace-context-label">{readerViewOptions.find((option) => option.value === viewMode)?.label}</p> : null}
             </div>
 
             {showShelf ? (
               <ShelfPane
                 folders={library.folders}
                 documents={liveDocuments}
+                books={libraryView.books}
+                pages={libraryView.pages}
                 selectedFolderId={library.selectedFolderId}
                 selectedDocumentId={library.selectedDocumentId}
+                filter={libraryFilter}
+                query={libraryQuery}
+                bookmarkedIds={bookmarkMetadata.bookmarkedIds}
+                resumePage={libraryView.resumePage}
+                metadataError={metadataError}
                 isReady={library.isReady}
                 onSelectFolder={handleSelectFolder}
                 onSelectDocument={handleSelectDocument}
+                onToggleBookmark={handleToggleBookmark}
                 onCreateDocument={handleCreateDocument}
                 onCreateFolder={library.createBook}
                 onOpenImport={handleOpenImport}
                 onExportFolder={() => void handleSidebarFolderExport()}
+                onClearSearch={() => setLibraryQuery("")}
               />
             ) : viewMode === "split" ? (
               <SplitWorkspace
