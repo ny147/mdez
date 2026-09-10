@@ -151,7 +151,7 @@ test("uses the accepted spacious library shell and typography", async ({ page })
     );
   });
 
-  expect(colors).toEqual(["#fbfafc", "#f3f0f8", "#292735", "#706c7c", "#7052b8", "#e9e6ee"]);
+  expect(colors).toEqual(["#fbfafe", "#f2eefa", "#211a3d", "#6c627d", "#6845ac", "#e4ddec"]);
 
   const presentation = await page.evaluate(() => ({
     body: getComputedStyle(document.body).fontFamily,
@@ -471,8 +471,9 @@ test("library copy explains page and book scope", async ({ page }) => {
   await expect(sidebar.getByRole("button", { name: /My library/ })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: /Recent pages/ })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: /Bookmarks/ })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2, name: "Recent pages" })).toBeVisible();
-  await expect(page.getByText("No books yet. Create a book to group related pages.").last()).toBeVisible();
+  await showShelfIfAvailable(page);
+  await expect(page.getByRole("heading", { level: 2, name: "Your library starts here." })).toBeVisible();
+  await expect(page.getByText("Create a page or import Markdown to begin.")).toBeVisible();
   await expect(page.getByText("Shelf root", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Bookmarked pages", { exact: true })).toHaveCount(0);
 });

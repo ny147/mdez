@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 
 import { MarkdownReader } from "@/components/mdez/MarkdownReader";
+import { BrandLogo } from "@/components/mdez/BrandLogo";
 import type { QuickSharePayload } from "@/types/quick-share";
 
 type SharedPageState =
@@ -24,7 +25,8 @@ function TerminalState({ title, message }: { title: string; message: string }) {
   return (
     <main className="grid min-h-screen place-items-center bg-canvas px-5 py-12 text-ink">
       <div className="w-full max-w-xl border-t border-border pt-8">
-        <p className="field-label">Mdez shared snapshot</p>
+        <BrandLogo />
+        <p className="field-label mt-4">Mdez shared snapshot</p>
         <h1 className="mt-2 text-wrap-balance font-display text-3xl font-black">{title}</h1>
         <p className="mt-4 max-w-prose text-pretty text-base font-semibold leading-7 text-muted">{message}</p>
         <a href="/" className="secondary-button mt-6 min-h-11 px-4 py-2 text-sm font-extrabold">
@@ -89,7 +91,7 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
     <div className="min-h-screen bg-canvas text-ink">
       <header className="border-b border-border bg-paper px-5 py-3">
         <div className="mx-auto flex w-full max-w-[760px] flex-wrap items-center justify-between gap-2">
-          <a href="/" className="font-display text-base font-black text-ink">Mdez</a>
+          <a href="/" aria-label="Open Mdez" className="inline-flex min-h-11 items-center"><BrandLogo /></a>
           <p className="text-sm font-semibold text-muted">View-only snapshot</p>
         </div>
       </header>

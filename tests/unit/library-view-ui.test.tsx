@@ -12,6 +12,46 @@ const book: Folder = { id: "book", name: "แนวคิดสำหรับ�
 const page: Document = { id: "page", title: "A very long multilingual page title ภาษาไทย 日本語 that must remain available in full", body: "body", folderId: "book", order: 0, createdAt: timestamp, updatedAt: timestamp };
 
 describe("redesigned library presentation", () => {
+  const emptyShelfProps: React.ComponentProps<typeof ShelfPane> = {
+    folders: [], documents: [], books: [], pages: [], selectedFolderId: null,
+    selectedDocumentId: null, filter: "all", query: "", bookmarkedIds: new Set(),
+    resumePage: null, metadataError: null, isReady: true,
+    onSelectFolder: vi.fn(), onSelectDocument: vi.fn(), onToggleBookmark: vi.fn(),
+    onCreateDocument: vi.fn(), onCreateFolder: vi.fn(), onOpenImport: vi.fn(),
+    onExportFolder: vi.fn(), onClearSearch: vi.fn()
+  };
+
+  it("welcomes only a ready empty library and keeps creation available", () => {
+    const result = render(<ShelfPane {...emptyShelfProps} isReady={false} />);
+    expect(screen.queryByRole("heading", { name: "Your library starts here." })).not.toBeInTheDocument();
+    result.rerender(<ShelfPane {...emptyShelfProps} />);
+    expect(screen.getAllByRole("heading", { name: "Your library starts here." })).toHaveLength(1);
+    expect(screen.queryByText(/No books yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No pages yet/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create page" })).toBeEnabled();
+    result.rerender(<ShelfPane {...emptyShelfProps} folders={[book]} books={[book]} />);
+    expect(screen.queryByRole("heading", { name: "Your library starts here." })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { filter: "bookmarks" as const },
+    { filter: "recent" as const },
+    { filter: "unsorted" as const },
+    { query: "missing" },
+    { selectedFolderId: "book", folders: [book] },
+    { documents: [page] }
+  ])("does not mistake a contextual empty view for first use: %j", (overrides) => {
+    render(<ShelfPane {...emptyShelfProps} {...overrides} />);
+    expect(screen.queryByRole("heading", { name: "Your library starts here." })).not.toBeInTheDocument();
+  });
+
+  it("treats whitespace-only search as browsing without a second empty state", () => {
+    render(<ShelfPane {...emptyShelfProps} query="   " />);
+    expect(screen.getByRole("heading", { name: "Your library starts here." })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Nothing found yet." })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear search" })).not.toBeInTheDocument();
+  });
+
   it("renders a real zero-page cover and selects a child book", () => {
     const select = vi.fn();
     render(<BookCover folder={book} directPageCount={0} selected={false} onSelect={select} />);

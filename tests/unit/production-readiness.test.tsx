@@ -50,6 +50,11 @@ describe("production readiness", () => {
       start_url: "/"
     });
     expect(readFileSync(resolve(process.cwd(), "src/app/icon.svg"), "utf8")).toContain("<svg");
+    for (const icon of manifest().icons ?? []) {
+      const path = icon.src === "/icon.svg" ? "src/app/icon.svg" : `public${icon.src}`;
+      expect(readFileSync(resolve(process.cwd(), path)).byteLength).toBeGreaterThan(0);
+    }
+    expect(readFileSync(resolve(process.cwd(), "public/brand/apple-touch-icon.png")).byteLength).toBeGreaterThan(0);
   });
 
   it("provides recovery actions for application and missing-route errors", () => {

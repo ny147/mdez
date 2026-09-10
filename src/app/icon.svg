@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mdez">
-  <rect width="64" height="64" rx="15" fill="#fff0f8"/>
-  <path d="M13 17c8-3 14-1 19 4v30c-5-5-11-7-19-4V17Z" fill="#fffdfd" stroke="#b8487a" stroke-width="3" stroke-linejoin="round"/>
-  <path d="M51 17c-8-3-14-1-19 4v30c5-5 11-7 19-4V17Z" fill="#f6edff" stroke="#8053c8" stroke-width="3" stroke-linejoin="round"/>
-  <path d="M20 27h7M20 34h7M38 27h7M38 34h7" stroke="#725f7c" stroke-width="3" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Mdez"><rect width="128" height="128" rx="28" fill="#fbfafe"/><g transform="translate(8 -13) scale(1 1.15)"><path d="M9 44Q5 42 5 47V88Q5 91 8 92L47 107V62Z" fill="#f397cb"/><path d="M47 62L55 68L64 62V107L57 111Q55 112 53 111L47 107Z" fill="#ac96ea"/><path d="M64 62L103 44Q107 42 107 47V88Q107 91 104 92L64 107Z" fill="#47cbe8"/></g></svg>

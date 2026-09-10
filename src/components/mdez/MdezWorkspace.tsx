@@ -10,6 +10,7 @@ import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
 import { Sidebar } from "@/components/mdez/Sidebar";
+import { AnimatedBrandLogo } from "@/components/mdez/AnimatedBrandLogo";
 import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { LibrarySearch } from "@/components/mdez/LibrarySearch";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
@@ -507,7 +508,7 @@ export function MdezWorkspace() {
           >
             {isSidebarVisible ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}
           </button>
-          <span className="workspace-wordmark">Mdez</span>
+          <AnimatedBrandLogo />
         </div>
 
         <LibrarySearch query={libraryQuery} onQueryChange={setLibraryQuery} onSubmit={handleLibrarySearchSubmit} hasResults={libraryView.books.length + libraryView.pages.length > 0} onClear={() => setLibraryQuery("")} inputRef={librarySearchRef} />

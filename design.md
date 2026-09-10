@@ -1,8 +1,8 @@
 # Mdez Library Workspace Design
 
-Status: implemented and verified on `codex/library-redesign` on 2026-09-08.
+Status: Prism Pages brand implementation verified on `codex/prism-pages-brand` on 2026-09-10, based on freshly fetched `origin/main` at `5ed39b9`.
 
-The accepted visual reference is `mdez-redesign.html`. The normative behavior and implementation detail live in `docs/superpowers/specs/2026-09-06-library-redesign.md` and `docs/superpowers/plans/2026-09-06-library-redesign.md`.
+The library behavior remains defined by `docs/superpowers/specs/2026-09-06-library-redesign.md`. The current brand specification is `docs/superpowers/specs/2026-09-09-prism-pages-brand-design.md`; approved concept references are in `docs/design-assets/prism-pages/`.
 
 ## Product shape
 
@@ -13,12 +13,21 @@ Mdez opens into a calm, single-page writing library. Books are folders, pages ar
 - Manrope carries display hierarchy; DM Sans carries interface text.
 - JetBrains Mono remains the editor/status/code face.
 - Reader prose uses Georgia for Latin glyphs with the existing Shippori Mincho multilingual fallback.
-- The canvas is warm white, the fixed shelf is pale lavender, and semantic lavender/mint/berry accents distinguish Edit, Read, and Shelf.
+- The canvas is near white, the fixed shelf is pale lavender, and semantic violet/teal/berry accents distinguish Edit, Read, and Shelf. Pink, lavender, cyan, and blue cover variants remain stable per book.
 - Desktop uses a 238px shelf, 80px header, 1240px content measure, and four cover columns when space permits.
 - Tablet keeps the established 1023px drawer boundary. Mobile keeps the 767px bottom-navigation boundary and two cover columns.
 - Rules establish hierarchy; shadows are reserved for overlays and subtle book depth.
 
-All production colors are defined once in `src/app/styles/tokens.css`. Workspace and Markdown consumers use semantic custom properties rather than inline color literals.
+Workspace colors are defined in `src/app/styles/tokens.css`. The vector identity uses a shared `brand-mark.json` definition consumed by BrandLogo and `scripts/export-brand-icons.mjs`; regenerate exported icons with `node scripts/export-brand-icons.mjs`.
+
+## Prism Pages identity and companion
+
+- The header uses a combined open-book and mascot-head silhouette, plus a lowercase Manrope wordmark. The compact mobile header keeps the symbol only. Favicon uses the book-only mark.
+- AnimatedBrandLogo reveals the mascot in 360ms and finishes the sparkle at 600ms, once per tab session. Reduced motion and unavailable browser storage produce a static mark. Sidebar collapse and reload do not replay it. Public shared pages and recovery surfaces use static branding.
+- Writing and peeking PNGs are genuinely transparent, 384×256 and 416×277 respectively, each under 145KB. The writing companion appears on the resume card; peeking art appears in welcome and contextual empty states. Only one full mascot appears per Shelf view, and none appears inside the editor/reader.
+- First-use requires a ready, empty root library in All with no non-whitespace search. It replaces the two redundant main-panel empty messages with one welcome panel; actions stay available above it.
+- Resume artwork uses 192px desktop and 96px compact width and is hidden below 430px. Welcome artwork stacks above copy on mobile.
+- Book names in the narrow sidebar now occupy their own row; rename/create/delete controls occupy a second row. This repairs the previously zero-width book labels while preserving the same actions.
 
 ## Information architecture
 
@@ -55,11 +64,13 @@ CodeMirror, the MarkdownReader pipeline, math, syntax highlighting, table of con
 
 The final implementation passes:
 
-- 44 Vitest files / 280 tests.
+- 45 Vitest files / 292 tests.
 - ESLint with zero warnings.
 - Next.js type generation and TypeScript checking.
 - Optimized Next.js production build.
-- 160 Playwright tests across desktop and mobile projects.
+- 168 Playwright tests across desktop and mobile projects.
+
+Visual review passed for populated/welcome Shelf, mobile, Edit, Read, and Split. Screenshots and local logs are in `.superpowers/sdd/2026-09-09-prism-pages-brand/`; that scratch directory is ignored. Seventeen text/background token pairs exceeded 4.5:1 (lowest checked: 4.92:1). The mechanical design detector returned no findings. Code review's animation replay and whitespace-search findings were reproduced and resolved. Actual browser zoom at 200% was not separately exercised; responsive viewport checks are not claimed as a substitute.
 
 Browser coverage includes persistence, search/bookmark/resume reload, key groups, Quick Share, GitHub import/refresh, Markdown and ZIP export, reader math/code/TOC, reduced motion, keyboard navigation, inert overlays, 44px touch targets, and no horizontal page overflow at 390, 430, 768, 1024, and 1440 pixels.
 

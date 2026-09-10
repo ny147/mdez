@@ -15,3 +15,7 @@ _Avoid_: Global search, book-only search
 **Resume page**:
 The last page a reader opened in this browser within a particular workspace. It is personal history; another group member’s edits do not change it.
 _Avoid_: Latest edited page, group activity
+
+**Library companion**:
+Mdez's illustrated mascot, a decorative character that welcomes readers and adds personality to their library. It is not an interactive assistant or a source of document advice.
+_Avoid_: AI assistant, writing assistant, chatbot

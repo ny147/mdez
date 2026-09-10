@@ -3,6 +3,7 @@
 import { getCoverVariant } from "@/lib/library-view";
 import React from "react";
 import type { Folder } from "@/types/content";
+import mark from "./brand-mark.json";
 
 type BookCoverProps = {
   folder: Folder;
@@ -24,9 +25,10 @@ export function BookCover({ folder, directPageCount, selected, onSelect }: BookC
       onClick={() => onSelect(folder.id)}
     >
       <span className="library-book-cover" aria-hidden="true">
-        <span className="library-book-kicker">MDEZ NOTES</span>
         <strong>{folder.name}</strong>
-        <span className="library-book-geometry" />
+        <svg className="library-book-geometry" viewBox="0 40 112 72" focusable="false">
+          {mark.book.map((shape, index) => <path key={index} d={shape.d} fill="currentColor" />)}
+        </svg>
         <span className="library-book-foot">{pageLabel}</span>
       </span>
       <span className="library-book-title" title={folder.name}>{folder.name}</span>

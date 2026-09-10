@@ -7,5 +7,5 @@ export const appMetadata: Metadata = {
     template: "%s · Mdez"
   },
   description: "A local-first Markdown reader, editor, and public GitHub importer.",
-  icons: { icon: "/icon.svg" }
+  icons: { icon: "/icon.svg", apple: "/brand/apple-touch-icon.png" }
 };

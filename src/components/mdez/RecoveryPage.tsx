@@ -1,4 +1,5 @@
 import React, { type ReactNode } from "react";
+import { BrandLogo } from "@/components/mdez/BrandLogo";
 
 type RecoveryPageProps = {
   title: string;
@@ -10,7 +11,7 @@ export function RecoveryPage({ title, description, action }: RecoveryPageProps) 
   return (
     <main className="recovery-page text-ink">
       <section className="recovery-content" aria-labelledby="recovery-title">
-        <p className="font-display text-base font-bold text-accent-files">Mdez</p>
+        <BrandLogo />
         <h1 id="recovery-title" className="mt-5 max-w-xl font-display text-3xl font-black leading-tight sm:text-4xl">
           {title}
         </h1>
