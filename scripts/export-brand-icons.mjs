@@ -5,11 +5,21 @@ import sharp from "sharp";
 
 const root = new URL("../", import.meta.url);
 const mark = JSON.parse(await readFile(new URL("src/components/mdez/brand-mark.json", root), "utf8"));
+const wordmark = JSON.parse(await readFile(new URL("scripts/brand-wordmark.json", root), "utf8"));
 const paths = (part) => mark[part].map(({ d, color }) => `<path d="${d}" fill="${mark.colors[color]}"/>`).join("");
 const symbol = ["mascot", "book", "sparkle"].map((part) => `<g id="${part}">${paths(part)}</g>`).join("");
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${mark.viewBox}" role="img" aria-label="Mdez">${symbol}</svg>\n`;
 await mkdir(new URL("public/brand/", root), { recursive: true });
 await writeFile(new URL("public/brand/prism-pages.svg", root), svg);
+// Outlined lettering keeps external lockups independent of installed fonts.
+const lettering = wordmark.paths.map(({ x, d }) => `<path transform="translate(${x} 0)" d="${d}"/>`).join("");
+const scale = 84 / wordmark.unitsPerEm;
+const width = Math.ceil(140 + wordmark.advance * scale);
+for (const [name, ink, clip] of [["ink", mark.colors.ink, mark.colors.clip], ["white", "#ffffff", mark.colors.ink]]) {
+  const mascot = mark.mascot.map(({ d, color }) => `<path d="${d}" fill="${color === "ink" ? ink : clip}"/>`).join("");
+  const coloredSymbol = `<g id="mascot">${mascot}</g><g id="book">${paths("book")}</g><g id="sparkle">${paths("sparkle")}</g>`;
+  await writeFile(new URL(`public/brand/prism-pages-wordmark-${name}.svg`, root), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 112" role="img" aria-label="Mdez">${coloredSymbol}<g fill="${ink}" transform="translate(140 86) scale(${scale} -${scale})">${lettering}</g></svg>\n`);
+}
 await writeFile(new URL("src/app/icon.svg", root), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Mdez"><rect width="128" height="128" rx="28" fill="#fbfafe"/><g transform="translate(8 -13) scale(1 1.15)">${paths("book")}</g></svg>\n`);
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#f2eefa"/><g transform="translate(80 66) scale(3.14)">${symbol}</g></svg>`;
 for (const [name, size] of [["apple-touch-icon", 180], ["icon-192", 192], ["icon-512", 512]]) {

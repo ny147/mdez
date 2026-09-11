@@ -135,7 +135,7 @@ const isFirstUse = isReady && !query.trim() && filter === 'all'
 
 - [x] Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`. Inspect each result; historical results are not evidence for these changes.
 - [x] Run `npm run test:e2e` with the existing configured server and both projects. Preserve tests for local save/reload, search/bookmark/resume isolation, long unsaved drafts, import, GitHub refresh, Markdown/ZIP export, groups, and Quick Share.
-- [ ] Remaining release check: actual 200% browser zoom. Completed batched visual inspection at 390, 430, 768, 1024, and 1440px. Include populated, first-use, search/no-results, empty bookmarks/book, Edit/Read/Split, shared-page and recovery states. Use representative multilingual and long titles. Check horizontal overflow, 44px targets, focus-managed drawer, clear image edges, image-failure layout, and actual byte sizes.
+- [x] Actual 200% Chromium tab zoom verified on 2026-09-11 for welcome and all four workspace modes, with no horizontal overflow. Completed batched visual inspection at 390, 430, 768, 1024, and 1440px. Include populated, first-use, search/no-results, empty bookmarks/book, Edit/Read/Split, shared-page and recovery states. Use representative multilingual and long titles. Check horizontal overflow, 44px targets, focus-managed drawer, clear image edges, image-failure layout, and actual byte sizes.
 - [x] Verify the logo animates once in a fresh tab session, remains still on mode changes and reload, and is static when reduced motion is enabled. Verify denied sessionStorage does not break rendering. Record any environment limits precisely.
 - [x] Run the Impeccable mechanical detector once on changed UI files using `node C:/Users/Neary/.agents/skills/impeccable/scripts/detect.mjs --json` followed by the actual changed UI paths. Review design findings in the context of the pinned palette and approved references.
 - [x] Fix observed issues in one batch and perform at most one confirmation visual pass, unless unresolved material defects justify more work. Re-run only checks affected by fixes.
@@ -145,4 +145,3 @@ const isFirstUse = isReady && !query.trim() && filter === 'all'
 ## Plan self-review
 
 Coverage: Task 1 owns asset identity/alpha/performance; Task 2 owns logo accessibility/session motion; Task 3 owns first-use and all mascot placements; Task 4 owns tokens/icons/shared/recovery branding; Task 5 owns regression, responsive, accessibility, and documentation checks. Existing data flow stays unchanged. No new accounts, assistant, theme toggle, or marketing page are introduced.
-

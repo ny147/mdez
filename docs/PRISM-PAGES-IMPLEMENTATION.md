@@ -1,6 +1,6 @@
 # Prism Pages implementation checkpoint
 
-Updated: 2026-09-10.
+Updated: 2026-09-11. Implementation complete.
 
 ## Location and base
 
@@ -25,12 +25,12 @@ Combined silhouette/book SVG logo, once-per-tab-session 600ms reveal, reduced-mo
 - Both mascot PNGs have genuine RGBA transparency and are below 145KB. See `public/brand/README.md`.
 - Reviewer findings for replay-on-sidebar-toggle and whitespace search were reproduced with failing tests and fixed.
 
-## Remaining handoff
+## Final handoff
 
 - Review the final branch commit with `git log -1` and `git status --short`.
 - No merge, push, PR, or deployment has been performed.
-- Actual browser zoom at 200% was not separately tested; a final manual browser zoom check is recommended before release. No claim is made that viewport tests verify browser zoom.
-- The approved spec's external white-wordmark export remains unfinished; current app, favicon, and installed-app marks are delivered.
+- Actual Chromium tab zoom at 200% passed for welcome, Shelf, Edit, Read, and Split with a long multilingual title. Browser zoom was set through `chrome.tabs.setZoom` in an isolated test profile: viewport 1424→712 CSS pixels, DPR 1→2, document width 712 with no horizontal overflow. Captures used CDP's full visible browser surface. Mascots remained confined to Shelf.
+- External ink and white wordmark SVGs are delivered in `public/brand/`, with self-contained Manrope outlines and a deterministic export script. See the asset README for usage and provenance.
 
 ## Resume commands
 
@@ -49,6 +49,6 @@ Local verification logs, screenshot capture script, and final screenshots are un
 
 The user requested a checkpoint if either remaining usage window falls below 5%. Interpret this as remaining percentage (`100 - usedPercent`). Do not consume reset credits without explicit authorization. This checkpoint is saved proactively; check usage before extended follow-up work.
 
-## Pause reason
-Usage check reached 3% remaining in the five-hour window (97% used), triggering the user-requested save point. Resume with the white-wordmark export and actual 200% browser zoom verification, then final handoff. Core implementation is verified; do not repeat completed work without a new failure or change.
+## Checkpoint history
+Commit `19ab34d` saved the core implementation when usage reached 3% remaining. Work resumed after usage reset, completing the external wordmark exports and actual browser zoom verification. No application behavior changed after the full passing test suite.
 

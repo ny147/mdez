@@ -70,7 +70,7 @@ The final implementation passes:
 - Optimized Next.js production build.
 - 168 Playwright tests across desktop and mobile projects.
 
-Visual review passed for populated/welcome Shelf, mobile, Edit, Read, and Split. Screenshots and local logs are in `.superpowers/sdd/2026-09-09-prism-pages-brand/`; that scratch directory is ignored. Seventeen text/background token pairs exceeded 4.5:1 (lowest checked: 4.92:1). The mechanical design detector returned no findings. Code review's animation replay and whitespace-search findings were reproduced and resolved. Actual browser zoom at 200% was not separately exercised; responsive viewport checks are not claimed as a substitute.
+Visual review passed for populated/welcome Shelf, mobile, Edit, Read, and Split. Screenshots and local logs are in `.superpowers/sdd/2026-09-09-prism-pages-brand/`; that scratch directory is ignored. Seventeen text/background token pairs exceeded 4.5:1 (lowest checked: 4.92:1). The mechanical design detector returned no findings. Code review's animation replay and whitespace-search findings were reproduced and resolved. Actual Chromium tab zoom at 200% passed on 2026-09-11 for welcome, Shelf, Edit, Read, and Split: 1424 to 712 CSS pixels, DPR 1 to 2, no horizontal overflow. External ink and white wordmark SVGs with portable outlined lettering are delivered in public/brand/.
 
 Browser coverage includes persistence, search/bookmark/resume reload, key groups, Quick Share, GitHub import/refresh, Markdown and ZIP export, reader math/code/TOC, reduced motion, keyboard navigation, inert overlays, 44px touch targets, and no horizontal page overflow at 390, 430, 768, 1024, and 1440 pixels.
 

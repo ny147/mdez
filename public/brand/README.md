@@ -1,5 +1,26 @@
 # Prism Pages brand assets
 
+## Portable logo exports
+
+- `prism-pages.svg`: standalone full-color silhouette/book mark.
+- `prism-pages-wordmark-ink.svg`: full-color mark with ink lettering for light backgrounds.
+- `prism-pages-wordmark-white.svg`: full-color book with white silhouette and lettering for dark backgrounds. The hair clip uses brand ink (`#211A3D`); use that background for a seamless cutout appearance.
+
+All SVGs are self-contained paths with transparent backgrounds and an accessible
+Mdez label. They contain no external images, scripts, or font dependencies.
+Keep their aspect ratio and allow clear space around the mark.
+
+Regenerate logo and application-icon exports with `node scripts/export-brand-icons.mjs`.
+The symbol comes from `src/components/mdez/brand-mark.json`. Letter outlines in
+`scripts/brand-wordmark.json` derive from the application's Manrope Latin font at
+weight 800, with -0.04em tracking, matching the live wordmark's styling. The JSON
+records the source font SHA-256, units per em, glyph positions, and paths.
+Extraction used fontTools 4.65.0 from the existing Next.js font build; rebuilding
+these exports only requires the checked-in paths and the existing Sharp package.
+
+Both lockups were rasterized and visually checked, including the white version
+against brand ink. Existing app icons remain byte-identical after regeneration.
+
 ## Mascot provenance and exports
 
 Prepared 2026-09-09 with the built-in imagegen tool, following the approved
