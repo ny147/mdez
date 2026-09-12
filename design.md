@@ -1,6 +1,6 @@
 # Mdez Library Workspace Design
 
-Status: Prism Pages brand implementation verified on `codex/prism-pages-brand` on 2026-09-10, based on freshly fetched `origin/main` at `5ed39b9`.
+Status: Prism Pages brand plus flat Library sidebar implemented on `codex/library-sidebar` on 2026-09-12.
 
 The library behavior remains defined by `docs/superpowers/specs/2026-09-06-library-redesign.md`. The current brand specification is `docs/superpowers/specs/2026-09-09-prism-pages-brand-design.md`; approved concept references are in `docs/design-assets/prism-pages/`.
 
@@ -14,7 +14,7 @@ Mdez opens into a calm, single-page writing library. Books are folders, pages ar
 - JetBrains Mono remains the editor/status/code face.
 - Reader prose uses Georgia for Latin glyphs with the existing Shippori Mincho multilingual fallback.
 - The canvas is near white, the fixed shelf is pale lavender, and semantic violet/teal/berry accents distinguish Edit, Read, and Shelf. Pink, lavender, cyan, and blue cover variants remain stable per book.
-- Desktop uses a 238px shelf, 80px header, 1240px content measure, and four cover columns when space permits.
+- Desktop uses a 272px shelf, 80px header, 1240px content measure, and four cover columns when space permits.
 - Tablet keeps the established 1023px drawer boundary. Mobile keeps the 767px bottom-navigation boundary and two cover columns.
 - Rules establish hierarchy; shadows are reserved for overlays and subtle book depth.
 
@@ -27,11 +27,11 @@ Workspace colors are defined in `src/app/styles/tokens.css`. The vector identity
 - Writing and peeking PNGs are genuinely transparent, 384×256 and 416×277 respectively, each under 145KB. The writing companion appears on the resume card; peeking art appears in welcome and contextual empty states. Only one full mascot appears per Shelf view, and none appears inside the editor/reader.
 - First-use requires a ready, empty root library in All with no non-whitespace search. It replaces the two redundant main-panel empty messages with one welcome panel; actions stay available above it.
 - Resume artwork uses 192px desktop and 96px compact width and is hidden below 430px. Welcome artwork stacks above copy on mobile.
-- Book names in the narrow sidebar now occupy their own row; rename/create/delete controls occupy a second row. This repairs the previously zero-width book labels while preserving the same actions.
+- The Library uses compact 44px book and page rows. A disclosure controls the page list, the name opens Shelf, and a quiet ellipsis opens actions without reducing the title to zero width.
 
 ## Information architecture
 
-The sidebar owns workspace switching, group controls, shared-link management, primary library views, the nested book tree, Unsorted pages, and detailed page management. The header owns global search. The main shelf owns Import, New page, New book, the resume card, cover grid, page results, bookmark toggles, and selected-book ZIP export.
+The sidebar owns workspace switching, group controls, shared-link management, primary library views, a flat list of expandable books, Unsorted pages, and page management. Only one collection expands at a time. The header owns global search. The main shelf owns Import, New page, New book, the resume card, cover grid, page results, bookmark toggles, and selected-book ZIP export.
 
 Page sharing and Markdown export stay beside an open page. GitHub refresh stays beside the imported source context. These actions remain contextual instead of being duplicated globally.
 
@@ -46,6 +46,8 @@ Dexie schema version 5 adds two independent browser-local tables:
 
 The migration is additive. Existing version-4 records remain unchanged. Personal metadata is scoped as `local` or `group:<id>` and never alters a document's `updatedAt`, a group snapshot, or a group revision. Resume writes are serialized per workspace; hooks reject stale asynchronous reads after a workspace switch.
 
+Dexie schema version 6 converts legacy nested books to top-level collections in one upgrade transaction. Former paths become collision-safe names, page IDs and bodies remain unchanged, and new local, GitHub, and shared-group writes always use null book parents. Deleting a book moves its pages to Unsorted atomically.
+
 ## Interaction contract
 
 - Search updates live on Shelf. In Edit, Read, or Split, typing prepares a query and Enter safely returns to results without discarding drafts.
@@ -55,6 +57,7 @@ The migration is additive. Existing version-4 records remain unchanged. Personal
 - Resume history records explicit opens, including successful creation/import selection, but not passive refresh selection.
 - Mobile workspace/group/shared-link controls are reached through the inert, focus-managed shelf drawer.
 - Every compact mobile control meets the 44px target contract.
+- Expansion and the last non-Shelf mode are remembered separately per workspace. Opening a page from Shelf restores Edit, Read, or Split; page selection closes the mobile drawer while disclosure and menu actions leave it open.
 
 ## Editor and reader
 
@@ -64,11 +67,11 @@ CodeMirror, the MarkdownReader pipeline, math, syntax highlighting, table of con
 
 The final implementation passes:
 
-- 45 Vitest files / 292 tests.
+- 47 Vitest files / 311 tests.
 - ESLint with zero warnings.
 - Next.js type generation and TypeScript checking.
 - Optimized Next.js production build.
-- 168 Playwright tests across desktop and mobile projects.
+- 170 Playwright tests across desktop and mobile projects.
 
 Visual review passed for populated/welcome Shelf, mobile, Edit, Read, and Split. Screenshots and local logs are in `.superpowers/sdd/2026-09-09-prism-pages-brand/`; that scratch directory is ignored. Seventeen text/background token pairs exceeded 4.5:1 (lowest checked: 4.92:1). The mechanical design detector returned no findings. Code review's animation replay and whitespace-search findings were reproduced and resolved. Actual Chromium tab zoom at 200% passed on 2026-09-11 for welcome, Shelf, Edit, Read, and Split: 1424 to 712 CSS pixels, DPR 1 to 2, no horizontal overflow. External ink and white wordmark SVGs with portable outlined lettering are delivered in public/brand/.
 

@@ -1,10 +1,10 @@
 # Prism Pages implementation checkpoint
 
-Updated: 2026-09-11. Implementation complete.
+Updated: 2026-09-12. Flat Library sidebar implementation complete.
 
 ## Location and base
 
-- Branch: `codex/prism-pages-brand`.
+- Branch: `codex/library-sidebar`.
 - Worktree: `D:/Developer/mdez/.worktrees/prism-pages-brand`.
 - Started from freshly fetched `origin/main`, commit `5ed39b9`.
 - The original checkout at `D:/Developer/mdez` remains on main with the design-session notes intact.
@@ -12,13 +12,15 @@ Updated: 2026-09-11. Implementation complete.
 
 ## Delivered
 
-Combined silhouette/book SVG logo, once-per-tab-session 600ms reveal, reduced-motion/static fallback, browser/app icons, transparent writing and peeking mascots, Prism Pages tokens and book motifs, unified first-use state, contextual empty artwork, and static branding on shared/recovery pages. Fixed sidebar book labels being squeezed to zero width by management controls.
+Combined silhouette/book SVG logo, once-per-tab-session 600ms reveal, reduced-motion/static fallback, browser/app icons, transparent writing and peeking mascots, Prism Pages tokens and book motifs, unified first-use state, contextual empty artwork, and static branding on shared/recovery pages.
+
+The Library sidebar is one flat, continuous book/page list. It provides natural sorting, one expanded collection, Unsorted as the fixed final collection, content-preserving book deletion, inline rename feedback, Move to and drag/drop, per-workspace expansion/mode memory, portal-based action menus, and bounded rendering for large page collections. Dexie version 6 and the PostgreSQL migration preserve legacy nested content with path-based book names.
 
 ## Verified
 
 - Build, ESLint and TypeScript: pass.
-- Vitest: 45 files, 292 tests pass.
-- Playwright: 168 desktop/mobile tests pass, including new brand, reduced-motion/image-failure, and sidebar-label checks.
+- Vitest: 47 files, 311 tests pass.
+- Playwright: 170 desktop/mobile tests pass, including the 100-book/1,000-page library, distant-page reveal, menu bounds, brand, reduced-motion/image-failure, and sidebar-label checks.
 - Visual review: pass, no material findings in final screenshots.
 - Overflow: none at 390/430/768/1024/1440px; console page errors: none in capture.
 - Contrast: 17 text/background token pairs pass 4.5:1; lowest checked 4.92:1.
@@ -50,5 +52,5 @@ Local verification logs, screenshot capture script, and final screenshots are un
 The user requested a checkpoint if either remaining usage window falls below 5%. Interpret this as remaining percentage (`100 - usedPercent`). Do not consume reset credits without explicit authorization. This checkpoint is saved proactively; check usage before extended follow-up work.
 
 ## Checkpoint history
-Commit `19ab34d` saved the core implementation when usage reached 3% remaining. Work resumed after usage reset, completing the external wordmark exports and actual browser zoom verification. No application behavior changed after the full passing test suite.
+Commit `19ab34d` saved the core implementation when usage reached 3% remaining. Work resumed after usage reset, completing the external wordmark exports, actual browser zoom verification, and the flat Library sidebar on `codex/library-sidebar`.
 

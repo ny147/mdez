@@ -2,6 +2,7 @@ import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubSource } from "@/types/github";
 import type { GroupSnapshot } from "@/types/key-group";
+import { buildFlatBookMigration } from "@/lib/library-tree";
 
 export type StoredSharedLink = {
   publicId: string;
@@ -88,6 +89,25 @@ export class MdezDatabase extends Dexie {
       cachedGroups: "groupId, cachedAt",
       pageBookmarks: "[workspaceId+documentId], workspaceId",
       workspaceResume: "workspaceId"
+    });
+
+    this.version(6).stores({
+      folders: "id, parentId, sourceId, order, updatedAt",
+      documents: "id, folderId, sourceId, order, updatedAt",
+      githubSources: "id, &normalizedUrl, rootFolderId, updatedAt",
+      sharedLinks: "publicId, createdAt, expiresAt",
+      rememberedGroups: "groupId, lastOpenedAt",
+      cachedGroups: "groupId, cachedAt",
+      pageBookmarks: "[workspaceId+documentId], workspaceId",
+      workspaceResume: "workspaceId"
+    }).upgrade(async (transaction) => {
+      const table = transaction.table<Folder, string>("folders");
+      const folders = await table.toArray();
+      const migrated = new Map(buildFlatBookMigration(folders).map((item) => [item.id, item.name]));
+      await table.toCollection().modify((folder) => {
+        folder.name = migrated.get(folder.id) ?? folder.name;
+        folder.parentId = null;
+      });
     });
   }
 }

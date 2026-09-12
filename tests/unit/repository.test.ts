@@ -246,7 +246,17 @@ describe("repository", () => {
     expect(renamedDocument.title).toBe("untitled.md");
   });
 
-  it("assigns sibling order by folder", async () => {
+  it("moves a book's pages to Unsorted before deleting the book", async () => {
+    const book = await createFolder("Research", null);
+    const page = await createDocument({ title: "Keep me", body: "preserved", folderId: book.id });
+
+    await deleteFolder(book.id);
+
+    expect(await db.folders.get(book.id)).toBeUndefined();
+    expect(await db.documents.get(page.id)).toMatchObject({ folderId: null, body: "preserved" });
+  });
+
+  it("creates every book at the top level", async () => {
     const parent = await createFolder("Parent", null);
     const rootFolder = await createFolder("Root", null);
     const childFolder = await createFolder("Child", parent.id);
@@ -256,7 +266,8 @@ describe("repository", () => {
 
     expect(parent.order).toBe(0);
     expect(rootFolder.order).toBe(1);
-    expect(childFolder.order).toBe(0);
+    expect(childFolder.parentId).toBeNull();
+    expect(childFolder.order).toBe(2);
     expect(firstRootDocument.order).toBe(0);
     expect(secondRootDocument.order).toBe(1);
     expect(childDocument.order).toBe(0);
@@ -313,7 +324,7 @@ describe("repository", () => {
     const result = await importGitHubSource(githubSession());
     const content = await listContent();
     const root = content.folders.find((folder) => folder.id === result.rootFolderId);
-    const guide = content.folders.find((folder) => folder.name === "guides");
+    const guide = content.folders.find((folder) => folder.name === "codex / guides");
 
     expect(result).toMatchObject({ folderCount: 2, documentCount: 2 });
     expect(result.firstDocumentId).not.toBeNull();
@@ -325,7 +336,7 @@ describe("repository", () => {
       branch: "main"
     });
     expect(root).toMatchObject({ name: "codex", parentId: null, sourceId: result.source.id });
-    expect(guide).toMatchObject({ parentId: root?.id, sourceId: result.source.id });
+    expect(guide).toMatchObject({ name: "codex / guides", parentId: null, sourceId: result.source.id });
     expect(content.documents.filter((document) => document.sourceId === result.source.id)).toHaveLength(2);
     expect(content.documents.find((document) => document.title === "setup")?.folderId).toBe(guide?.id);
     expect(content.folders.find((folder) => folder.id === localFolder.id)?.sourceId).toBeUndefined();
@@ -457,16 +468,36 @@ describe("repository", () => {
     expect(content.documents.some((document) => document.sourceId === second.source.id)).toBe(true);
     expect(content.documents.find((document) => document.id === localDocument.id)?.body).toBe("keep");
   });
-  it("removes source metadata when its root book is deleted", async () => {
+  it("preserves imported pages and repoints source metadata when its root book is deleted", async () => {
     const localDocument = await createDocument({ title: "Local", body: "keep", folderId: null });
     const imported = await importGitHubSource(githubSession());
 
     await deleteFolder(imported.rootFolderId);
 
     const content = await listContent();
-    expect(content.sources.some((source) => source.id === imported.source.id)).toBe(false);
-    expect(content.folders.some((folder) => folder.sourceId === imported.source.id)).toBe(false);
-    expect(content.documents.some((document) => document.sourceId === imported.source.id)).toBe(false);
+    const source = content.sources.find((item) => item.id === imported.source.id);
+    expect(source).toBeDefined();
+    expect(source?.rootFolderId).not.toBe(imported.rootFolderId);
+    expect(content.folders.some((folder) => folder.id === imported.rootFolderId)).toBe(false);
+    expect(content.folders.some((folder) => folder.id === source?.rootFolderId && folder.sourceId === imported.source.id)).toBe(true);
+    expect(content.documents.filter((document) => document.sourceId === imported.source.id)).toHaveLength(2);
+    expect(content.documents.some((document) => document.sourceId === imported.source.id && document.folderId === null)).toBe(true);
     expect(content.documents.find((document) => document.id === localDocument.id)?.body).toBe("keep");
+  });
+
+  it("keeps root-only imported pages without dangling source metadata when their book is deleted", async () => {
+    const imported = await importGitHubSource(githubSession({
+      markdownCount: 1,
+      folders: [],
+      documents: [{ path: "readme.md", title: "readme", body: "# Read me", folderPath: null, order: 0, byteSize: 9 }]
+    }));
+
+    await deleteFolder(imported.rootFolderId);
+
+    const content = await listContent();
+    expect(content.sources.some((source) => source.id === imported.source.id)).toBe(false);
+    expect(content.documents).toHaveLength(1);
+    expect(content.documents[0].folderId).toBeNull();
+    expect(content.documents[0].sourceId).toBeUndefined();
   });
 });

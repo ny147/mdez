@@ -33,6 +33,7 @@ import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
 import { selectLibraryView, type LibraryFilter } from "@/lib/library-view";
 import { usePageBookmarks } from "@/hooks/usePageBookmarks";
 import { useWorkspaceResume } from "@/hooks/useWorkspaceResume";
+import { loadLastContentMode, saveLastContentMode } from "@/lib/workspace-ui-preferences";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -114,6 +115,8 @@ export function MdezWorkspace() {
   const drawerTriggerRef = useRef<HTMLButtonElement>(null);
   const librarySearchRef = useRef<HTMLInputElement>(null);
   const recordNextSelectionRef = useRef(false);
+  const lastNonShelfModeRef = useRef<ViewMode>("editor");
+  const modeWorkspaceRef = useRef<string | null>(null);
   const workspaceId = activeGroupId ? `group:${activeGroupId}` : "local";
   const bookmarkMetadata = usePageBookmarks(workspaceId);
   const resumeMetadata = useWorkspaceResume(workspaceId);
@@ -123,6 +126,18 @@ export function MdezWorkspace() {
     setLibraryFilter("all");
     setLibraryQuery("");
   }, [workspaceId]);
+  useEffect(() => {
+    if (modeWorkspaceRef.current !== workspaceId) {
+      modeWorkspaceRef.current = workspaceId;
+      const saved = loadLastContentMode(workspaceId);
+      lastNonShelfModeRef.current = saved;
+      if (viewMode !== "shelf" && viewMode !== saved) setViewMode(saved);
+      return;
+    }
+    if (viewMode === "shelf") return;
+    lastNonShelfModeRef.current = viewMode;
+    saveLastContentMode(workspaceId, viewMode);
+  }, [viewMode, workspaceId]);
   useEffect(() => {
     const savedSidebar = window.localStorage.getItem("mdez-sidebar-state");
     if (savedSidebar === "hidden") {
@@ -259,14 +274,15 @@ export function MdezWorkspace() {
     void resumeMetadata.recordOpened(documentId).catch(() => {
       setOperationStatus({ message: "Resume history could not be saved", state: "error" });
     });
-    setViewMode("editor");
+    if (viewMode === "shelf") setViewMode(lastNonShelfModeRef.current);
     setIsDrawerOpen(false);
   }
 
-  async function handleCreateDocument() {
+  async function handleCreateDocument(folderId?: string | null | unknown) {
     try {
+      const targetFolderId = typeof folderId === "string" || folderId === null ? folderId : undefined;
       recordNextSelectionRef.current = true;
-      await library.createPage();
+      await library.createPage(targetFolderId);
       setViewMode("editor");
       setIsDrawerOpen(false);
     } catch {
@@ -365,6 +381,7 @@ export function MdezWorkspace() {
       await library.renamePage(documentId, title);
     } catch {
       library.setError("Could not rename page.");
+      throw new Error("Could not rename page.");
     }
   }
 
@@ -535,7 +552,7 @@ export function MdezWorkspace() {
           documents={liveDocuments}
           selectedFolderId={library.selectedFolderId}
           selectedDocumentId={library.selectedDocumentId}
-          expandedFolderIds={library.expandedFolderIds}
+          expandedCollectionId={library.expandedCollectionId}
           error={library.error}
           githubSource={activeGitHubSource}
           refreshingSourceId={refreshingSourceId}

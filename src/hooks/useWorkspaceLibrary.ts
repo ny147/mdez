@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 
-import { folderHasContent } from "@/lib/tree";
+import { UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
+import { loadExpandedCollection, saveExpandedCollection } from "@/lib/workspace-ui-preferences";
 import {
   createDocument,
   createDocuments,
@@ -26,7 +27,7 @@ export type WorkspaceLibraryController = {
   sources: GitHubSource[];
   selectedFolderId: string | null;
   selectedDocumentId: string | null;
-  expandedFolderIds: Set<string>;
+  expandedCollectionId: string | null;
   selectedFolder: Folder | null;
   selectedDocument: Document | null;
   isReady: boolean;
@@ -39,7 +40,7 @@ export type WorkspaceLibraryController = {
   createBook: (parentId: string | null) => Promise<void>;
   renameBook: (folderId: string, name: string) => Promise<void>;
   deleteBook: (folderId: string) => Promise<void>;
-  createPage: () => Promise<void>;
+  createPage: (folderId?: string | null) => Promise<void>;
   importPages: (items: { title: string; body: string }[], folderId: string | null) => Promise<void>;
   renamePage: (documentId: string, title: string) => Promise<void>;
   movePage: (documentId: string, folderId: string | null) => Promise<void>;
@@ -53,31 +54,13 @@ function byOrderThenTitle(a: Document, b: Document) {
   return a.order - b.order || a.title.localeCompare(b.title);
 }
 
-function getAncestorFolderIds(folders: Folder[], folderId: string | null) {
-  const ancestors: string[] = [];
-  let currentFolder = folders.find((folder) => folder.id === folderId) ?? null;
-  const visited = new Set<string>();
-
-  while (currentFolder?.parentId && !visited.has(currentFolder.parentId)) {
-    ancestors.push(currentFolder.parentId);
-    visited.add(currentFolder.parentId);
-    currentFolder = folders.find((folder) => folder.id === currentFolder?.parentId) ?? null;
-  }
-
-  return ancestors;
-}
-
-function getExpandedFolderIdsForSelection(folders: Folder[], folderId: string | null) {
-  return folderId ? [...getAncestorFolderIds(folders, folderId), folderId] : [];
-}
-
 export function useWorkspaceLibrary(): WorkspaceLibraryController {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [sources, setSources] = useState<GitHubSource[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
+  const [expandedCollectionId, setExpandedCollectionId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +89,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
         const firstDocument = content.documents[0] ?? null;
         applyContent(content, firstDocument?.id ?? null);
         setSelectedFolderId(firstDocument?.folderId ?? null);
-        setExpandedFolderIds(new Set(getExpandedFolderIdsForSelection(content.folders, firstDocument?.folderId ?? null)));
+        setExpandedCollectionId(loadExpandedCollection("local", new Set(content.folders.map((folder) => folder.id))));
         setIsReady(true);
       })
       .catch(() => {
@@ -120,38 +103,24 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     };
   }, [applyContent]);
 
-  const expandFolderAncestors = useCallback((folderId: string | null, sourceFolders: Folder[], includeFolder = false) => {
-    setExpandedFolderIds((current) => {
-      const next = new Set(current);
-      for (const ancestorId of getAncestorFolderIds(sourceFolders, folderId)) next.add(ancestorId);
-      if (includeFolder && folderId !== null) next.add(folderId);
-      return next;
-    });
-  }, []);
-
   const selectFolder = useCallback((folderId: string | null) => {
-    const firstDocument = documents
-      .filter((document) => document.folderId === folderId)
-      .sort(byOrderThenTitle)[0];
-
     setSelectedFolderId(folderId);
-    setSelectedDocumentId(firstDocument?.id ?? null);
-    expandFolderAncestors(folderId, folders, true);
-  }, [documents, expandFolderAncestors, folders]);
+  }, []);
 
   const selectDocument = useCallback((documentId: string) => {
     const document = documents.find((item) => item.id === documentId);
     if (!document) return;
     setSelectedFolderId(document.folderId);
     setSelectedDocumentId(document.id);
-    expandFolderAncestors(document.folderId, folders, true);
-  }, [documents, expandFolderAncestors, folders]);
+    const collectionId = document.folderId ?? UNSORTED_COLLECTION_ID;
+    setExpandedCollectionId(collectionId);
+    saveExpandedCollection("local", collectionId);
+  }, [documents]);
 
   const toggleFolder = useCallback((folderId: string) => {
-    setExpandedFolderIds((current) => {
-      const next = new Set(current);
-      if (next.has(folderId)) next.delete(folderId);
-      else next.add(folderId);
+    setExpandedCollectionId((current) => {
+      const next = current === folderId ? null : folderId;
+      saveExpandedCollection("local", next);
       return next;
     });
   }, []);
@@ -161,67 +130,68 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
   }, [loadContent]);
 
   const createBook = useCallback(async (parentId: string | null) => {
+    void parentId;
     const name = window.prompt("New book name", "New Book");
     if (name === null) return;
 
     try {
-      const folder = await createFolder(name, parentId);
+      const folder = await createFolder(name, null);
       setError(null);
-      setExpandedFolderIds((current) => {
-        const next = new Set(current);
-        for (const ancestorId of getAncestorFolderIds(folders, parentId)) next.add(ancestorId);
-        if (parentId !== null) next.add(parentId);
-        next.add(folder.id);
-        return next;
-      });
+      setExpandedCollectionId(folder.id);
+      saveExpandedCollection("local", folder.id);
       setSelectedFolderId(folder.id);
       await loadContent(null);
     } catch {
       setError("Could not create book.");
     }
-  }, [folders, loadContent]);
+  }, [loadContent]);
 
   const renameBook = useCallback(async (folderId: string, name: string) => {
     try {
       await renameFolder(folderId, name);
       setError(null);
       await loadContent();
-    } catch {
+    } catch (cause) {
       setError("Could not rename book.");
+      throw cause;
     }
   }, [loadContent]);
 
   const deleteBook = useCallback(async (folderId: string) => {
-    if (folderHasContent(folders, documents, folderId)) {
-      setError("Move or delete nested books and pages before deleting this book.");
-      return;
-    }
-    if (!window.confirm("Delete this empty book?")) return;
+    const folder = folders.find((item) => item.id === folderId);
+    if (!folder) return;
+    const count = documents.filter((item) => item.folderId === folderId).length;
+    const message = count === 0 ? `Delete “${folder.name}”?` : `Delete “${folder.name}”? Its ${count} ${count === 1 ? "page" : "pages"} will move to Unsorted. No pages will be deleted.`;
+    if (!window.confirm(message)) return;
 
     try {
       await deleteFolder(folderId);
       setError(null);
-      setExpandedFolderIds((current) => {
-        const next = new Set(current);
-        next.delete(folderId);
+      setExpandedCollectionId((current) => {
+        const next = current === folderId || selectedFolderId === folderId ? UNSORTED_COLLECTION_ID : current;
+        if (next !== current) saveExpandedCollection("local", next);
         return next;
       });
       if (selectedFolderId === folderId) {
         setSelectedFolderId(null);
-        await loadContent(null);
+        await loadContent(selectedDocumentId);
       } else {
         await loadContent();
       }
     } catch {
       setError("Could not delete book.");
     }
-  }, [documents, folders, loadContent, selectedFolderId]);
+  }, [documents, folders, loadContent, selectedDocumentId, selectedFolderId]);
 
-  const createPage = useCallback(async () => {
+  const createPage = useCallback(async (targetFolderId = selectedFolderId) => {
     try {
-      const document = await createDocument({ title: "untitled.md", body: "# Untitled\n", folderId: selectedFolderId });
+      const document = await createDocument({ title: "untitled.md", body: "# Untitled\n", folderId: targetFolderId });
       setError(null);
+      setSelectedFolderId(targetFolderId);
       setSelectedDocumentId(document.id);
+      const collectionId = targetFolderId ?? UNSORTED_COLLECTION_ID;
+      setExpandedCollectionId(collectionId);
+      saveExpandedCollection("local", collectionId);
       await loadContent(document.id);
     } catch (cause) {
       setError("Could not create page.");
@@ -235,13 +205,14 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
       const newestDocumentId = importedDocuments[importedDocuments.length - 1]?.id ?? null;
       setError(null);
       setSelectedFolderId(folderId);
-      expandFolderAncestors(folderId, folders, true);
+      setExpandedCollectionId(folderId ?? UNSORTED_COLLECTION_ID);
+      saveExpandedCollection("local", folderId ?? UNSORTED_COLLECTION_ID);
       await loadContent(newestDocumentId);
     } catch {
       setError("Could not import markdown.");
       throw new Error("Could not import markdown.");
     }
-  }, [expandFolderAncestors, folders, loadContent]);
+  }, [loadContent]);
 
   const renamePage = useCallback(async (documentId: string, title: string) => {
     void title;
@@ -253,14 +224,19 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     try {
       await moveDocument(documentId, folderId);
       setError(null);
-      setSelectedFolderId(folderId);
-      setSelectedDocumentId(documentId);
-      expandFolderAncestors(folderId, folders, true);
-      await loadContent(documentId);
-    } catch {
+      const active = selectedDocumentId === documentId;
+      if (active) {
+        const collectionId = folderId ?? UNSORTED_COLLECTION_ID;
+        setSelectedFolderId(folderId);
+        setExpandedCollectionId(collectionId);
+        saveExpandedCollection("local", collectionId);
+      }
+      await loadContent(active ? documentId : selectedDocumentId);
+    } catch (cause) {
       setError("Could not move page.");
+      throw cause;
     }
-  }, [expandFolderAncestors, folders, loadContent]);
+  }, [loadContent, selectedDocumentId]);
 
   const deletePage = useCallback(async (documentId: string) => {
     if (!window.confirm("Delete this page?")) return;
@@ -288,9 +264,10 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     const firstDocument = content.documents.find((document) => document.id === result.firstDocumentId) ?? null;
     const folderId = firstDocument?.folderId ?? result.rootFolderId;
     setSelectedFolderId(folderId);
-    expandFolderAncestors(folderId, content.folders, true);
+    setExpandedCollectionId(folderId ?? UNSORTED_COLLECTION_ID);
+    saveExpandedCollection("local", folderId ?? UNSORTED_COLLECTION_ID);
     return result;
-  }, [expandFolderAncestors, loadContent]);
+  }, [loadContent]);
 
   const refreshGitHub = useCallback(async (sourceId: string, session: GitHubImportSession) => {
     const result = await refreshGitHubSource(sourceId, session);
@@ -298,9 +275,10 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     const firstDocument = content.documents.find((document) => document.id === result.firstDocumentId) ?? null;
     const folderId = firstDocument?.folderId ?? result.rootFolderId;
     setSelectedFolderId(folderId);
-    expandFolderAncestors(folderId, content.folders, true);
+    setExpandedCollectionId(folderId ?? UNSORTED_COLLECTION_ID);
+    saveExpandedCollection("local", folderId ?? UNSORTED_COLLECTION_ID);
     return result;
-  }, [expandFolderAncestors, loadContent]);
+  }, [loadContent]);
 
   const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) ?? null;
   const selectedDocument = documents.find((document) => document.id === selectedDocumentId) ?? null;
@@ -311,7 +289,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     sources,
     selectedFolderId,
     selectedDocumentId,
-    expandedFolderIds,
+    expandedCollectionId,
     selectedFolder,
     selectedDocument,
     isReady,
@@ -332,7 +310,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     refreshContent,
     importGitHub,
     refreshGitHub
-  }), [createBook, createPage, deleteBook, deletePage, documents, error, expandedFolderIds, folders, importGitHub,
+  }), [createBook, createPage, deleteBook, deletePage, documents, error, expandedCollectionId, folders, importGitHub,
     importPages, isReady, movePage, refreshContent, refreshGitHub, renameBook, renamePage, selectDocument, selectFolder,
     selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, sources, toggleFolder]);
 }

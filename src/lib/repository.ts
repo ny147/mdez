@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { createId } from "@/lib/id";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession, GitHubSource } from "@/types/github";
+import { buildFlatBookMigration } from "@/lib/library-tree";
 
 function now() {
   return new Date().toISOString();
@@ -34,13 +35,14 @@ export async function listContent() {
 }
 
 export async function createFolder(name: string, parentId: string | null): Promise<Folder> {
+  void parentId;
   return db.transaction("rw", db.folders, async () => {
     const timestamp = now();
-    const order = await countFoldersByParent(parentId);
+    const order = await countFoldersByParent(null);
     const folder: Folder = {
       id: createId("folder"),
       name: name.trim() || "Untitled Book",
-      parentId,
+      parentId: null,
       order,
       createdAt: timestamp,
       updatedAt: timestamp
@@ -71,14 +73,23 @@ export async function renameFolder(id: string, name: string) {
 }
 
 export async function deleteFolder(id: string) {
-  const source = await db.githubSources.where("rootFolderId").equals(id).first();
-
-  if (source) {
-    await deleteGitHubSource(source.id);
-    return;
-  }
-
-  await db.folders.delete(id);
+  await db.transaction("rw", db.folders, db.documents, db.githubSources, async () => {
+    const folder = await db.folders.get(id);
+    if (!folder) throw new Error("Folder not found.");
+    const source = await db.githubSources.where("rootFolderId").equals(id).first();
+    if (source) {
+      const replacement = (await db.folders.where("sourceId").equals(source.id).toArray())
+        .filter((item) => item.id !== id)
+        .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id))[0];
+      if (replacement) await db.githubSources.update(source.id, { rootFolderId: replacement.id, updatedAt: now() });
+      else {
+        await db.documents.where("sourceId").equals(source.id).modify((document) => { delete document.sourceId; document.updatedAt = now(); });
+        await db.githubSources.delete(source.id);
+      }
+    }
+    await db.documents.where("folderId").equals(id).modify({ folderId: null, updatedAt: now() });
+    await db.folders.delete(id);
+  });
 }
 
 export async function createDocument(input: { title: string; body: string; folderId: string | null }): Promise<Document> {
@@ -284,6 +295,14 @@ async function addSourceRecords(records: SourceRecords) {
   }
 }
 
+function flattenSourceRecords(records: SourceRecords, existingFolders: Folder[]): SourceRecords {
+  const names = new Map(buildFlatBookMigration([...existingFolders, ...records.folders]).map((item) => [item.id, item.name]));
+  return {
+    ...records,
+    folders: records.folders.map((folder) => ({ ...folder, name: names.get(folder.id) ?? folder.name, parentId: null }))
+  };
+}
+
 export async function importGitHubSource(session: GitHubImportSession): Promise<GitHubImportResult> {
   return db.transaction("rw", db.folders, db.documents, db.githubSources, async () => {
     const normalizedUrl = session.repository.normalizedUrl;
@@ -310,12 +329,12 @@ export async function importGitHubSource(session: GitHubImportSession): Promise<
       createdAt: timestamp,
       updatedAt: timestamp
     };
-    const records = buildSourceRecords(
+    const records = flattenSourceRecords(buildSourceRecords(
       session,
       sourceId,
       { id: rootFolderId, order: rootOrder, createdAt: timestamp },
       timestamp
-    );
+    ), await db.folders.toArray());
 
     await db.githubSources.add(source);
     await addSourceRecords(records);
@@ -357,12 +376,13 @@ export async function refreshGitHubSource(
       lastRefreshedAt: session.fetchedAt,
       updatedAt: timestamp
     };
-    const records = buildSourceRecords(
+    const existingFolders = await db.folders.where("sourceId").notEqual(sourceId).toArray();
+    const records = flattenSourceRecords(buildSourceRecords(
       session,
       sourceId,
       { id: rootFolder.id, order: rootFolder.order, createdAt: rootFolder.createdAt },
       timestamp
-    );
+    ), existingFolders);
     const [folderIds, documentIds] = (await Promise.all([
       db.folders.where("sourceId").equals(sourceId).primaryKeys(),
       db.documents.where("sourceId").equals(sourceId).primaryKeys()

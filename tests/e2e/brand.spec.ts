@@ -6,7 +6,7 @@ test("sidebar book names retain readable space beside their management controls"
   await expect(page.getByRole("heading", { name: "Your library starts here." })).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept("Creative writing"));
   await page.getByRole("main").getByRole("button", { name: "New book", exact: true }).click();
-  const title = page.getByTitle("Open Creative writing book", { exact: true }).locator("span");
+  const title = page.getByRole("button", { name: "Open Creative writing book", exact: true });
   await expect(title).toBeVisible();
   expect((await title.boundingBox())!.width).toBeGreaterThanOrEqual(80);
 });

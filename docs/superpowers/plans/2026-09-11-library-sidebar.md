@@ -33,13 +33,13 @@
 **Interfaces:**
 - Produces: `naturalCompare(left: string, right: string): number`, `buildFlatBookMigration(folders: Folder[]): Array<{ id: string; name: string }>`, and `deleteBookPreservingPages(id: string): Promise<void>`.
 
-- [ ] Write tests with literal expectations for Chapter 2/10 ordering, stable ID ties, multi-level paths, collisions, cycles, and retry-safe already-flat inputs.
-- [ ] Run `npm test -- tests/unit/library-tree.test.ts` and confirm failures are caused by missing exports.
-- [ ] Implement pure natural sorting and deterministic flattening helpers.
-- [ ] Run the focused test and confirm it passes.
-- [ ] Add a Dexie version migration that snapshots folders, applies collision-safe path names once, and clears every parent ID atomically.
-- [ ] Add repository tests proving IDs/pages survive migration and occupied-book deletion moves pages to Unsorted atomically.
-- [ ] Run `npm test -- tests/unit/library-tree.test.ts tests/unit/repository.test.ts` and confirm green.
+- [x] Write tests with literal expectations for Chapter 2/10 ordering, stable ID ties, multi-level paths, collisions, cycles, and retry-safe already-flat inputs.
+- [x] Run `npm test -- tests/unit/library-tree.test.ts` and confirm failures are caused by missing exports.
+- [x] Implement pure natural sorting and deterministic flattening helpers.
+- [x] Run the focused test and confirm it passes.
+- [x] Add a Dexie version migration that snapshots folders, applies collision-safe path names once, and clears every parent ID atomically.
+- [x] Add repository tests proving IDs/pages survive migration and occupied-book deletion moves pages to Unsorted atomically.
+- [x] Run `npm test -- tests/unit/library-tree.test.ts tests/unit/repository.test.ts` and confirm green.
 
 ### Task 2: Flat writes, GitHub imports, and shared storage
 
@@ -57,12 +57,12 @@
 - Consumes: Task 1 flattening/name helpers.
 - Produces: `deleteFolderPreservingDocuments(groupId, id, expectedVersion)` through the existing authenticated folder DELETE route.
 
-- [ ] Add failing tests proving nested creates/updates are rejected or normalized, imports flatten paths, and shared delete returns updated page records through revisions.
-- [ ] Run the focused repository/server tests and confirm expected failures.
-- [ ] Make local create/import/refresh paths create only top-level books with collision-safe path names.
-- [ ] Implement one-transaction shared delete: lock the folder, move its pages to null with new versions/revisions, delete the folder, and record convergence changes.
-- [ ] Enforce null parents in shared creates and updates, including in-memory parity.
-- [ ] Run focused tests and confirm green.
+- [x] Add failing tests proving nested creates/updates are rejected or normalized, imports flatten paths, and shared delete returns updated page records through revisions.
+- [x] Run the focused repository/server tests and confirm expected failures.
+- [x] Make local create/import/refresh paths create only top-level books with collision-safe path names.
+- [x] Implement one-transaction shared delete: lock the folder, move its pages to null with new versions/revisions, delete the folder, and record convergence changes.
+- [x] Enforce null parents in shared creates and updates, including in-memory parity.
+- [x] Run focused tests and confirm green.
 
 ### Task 3: Single collection/page tree
 
@@ -77,13 +77,13 @@
 - Consumes: flat folders/documents and existing create/select/rename/move/delete callbacks.
 - Produces: a single semantic list with one expanded collection, book/page menus, inline editing, and HTML drag/drop.
 
-- [ ] Replace existing sidebar tests with failing tests for compact book rows, natural page order, one-open disclosure, Unsorted, always-visible menus, inline rename, Move to, drag/drop, and empty collections.
-- [ ] Run `npm test -- tests/unit/sidebar-library.test.tsx` and confirm failures reflect the old split UI.
-- [ ] Implement `LibraryTree` using buttons and nested lists, not an ARIA tree; preserve complete accessible names and 44px controls.
-- [ ] Implement inline rename with Enter/save and Escape/cancel, retaining invalid or failed drafts.
-- [ ] Implement page menu Move to and HTML drag/drop between books/Unsorted with destination feedback.
-- [ ] Replace FolderTree plus DocumentList in Sidebar and style the active page, owning book, indentation, menu, and empty state.
-- [ ] Run focused component tests and confirm green.
+- [x] Replace existing sidebar tests with failing tests for compact book rows, natural page order, one-open disclosure, Unsorted, always-visible menus, inline rename, Move to, drag/drop, and empty collections.
+- [x] Run `npm test -- tests/unit/sidebar-library.test.tsx` and confirm failures reflect the old split UI.
+- [x] Implement `LibraryTree` using buttons and nested lists, not an ARIA tree; preserve complete accessible names and 44px controls.
+- [x] Implement inline rename with Enter/save and Escape/cancel, retaining invalid or failed drafts.
+- [x] Implement page menu Move to and HTML drag/drop between books/Unsorted with destination feedback.
+- [x] Replace FolderTree plus DocumentList in Sidebar and style the active page, owning book, indentation, menu, and empty state.
+- [x] Run focused component tests and confirm green.
 
 ### Task 4: Workspace navigation and remembered state
 
@@ -98,13 +98,13 @@
 **Interfaces:**
 - Produces: one `expandedCollectionId: string | null | "unsorted"`, explicit `revealDocument(id)`, and per-workspace last non-Shelf mode storage.
 
-- [ ] Add failing tests for accordion expansion, search/page reveal, deleted preference IDs, storage failure, active-page moves, and Shelf-to-last-mode navigation.
-- [ ] Run focused tests and confirm expected failures.
-- [ ] Replace expanded sets with a single collection ID while keeping adapter compatibility at component boundaries where needed.
-- [ ] Persist expansion and last mode under workspace-scoped keys; make reads/writes tolerant of denied storage.
-- [ ] Route page selection through a workspace handler that restores mode and closes only the mobile drawer.
-- [ ] Ensure active-page moves reveal the destination while non-active moves preserve expansion.
-- [ ] Run focused tests and confirm green.
+- [x] Add failing tests for accordion expansion, search/page reveal, deleted preference IDs, storage failure, active-page moves, and Shelf-to-last-mode navigation.
+- [x] Run focused tests and confirm expected failures.
+- [x] Replace expanded sets with a single collection ID while keeping adapter compatibility at component boundaries where needed.
+- [x] Persist expansion and last mode under workspace-scoped keys; make reads/writes tolerant of denied storage.
+- [x] Route page selection through a workspace handler that restores mode and closes only the mobile drawer.
+- [x] Ensure active-page moves reveal the destination while non-active moves preserve expansion.
+- [x] Run focused tests and confirm green.
 
 ### Task 5: Large-list rendering and regression coverage
 
@@ -117,10 +117,10 @@
 - Consumes: visible rows from Tasks 1 and 3.
 - Produces: bounded DOM rendering for long expanded page lists while retaining focused/edited rows and scroll-to-reveal.
 
-- [ ] Add a failing browser test with 100 books and 1,000 pages that checks bounded mounted rows, distant-page reveal, menu placement, drag/drop, keyboard rename, and mobile close behavior.
-- [ ] Run the focused Playwright spec and confirm expected failures.
-- [ ] Add fixed-height windowing with overscan, measured scroll position, stable keys, and forced inclusion of active/focused/editing rows.
-- [ ] Run the focused browser test and confirm green.
+- [x] Add a failing browser test with 100 books and 1,000 pages that checks bounded mounted rows, distant-page reveal, menu placement, drag/drop, keyboard rename, and mobile close behavior.
+- [x] Run the focused Playwright spec and confirm expected failures.
+- [x] Add fixed-height windowing with overscan, measured scroll position, stable keys, and forced inclusion of active/focused/editing rows.
+- [x] Run the focused browser test and confirm green.
 
 ### Task 6: Documentation and final verification
 
@@ -133,8 +133,8 @@
 **Interfaces:**
 - Documents the shipped flat-book model, migration, interactions, and verification evidence.
 
-- [ ] Update terminology so a book is a flat collection of pages and record migration behavior.
-- [ ] Run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
-- [ ] Run the complete Playwright suite.
-- [ ] Inspect desktop, mobile, and actual 200% browser zoom with long and multilingual titles; confirm no horizontal overflow or clipped menus.
-- [ ] Confirm `git diff --check`, review the final diff, and commit the verified implementation.
+- [x] Update terminology so a book is a flat collection of pages and record migration behavior.
+- [x] Run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
+- [x] Run the complete Playwright suite.
+- [x] Inspect desktop, mobile, and actual 200% browser zoom with long and multilingual titles; confirm no horizontal overflow or clipped menus.
+- [x] Confirm `git diff --check`, review the final diff, and commit the verified implementation.

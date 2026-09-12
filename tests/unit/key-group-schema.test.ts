@@ -12,3 +12,13 @@ it("defines revisioned private group tables with seven-day deletion", () => {
   expect(sql).toContain("version integer not null default 1");
   expect(sql).toContain("group_revision bigint not null");
 });
+
+it("flattens shared books and publishes migration revisions for cached clients", () => {
+  const sql = readFileSync("supabase/migrations/202609110001_flat_books.sql", "utf8");
+  expect(sql).toContain("add constraint group_folders_are_top_level check (parent_id is null)");
+  expect(sql).toContain("set group_revision = next_revision");
+  expect(sql).toContain("insert into public.group_change_log");
+  expect(sql).toContain("set revision = next_revision");
+  expect(sql).toContain("disable trigger group_folders_active_guard");
+  expect(sql).toContain("enable trigger group_folders_active_guard");
+});

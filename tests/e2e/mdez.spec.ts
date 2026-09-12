@@ -164,7 +164,7 @@ test("uses the accepted spacious library shell and typography", async ({ page })
   expect(presentation.heading).toContain("Manrope");
   expect(presentation.topbarHeight).toBe("80px");
   if (await page.evaluate(() => window.innerWidth >= 1024)) {
-    expect(presentation.sidebarWidth).toBe("238px");
+    expect(presentation.sidebarWidth).toBe("272px");
   }
 });
 
@@ -174,10 +174,10 @@ test("workspace polish distinguishes primary actions and active modes", async ({
   const shelfCreate = page.getByRole("main").getByRole("button", { name: "Create page", exact: true });
   const sidebarCreate = page
     .getByRole("complementary", { name: "Library shelf" })
-    .locator('button[data-visual-priority="secondary"]');
+    .getByRole("button", { name: "Create book", exact: true });
 
   await expect(shelfCreate).toHaveAttribute("data-visual-priority", "primary");
-  await expect(sidebarCreate).toHaveAttribute("data-visual-priority", "secondary");
+  await expect(sidebarCreate).not.toHaveAttribute("data-visual-priority", "primary");
 
   const shelfTab = page.getByRole("tab", { name: "Shelf", exact: true }).first();
   await expect(shelfTab).toHaveAttribute("data-active-treatment", "filled");
@@ -227,29 +227,26 @@ test("workspace mode tabs expose their panel and support roving keyboard focus",
   }
 });
 
-test("book hierarchy uses nested lists with explicit selection and expansion states", async ({ page }) => {
+test("library keeps books flat and expands one page collection at a time", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
   const books = sidebar.getByRole("list", { name: "Books and pages" });
 
   await expect(books).toBeVisible();
-  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages, closed/ })).toHaveAttribute("aria-pressed", "false");
+  await expect(sidebar.getByRole("button", { name: "Expand Unsorted pages" })).toHaveAttribute("aria-expanded", "false");
 
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
-  const projects = books.getByTitle("Open Projects book");
+  const projects = books.getByRole("button", { name: "Open Projects book" });
   await expect(projects).toHaveAttribute("aria-pressed", "true");
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
-  await sidebar.getByRole("button", { name: "Create book inside Projects" }).click();
+  await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
 
   await expect(projects).toHaveAttribute("aria-pressed", "false");
-  const expandProjects = books.getByRole("button", { name: "Collapse Projects" });
-  await expect(expandProjects).toHaveAttribute("aria-expanded", "true");
-  const childListId = await expandProjects.getAttribute("aria-controls");
-  expect(childListId).toBeTruthy();
-  await expect(books.locator(`#${childListId}`)).toHaveRole("list");
-  await expect(books.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
+  await expect(books.getByRole("button", { name: "Expand Projects" })).toHaveAttribute("aria-expanded", "false");
+  await expect(books.getByRole("button", { name: "Collapse Launch" })).toHaveAttribute("aria-expanded", "true");
+  await expect(books.getByRole("button", { name: "Open Launch book", exact: true })).toBeVisible();
 });
 
 test("reduced motion stops looping loading and refresh animations without hiding status", async ({ page }) => {
@@ -361,7 +358,7 @@ test("workspace polish keeps localized titles and icon actions discoverable", as
   await showShelfIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  const sidebarTitle = sidebar.locator(".page-title-clamp").filter({ hasText: title });
+  const sidebarTitle = sidebar.getByRole("button", { name: `Open ${title}` });
   await expect(sidebarTitle).toHaveCSS("white-space", "nowrap");
   await expect(sidebarTitle).toHaveCSS("text-overflow", "ellipsis");
   await expect(sidebarTitle).toHaveAttribute("title", title);
@@ -427,11 +424,11 @@ test("very narrow library drawer keeps its content inside the viewport", async (
 
   page.once("dialog", async (dialog) => dialog.accept("memory"));
   await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
-  await expect(sidebar.getByRole("button", { name: "memory book, 0 pages, open", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Open memory book", exact: true })).toBeVisible();
 
   const overflow = await scrollArea.evaluate((element) => {
     const boundary = element.getBoundingClientRect();
-    const row = element.querySelector<HTMLElement>(".folder-tree-row");
+    const row = element.querySelector<HTMLElement>(".library-tree-book");
     const rowStyle = row ? getComputedStyle(row) : null;
     const wideDescendants = Array.from(element.querySelectorAll<HTMLElement>("*"))
       .map((node) => {
@@ -467,7 +464,7 @@ test("library copy explains page and book scope", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: /Unsorted pages, \d+ pages, closed/ })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Expand Unsorted pages" })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: /My library/ })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: /Recent pages/ })).toBeVisible();
   await expect(sidebar.getByRole("button", { name: /Bookmarks/ })).toBeVisible();
@@ -539,20 +536,79 @@ test("sidebar page rows reveal management actions on demand", async ({ page }) =
   await openShelfDrawerIfAvailable(page);
 
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  const pageRow = sidebar.getByRole("article").filter({ hasText: "untitled.md" });
-  await expect(pageRow.getByText(/minute ago|Recently updated/)).toBeVisible();
-  await expect(pageRow.getByText("Manage page", { exact: true })).toHaveCount(0);
+  const pageRow = sidebar.locator(".library-tree-page").filter({ hasText: "untitled.md" });
+  await expect(pageRow).toBeVisible();
   const compactRow = await pageRow.boundingBox();
-  expect(compactRow?.height).toBeLessThanOrEqual(72);
-  await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeHidden();
+  expect(compactRow?.height).toBeLessThanOrEqual(44);
+  await expect(sidebar.getByRole("menuitem", { name: "Rename page" })).toHaveCount(0);
 
   const manageButton = pageRow.getByRole("button", { name: "Manage untitled.md" });
   const manageBox = await manageButton.boundingBox();
-  expect(manageBox?.width).toBeLessThanOrEqual(44);
+  expect(manageBox?.width).toBe(44);
   await manageButton.click();
-  await expect(pageRow.getByRole("button", { name: "Rename untitled.md" })).toBeVisible();
-  await expect(pageRow.getByRole("combobox", { name: "Move untitled.md page" })).toBeVisible();
-  await expect(pageRow.getByRole("button", { name: "Delete untitled.md" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Rename page" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Move untitled.md" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Delete page" })).toBeVisible();
+});
+
+test("large flat libraries keep page rows bounded and reveal distant search results", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "A little space for big ideas." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved in this browser" })).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => {
+    const database = (await indexedDB.databases()).find((entry) => entry.name === "mdez");
+    return database?.version ?? 0;
+  })).toBeGreaterThanOrEqual(6);
+  await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("mdez");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction(["folders", "documents"], "readwrite");
+    const folders = transaction.objectStore("folders");
+    const documents = transaction.objectStore("documents");
+    const timestamp = new Date().toISOString();
+    for (let index = 0; index < 100; index += 1) {
+      folders.add({ id: `book-${index}`, name: `Book ${index}`, parentId: null, order: index, createdAt: timestamp, updatedAt: timestamp });
+    }
+    for (let index = 0; index < 1000; index += 1) {
+      documents.add({ id: `page-${index}`, title: `Page ${index}`, body: `# Page ${index}`, folderId: "book-50", order: index, createdAt: timestamp, updatedAt: timestamp });
+    }
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    database.close();
+    localStorage.setItem("mdez-library-expanded:local", "book-50");
+  });
+  await page.reload();
+  await openShelfDrawerIfAvailable(page);
+
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  await expect(sidebar.getByRole("button", { name: "Open Book 99 book" })).toBeVisible();
+  const pageList = sidebar.getByRole("list", { name: "Pages in Book 50" });
+  await expect(pageList).toBeVisible();
+  expect(await pageList.getByRole("button", { name: /^Open Page / }).count()).toBeLessThan(100);
+
+  await showShelfIfAvailable(page);
+  const search = page.getByRole("searchbox", { name: "Search pages and books" });
+  await search.fill("Page 999");
+  await page.getByRole("main").getByRole("button", { name: "Open Page 999" }).click();
+  await openShelfDrawerIfAvailable(page);
+  const distantPage = sidebar.getByRole("button", { name: "Open Page 999" });
+  await expect(distantPage).toBeVisible();
+  await expect(distantPage).toHaveAttribute("aria-current", "page");
+
+  await sidebar.getByRole("button", { name: "Manage Page 999" }).click();
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const menuBox = await menu.boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.y).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(viewport.width);
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(viewport.height);
 });
 
 test("an open book explains filtering and export scope", async ({ page }) => {
@@ -560,7 +616,8 @@ test("an open book explains filtering and export scope", async ({ page }) => {
   page.once("dialog", (dialog) => dialog.accept("Writing"));
   await page.getByRole("button", { name: "Create book" }).first().click();
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await sidebar.getByRole("button", { name: "Create page in Writing", exact: true }).click();
+  await sidebar.getByRole("button", { name: "Manage Writing" }).click();
+  await page.getByRole("menuitem", { name: "Add page", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
 
@@ -1070,7 +1127,7 @@ test("imports a public GitHub repository through preview and persists its source
 
   await page.reload();
   await openShelfDrawerIfAvailable(page);
-  await expect(page.getByRole("complementary", { name: "Library shelf" }).getByTitle("Open docs book")).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Open codex / docs book" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh from GitHub" })).toBeVisible();
 });
 
@@ -1209,37 +1266,42 @@ test("exports the selected document as markdown", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "Downloaded export-me.md" })).toBeVisible();
 });
 
-test("creates nested folders and blocks deleting non-empty folder", async ({ page }) => {
+test("deleting a non-empty book moves its pages to Unsorted", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await page.getByRole("button", { name: "Create book", exact: true }).first().click();
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Open Projects book", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
-  await page.getByRole("button", { name: "Create book inside Projects" }).click();
-  await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Create book", exact: true }).first().click();
+  await expect(sidebar.getByRole("button", { name: "Open Launch book", exact: true })).toBeVisible();
 
-  await page.getByRole("complementary", { name: "Library shelf" }).getByRole("button", { name: "Create page in Launch", exact: true }).click();
+  await sidebar.getByRole("button", { name: "Manage Launch" }).click();
+  await page.getByRole("menuitem", { name: "Add page", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await showShelfIfAvailable(page);
   await openShelfDrawerIfAvailable(page);
-  await page.getByRole("button", { name: "Delete Projects" }).click();
-  await expect(
-    page.getByRole("complementary", { name: "Library shelf" }).getByText("Move or delete nested books and pages", { exact: false })
-  ).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  const deleteLaunch = page.getByRole("menuitem", { name: "Delete book" });
+  if (!await deleteLaunch.isVisible().catch(() => false)) {
+    await sidebar.getByRole("button", { name: "Manage Launch" }).click();
+  }
+  await deleteLaunch.click();
+  await expect(sidebar.getByRole("button", { name: "Open Launch book" })).toHaveCount(0);
+  await expect(sidebar.getByText("untitled.md", { exact: true })).toBeVisible();
 });
 
-test("exports a nested folder ZIP rooted at the selected folder", async ({ page }) => {
+test("exports a flat book ZIP rooted at the selected book", async ({ page }) => {
   await openShelfDrawerIfAvailable(page);
   page.once("dialog", (dialog) => dialog.accept("Projects"));
   await page.getByRole("button", { name: "Create book", exact: true }).first().click();
   const sidebar = page.getByRole("complementary", { name: "Library shelf" });
-  await expect(sidebar.getByRole("button", { name: "Projects book, 0 pages, open", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "Open Projects book", exact: true })).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept("Launch"));
-  await page.getByRole("button", { name: "Create book inside Projects" }).click();
-  await expect(sidebar.getByRole("button", { name: "Launch book, 0 pages, open", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Create book", exact: true }).first().click();
+  await expect(sidebar.getByRole("button", { name: "Open Launch book", exact: true })).toBeVisible();
 
   await showShelfIfAvailable(page);
   await page.getByRole("button", { name: "Import Markdown", exact: true }).click();

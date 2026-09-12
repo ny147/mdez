@@ -2,6 +2,8 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Sql, TransactionSql } from "postgres";
 
+import { buildFlatBookMigration } from "@/lib/library-tree";
+import type { Folder } from "@/types/content";
 import { GROUP_LIMITS, type GroupChangesResult, type GroupDocument, type GroupFolder, type GroupSnapshot, type GroupSummary, type LocalGroupImport } from "@/types/key-group";
 import { KeyGroupError, type KeyGroupStore } from "./store";
 
@@ -41,14 +43,19 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
       const groupId = randomUUID();
       await tx`insert into public.key_groups (id, name, key_digest) values (${groupId}, ${input.name}, ${keyDigest})`;
       const folderIds = new Map<string, string>();
-      const pendingFolders = [...input.folders];
-      while (pendingFolders.length) {
-        const index = pendingFolders.findIndex((folder) => folder.parentClientId === null || folderIds.has(folder.parentClientId));
-        if (index < 0) throw new Error("Folder hierarchy cannot be imported");
-        const [folder] = pendingFolders.splice(index, 1);
+      const migrationInput = input.folders.map((folder): Folder => ({
+        id: folder.clientId,
+        parentId: folder.parentClientId,
+        name: folder.name,
+        order: folder.order,
+        createdAt: folder.createdAt,
+        updatedAt: folder.updatedAt
+      }));
+      const flatNames = new Map(buildFlatBookMigration(migrationInput).map((folder) => [folder.id, folder.name]));
+      for (const folder of input.folders) {
         const id = randomUUID();
         folderIds.set(folder.clientId, id);
-        await tx`insert into public.group_folders (id, group_id, parent_id, name, sort_order, version, group_revision, created_at, updated_at) values (${id}, ${groupId}, ${folder.parentClientId ? folderIds.get(folder.parentClientId)! : null}, ${folder.name}, ${folder.order}, 1, 0, ${new Date(folder.createdAt)}, ${new Date(folder.updatedAt)})`;
+        await tx`insert into public.group_folders (id, group_id, parent_id, name, sort_order, version, group_revision, created_at, updated_at) values (${id}, ${groupId}, ${null}, ${flatNames.get(folder.clientId) ?? folder.name}, ${folder.order}, 1, 0, ${new Date(folder.createdAt)}, ${new Date(folder.updatedAt)})`;
       }
       for (const document of input.documents) {
         await tx`insert into public.group_documents (id, group_id, folder_id, title, markdown, sort_order, version, group_revision, created_at, updated_at) values (${randomUUID()}, ${groupId}, ${document.folderClientId ? folderIds.get(document.folderClientId)! : null}, ${document.title}, ${document.body}, ${document.order}, 1, 0, ${new Date(document.createdAt)}, ${new Date(document.updatedAt)})`;
@@ -104,8 +111,8 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
     return this.sql.begin(async (tx) => {
       const revision = await this.nextRevision(tx, groupId);
       const id = randomUUID();
-      const orderRows = await tx<{ next_order: number }[]>`select coalesce(max(sort_order), -1) + 1 as next_order from public.group_folders where group_id = ${groupId} and parent_id is not distinct from ${input.parentId}`;
-      const rows = await tx<FolderRow[]>`insert into public.group_folders (id, group_id, parent_id, name, sort_order, version, group_revision) values (${id}, ${groupId}, ${input.parentId}, ${input.name.trim()}, ${Number(orderRows[0]?.next_order ?? 0)}, 1, ${revision}) returning id, parent_id, name, sort_order, version, group_revision, created_at, updated_at`;
+      const orderRows = await tx<{ next_order: number }[]>`select coalesce(max(sort_order), -1) + 1 as next_order from public.group_folders where group_id = ${groupId} and parent_id is null`;
+      const rows = await tx<FolderRow[]>`insert into public.group_folders (id, group_id, parent_id, name, sort_order, version, group_revision) values (${id}, ${groupId}, ${null}, ${input.name.trim()}, ${Number(orderRows[0]?.next_order ?? 0)}, 1, ${revision}) returning id, parent_id, name, sort_order, version, group_revision, created_at, updated_at`;
       await this.finishMutation(tx, groupId, revision, "folder", id, "create");
       return mapFolder(rows[0]);
     });
@@ -118,11 +125,7 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
       const current = currentRows[0];
       if (!current) throw new KeyGroupError("NOT_FOUND", "Folder not found");
       if (current.version !== input.expectedVersion) throw new KeyGroupError("CONFLICT", "Folder version conflict", { entityType: "folder", entityId: id, expectedVersion: input.expectedVersion, currentVersion: current.version });
-      if (input.parentId !== undefined) {
-        const cycle = await tx<{ found: number }[]>`with recursive descendants as (select id from public.group_folders where group_id = ${groupId} and id = ${id} union all select child.id from public.group_folders child join descendants parent on child.parent_id = parent.id where child.group_id = ${groupId}) select 1 as found from descendants where id = ${input.parentId} limit 1`;
-        if (cycle[0]) throw new Error("Folder hierarchy must not contain a cycle");
-      }
-      const rows = await tx<FolderRow[]>`update public.group_folders set name = ${input.name?.trim() ?? current.name}, parent_id = ${input.parentId === undefined ? current.parent_id : input.parentId}, sort_order = ${input.order ?? current.sort_order}, version = version + 1, group_revision = ${revision}, updated_at = now() where group_id = ${groupId} and id = ${id} and version = ${input.expectedVersion} returning id, parent_id, name, sort_order, version, group_revision, created_at, updated_at`;
+      const rows = await tx<FolderRow[]>`update public.group_folders set name = ${input.name?.trim() ?? current.name}, parent_id = null, sort_order = ${input.order ?? current.sort_order}, version = version + 1, group_revision = ${revision}, updated_at = now() where group_id = ${groupId} and id = ${id} and version = ${input.expectedVersion} returning id, parent_id, name, sort_order, version, group_revision, created_at, updated_at`;
       if (!rows[0]) throw new KeyGroupError("CONFLICT", "Folder version conflict", { entityType: "folder", entityId: id, expectedVersion: input.expectedVersion, currentVersion: current.version });
       await this.finishMutation(tx, groupId, revision, "folder", id, "update");
       return mapFolder(rows[0]);
@@ -131,11 +134,17 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
 
   async deleteFolder(groupId: string, id: string, expectedVersion: number): Promise<number> {
     return this.sql.begin(async (tx) => {
-      const revision = await this.nextRevision(tx, groupId);
-      const occupied = await tx<{ occupied: boolean }[]>`select exists(select 1 from public.group_folders where group_id = ${groupId} and parent_id = ${id}) or exists(select 1 from public.group_documents where group_id = ${groupId} and folder_id = ${id}) as occupied`;
-      if (occupied[0]?.occupied) throw new Error("Move or delete its pages and subfolders first.");
-      const current = await tx<{ version: number }[]>`select version from public.group_folders where group_id = ${groupId} and id = ${id}`;
+      const current = await tx<{ version: number }[]>`select version from public.group_folders where group_id = ${groupId} and id = ${id} for update`;
       if (!current[0]) throw new KeyGroupError("NOT_FOUND", "Folder not found");
+      if (current[0].version !== expectedVersion) throw new KeyGroupError("CONFLICT", "Folder version conflict", { entityType: "folder", entityId: id, expectedVersion, currentVersion: current[0].version });
+      const moved = await tx<{ id: string }[]>`select id from public.group_documents where group_id = ${groupId} and folder_id = ${id} order by id for update`;
+      let revision = 0;
+      for (const document of moved) {
+        revision = await this.nextRevision(tx, groupId);
+        await tx`update public.group_documents set folder_id = null, version = version + 1, group_revision = ${revision}, updated_at = now() where group_id = ${groupId} and id = ${document.id}`;
+        await this.finishMutation(tx, groupId, revision, "document", document.id, "update");
+      }
+      revision = await this.nextRevision(tx, groupId);
       const rows = await tx<FolderRow[]>`delete from public.group_folders where group_id = ${groupId} and id = ${id} and version = ${expectedVersion} returning id`;
       if (!rows[0]) throw new KeyGroupError("CONFLICT", "Folder version conflict", { entityType: "folder", entityId: id, expectedVersion, currentVersion: current[0].version });
       await this.finishMutation(tx, groupId, revision, "folder", id, "delete");

@@ -5,8 +5,7 @@ import { Clock3, Library, Star, X } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import type { GitHubSource } from "@/types/github";
-import { DocumentList } from "@/components/mdez/DocumentList";
-import { FolderTree } from "@/components/mdez/FolderTree";
+import { LibraryTree } from "@/components/mdez/LibraryTree";
 import { GitHubSourcePanel } from "@/components/mdez/GitHubSourcePanel";
 import type { LibraryFilter } from "@/lib/library-view";
 
@@ -15,7 +14,7 @@ type SidebarProps = {
   documents: Document[];
   selectedFolderId: string | null;
   selectedDocumentId: string | null;
-  expandedFolderIds: Set<string>;
+  expandedCollectionId: string | null;
   error: string | null;
   githubSource: GitHubSource | null;
   refreshingSourceId: string | null;
@@ -29,7 +28,7 @@ type SidebarProps = {
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onSelectDocument: (documentId: string) => void;
-  onCreateDocument: () => void;
+  onCreateDocument: (folderId: string | null) => void;
   onRenameDocument: (documentId: string, title: string) => void;
   onMoveDocument: (documentId: string, folderId: string | null) => void;
   onDeleteDocument: (documentId: string) => void;
@@ -45,7 +44,7 @@ export function Sidebar({
   documents,
   selectedFolderId,
   selectedDocumentId,
-  expandedFolderIds,
+  expandedCollectionId,
   error,
   githubSource,
   refreshingSourceId,
@@ -110,42 +109,23 @@ export function Sidebar({
 
         <div className="sidebar-library-scroll">
           <div className="sidebar-library-sections">
-            <FolderTree
+            <LibraryTree
               folders={folders}
               documents={documents}
               selectedFolderId={selectedFolderId}
-              expandedFolderIds={expandedFolderIds}
+              selectedDocumentId={selectedDocumentId}
+              expandedCollectionId={expandedCollectionId}
               onSelectFolder={onSelectFolder}
-              onToggleFolder={onToggleFolder}
+              onToggleCollection={onToggleFolder}
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
-              showUnsorted={false}
+              onSelectDocument={onSelectDocument}
+              onCreateDocument={onCreateDocument}
+              onRenameDocument={onRenameDocument}
+              onMoveDocument={onMoveDocument}
+              onDeleteDocument={onDeleteDocument}
             />
-            <button
-              type="button"
-              className="sidebar-unsorted"
-              data-selected={filter === "unsorted"}
-              aria-label={`Unsorted pages, ${documents.filter((document) => document.folderId === null).length} pages, ${filter === "unsorted" ? "open" : "closed"}`}
-              aria-pressed={filter === "unsorted"}
-              onClick={() => onSelectFilter("unsorted")}
-            >
-              Unsorted pages
-              <span>{documents.filter((document) => document.folderId === null).length}</span>
-            </button>
-            <div className="border-t border-border pt-4">
-              <DocumentList
-                folders={folders}
-                documents={documents}
-                selectedFolderId={selectedFolderId}
-                selectedDocumentId={selectedDocumentId}
-                onSelectDocument={onSelectDocument}
-                onCreateDocument={onCreateDocument}
-                onRenameDocument={onRenameDocument}
-                onMoveDocument={onMoveDocument}
-                onDeleteDocument={onDeleteDocument}
-              />
-            </div>
           </div>
         </div>
       </div>

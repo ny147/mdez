@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
+import { UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
 import type { Document, Folder } from "@/types/content";
 
 const repository = vi.hoisted(() => ({
@@ -79,5 +80,54 @@ describe("useWorkspaceLibrary", () => {
     await act(async () => result.current.refreshContent(null));
     expect(result.current.selectedDocumentId).toBeNull();
     expect(result.current.selectedDocument).toBeNull();
+  });
+
+  it("opens a book shelf without replacing the active page", async () => {
+    const otherFolder = { ...folder, id: "book-2", name: "Other" };
+    repository.listContent.mockResolvedValueOnce({ ...content, folders: [folder, otherFolder] });
+    const { result } = renderHook(() => useWorkspaceLibrary());
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    act(() => result.current.selectDocument(secondPage.id));
+
+    act(() => result.current.selectFolder(otherFolder.id));
+
+    expect(result.current.selectedFolderId).toBe(otherFolder.id);
+    expect(result.current.selectedDocumentId).toBe(secondPage.id);
+  });
+
+  it("moves a background page without replacing the active page or expansion", async () => {
+    const { result } = renderHook(() => useWorkspaceLibrary());
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    act(() => result.current.selectDocument(secondPage.id));
+    repository.moveDocument.mockResolvedValue({ ...firstPage, folderId: null });
+    repository.listContent.mockResolvedValueOnce({
+      ...content,
+      documents: [{ ...firstPage, folderId: null }, secondPage]
+    });
+
+    await act(async () => result.current.movePage(firstPage.id, null));
+
+    expect(result.current.selectedDocumentId).toBe(secondPage.id);
+    expect(result.current.selectedFolderId).toBe(folder.id);
+    expect(result.current.expandedCollectionId).toBe(folder.id);
+  });
+
+  it("keeps the active page selected when deleting its book moves it to Unsorted", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { result } = renderHook(() => useWorkspaceLibrary());
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    act(() => result.current.selectDocument(secondPage.id));
+    repository.deleteFolder.mockResolvedValue(undefined);
+    repository.listContent.mockResolvedValueOnce({
+      folders: [],
+      documents: [{ ...firstPage, folderId: null }, { ...secondPage, folderId: null }],
+      sources: []
+    });
+
+    await act(async () => result.current.deleteBook(folder.id));
+
+    expect(result.current.selectedDocumentId).toBe(secondPage.id);
+    expect(result.current.selectedFolderId).toBeNull();
+    expect(result.current.expandedCollectionId).toBe(UNSORTED_COLLECTION_ID);
   });
 });

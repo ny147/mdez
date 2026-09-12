@@ -31,6 +31,39 @@ describe("remembered Key Groups", () => {
     try { await migrated.open(); expect(await migrated.documents.get("local")).toEqual(expect.objectContaining({ body: "safe" })); expect(await migrated.sharedLinks.get("share")).toBeDefined(); }
     finally { migrated.close(); await Dexie.delete(databaseName); }
   });
+
+  it("flattens nested version-5 books without moving or changing their pages", async () => {
+    const databaseName = `mdez-version-5-flat-books-${crypto.randomUUID()}`;
+    const legacy = new Dexie(databaseName);
+    legacy.version(5).stores({
+      folders: "id, parentId, sourceId, order, updatedAt",
+      documents: "id, folderId, sourceId, order, updatedAt",
+      githubSources: "id, &normalizedUrl, rootFolderId, updatedAt",
+      sharedLinks: "publicId, createdAt, expiresAt",
+      rememberedGroups: "groupId, lastOpenedAt",
+      cachedGroups: "groupId, cachedAt",
+      pageBookmarks: "[workspaceId+documentId], workspaceId",
+      workspaceResume: "workspaceId"
+    });
+    await legacy.open();
+    await legacy.table("folders").bulkAdd([
+      { id: "research", name: "Research", parentId: null, order: 0, createdAt: timestamp, updatedAt: timestamp },
+      { id: "existing", name: "Research / Draft", parentId: null, order: 1, createdAt: timestamp, updatedAt: timestamp },
+      { id: "draft", name: "Draft", parentId: "research", order: 0, createdAt: timestamp, updatedAt: timestamp }
+    ]);
+    await legacy.table("documents").add({ id: "page", title: "Keep", body: "exact body", folderId: "draft", order: 0, createdAt: timestamp, updatedAt: timestamp });
+    legacy.close();
+
+    const migrated = new MdezDatabase(databaseName);
+    try {
+      await migrated.open();
+      expect(await migrated.folders.get("draft")).toMatchObject({ parentId: null, name: "Research / Draft (2)" });
+      expect(await migrated.documents.get("page")).toMatchObject({ folderId: "draft", body: "exact body" });
+    } finally {
+      migrated.close();
+      await Dexie.delete(databaseName);
+    }
+  });
 });
 
 it("sends the group key only in its private header", async () => {
