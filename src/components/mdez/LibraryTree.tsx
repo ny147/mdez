@@ -7,6 +7,7 @@ import type { Document, Folder } from "@/types/content";
 import { groupPagesByCollection, sortBooks, UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
 import { mergeRetainedIndices } from "@/lib/library-virtual-window";
 import { WORKSPACE_COPY } from "@/lib/workspace-copy";
+import type { LibraryFilter } from "@/lib/library-view";
 
 export { UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
 
@@ -17,6 +18,7 @@ export type LibraryTreeProps = {
   selectedDocumentId: string | null;
   expandedCollectionId: string | null;
   pageReveal: { documentId: string; sequence: number } | null;
+  filter: LibraryFilter;
   onSelectFolder: (folderId: string | null) => void;
   onToggleCollection: (collectionId: string) => void;
   onCreateFolder: (parentId: null) => void;
@@ -262,10 +264,10 @@ export function LibraryTree(props: LibraryTreeProps) {
           const pages = pagesByCollection.get(book.id) ?? [];
           const expanded = props.expandedCollectionId === book.id;
           return <li key={book.id} data-drop-target={dropTarget === book.id} onDragOver={(event) => { event.preventDefault(); setDropTarget(book.id); }} onDragLeave={() => setDropTarget(null)} onDrop={(event) => drop(event, book.id)} data-testid={`collection-${book.id}`}>
-            <div className="library-tree-book" data-selected={props.selectedFolderId === book.id}>
+            <div className="library-tree-book" data-selected={props.filter === "all" && props.selectedFolderId === book.id}>
               <button type="button" className="library-tree-disclosure" aria-label={`${expanded ? "Collapse" : "Expand"} ${book.name}`} aria-expanded={expanded} onClick={() => props.onToggleCollection(book.id)}>{expanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</button>
               <BookOpen aria-hidden="true" className="library-tree-book-icon" />
-              {editing?.kind === "book" && editing.id === book.id ? <span className="library-inline-edit"><input autoFocus onFocus={(event) => event.currentTarget.select()} aria-label={`Rename ${book.name}`} aria-invalid={Boolean(editError)} value={editing.value} onChange={(event) => { setEditError(null); setEditing({ ...editing, value: event.target.value }); }} onKeyDown={editingKeys} /><button type="button" disabled={isSavingEdit} onClick={() => void saveEditing()}>Save</button><button type="button" onClick={() => setEditing(null)}>Cancel</button>{editError ? <small role="alert">{editError}</small> : null}</span> : <button type="button" className="library-tree-book-open" aria-pressed={props.selectedFolderId === book.id} aria-label={`Open ${book.name} book`} title={book.name} onClick={() => props.onSelectFolder(book.id)}>{book.name}</button>}
+              {editing?.kind === "book" && editing.id === book.id ? <span className="library-inline-edit"><input autoFocus onFocus={(event) => event.currentTarget.select()} aria-label={`Rename ${book.name}`} aria-invalid={Boolean(editError)} value={editing.value} onChange={(event) => { setEditError(null); setEditing({ ...editing, value: event.target.value }); }} onKeyDown={editingKeys} /><button type="button" disabled={isSavingEdit} onClick={() => void saveEditing()}>Save</button><button type="button" onClick={() => setEditing(null)}>Cancel</button>{editError ? <small role="alert">{editError}</small> : null}</span> : <button type="button" className="library-tree-book-open" aria-pressed={props.filter === "all" && props.selectedFolderId === book.id} aria-label={`Open ${book.name} book`} title={book.name} onClick={() => props.onSelectFolder(book.id)}>{book.name}</button>}
               <span className="library-tree-count" title={`${pages.length} pages`}>{pages.length}</span>
               <div className="library-row-menu" data-menu-key={`book:${book.id}`} onKeyDown={(event) => menuKeys(event, `book:${book.id}`)}>
                 <button type="button" className="library-row-menu-trigger" aria-label={`Manage ${book.name}`} title="Book actions" aria-haspopup="menu" aria-expanded={openMenu === `book:${book.id}`} onClick={(event) => toggleMenu(`book:${book.id}`, event.currentTarget)}><MoreHorizontal aria-hidden="true" /></button>
@@ -280,10 +282,10 @@ export function LibraryTree(props: LibraryTreeProps) {
           </li>;
         })}
         <li data-drop-target={dropTarget === UNSORTED_COLLECTION_ID} onDragOver={(event) => { event.preventDefault(); setDropTarget(UNSORTED_COLLECTION_ID); }} onDragLeave={() => setDropTarget(null)} onDrop={(event) => drop(event, null)} data-testid="collection-unsorted">
-          <div className="library-tree-book library-tree-unsorted" data-selected={props.selectedFolderId === null}>
+          <div className="library-tree-book library-tree-unsorted" data-selected={props.filter === "unsorted" && props.selectedFolderId === null}>
             <button type="button" className="library-tree-disclosure" aria-label={`${props.expandedCollectionId === UNSORTED_COLLECTION_ID ? "Collapse" : "Expand"} ${WORKSPACE_COPY.pagesWithoutBook}`} aria-expanded={props.expandedCollectionId === UNSORTED_COLLECTION_ID} onClick={() => props.onToggleCollection(UNSORTED_COLLECTION_ID)}>{props.expandedCollectionId === UNSORTED_COLLECTION_ID ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}</button>
             <Files aria-hidden="true" className="library-tree-book-icon" />
-            <button type="button" className="library-tree-book-open" aria-pressed={props.selectedFolderId === null} onClick={() => props.onSelectFolder(null)}>{WORKSPACE_COPY.pagesWithoutBook}</button>
+            <button type="button" className="library-tree-book-open" aria-pressed={props.filter === "unsorted" && props.selectedFolderId === null} onClick={() => props.onSelectFolder(null)}>{WORKSPACE_COPY.pagesWithoutBook}</button>
             <span className="library-tree-count">{(pagesByCollection.get(null) ?? []).length}</span>
             <button type="button" className="library-row-add" aria-label="Add page to Unsorted" onClick={() => props.onCreateDocument(null)}><FilePlus aria-hidden="true" /></button>
           </div>

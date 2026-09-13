@@ -60,6 +60,13 @@ describe("redesigned library presentation", () => {
     expect(screen.getAllByText("0 pages")).toHaveLength(2);
   });
 
+  it("shows pages without advertising nested books for a selected flat book", () => {
+    render(<ShelfPane {...emptyShelfProps} folders={[book]} documents={[page]} books={[]} pages={[page]} selectedFolderId="book" />);
+    expect(screen.queryByRole("heading", { name: "Books inside" })).toBeNull();
+    expect(screen.queryByText("No books yet. Create a book to group related pages.")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Pages in this book" })).toBeVisible();
+  });
+
   it("keeps the page target independent from its bookmark toggle and preserves the full title", () => {
     const open = vi.fn();
     const toggle = vi.fn();

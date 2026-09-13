@@ -262,7 +262,7 @@ export function MdezWorkspace() {
   const showReader = viewMode === "split" || viewMode === "preview";
 
   function handleSelectFolder(folderId: string | null) {
-    setLibraryFilter("all");
+    setLibraryFilter(folderId === null ? "unsorted" : "all");
     library.selectFolder(folderId);
     setViewMode("shelf");
     setIsDrawerOpen(false);

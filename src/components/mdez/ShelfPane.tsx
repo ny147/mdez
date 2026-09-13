@@ -33,7 +33,7 @@ export function ShelfPane({ folders, documents, books, pages, selectedFolderId, 
   const openBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
   const exportCopy = getBookExportCopy(openBook?.name ?? null);
   const hasQuery = query.trim().length > 0;
-  const showBooks = books.length > 0 || (!hasQuery && filter === "all");
+  const showBooks = !openBook && (books.length > 0 || (!hasQuery && filter === "all"));
   const showResume = !hasQuery && filter === "all" && selectedFolderId === null && resumePage;
   const hasResults = books.length > 0 || pages.length > 0;
   const isFirstUse = isReady && !hasQuery && filter === "all"
@@ -68,7 +68,7 @@ export function ShelfPane({ folders, documents, books, pages, selectedFolderId, 
 
       {showBooks && isReady && !isFirstUse ? (
         <section className="library-section" aria-labelledby="bookshelf-title">
-          <div className="library-section-heading"><h2 id="bookshelf-title">{openBook ? "Books inside" : WORKSPACE_COPY.books}</h2><span>{books.length} {books.length === 1 ? "book" : "books"}</span></div>
+          <div className="library-section-heading"><h2 id="bookshelf-title">{WORKSPACE_COPY.books}</h2><span>{books.length} {books.length === 1 ? "book" : "books"}</span></div>
           {books.length ? <div className="library-books">{books.map((folder) => <BookCover key={folder.id} folder={folder} directPageCount={documents.filter((document) => document.folderId === folder.id).length} selected={folder.id === selectedFolderId} onSelect={onSelectFolder} />)}</div> : <div className="library-empty compact"><p>No books yet. Create a book to group related pages.</p></div>}
         </section>
       ) : null}

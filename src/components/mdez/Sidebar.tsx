@@ -118,6 +118,7 @@ export function Sidebar({
               selectedDocumentId={selectedDocumentId}
               expandedCollectionId={expandedCollectionId}
               pageReveal={pageReveal}
+              filter={filter}
               onSelectFolder={onSelectFolder}
               onToggleCollection={onToggleFolder}
               onCreateFolder={onCreateFolder}
