@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { LibraryTree, UNSORTED_COLLECTION_ID } from "@/components/mdez/LibraryTree";
 import type { Document, Folder } from "@/types/content";
@@ -19,7 +19,7 @@ const renderTree = (overrides: Partial<React.ComponentProps<typeof LibraryTree>>
   const props: React.ComponentProps<typeof LibraryTree> = {
     folders: books, documents: pages, selectedFolderId: "book-a", selectedDocumentId: "p2",
     expandedCollectionId: "book-a", pageReveal: null, filter: "all", onSelectFolder: vi.fn(), onToggleCollection: vi.fn(),
-    onCreateFolder: vi.fn(), onRenameFolder: vi.fn(), onDeleteFolder: vi.fn(),
+    onRenameFolder: vi.fn(), onDeleteFolder: vi.fn(),
     onSelectDocument: vi.fn(), onCreateDocument: vi.fn(), onRenameDocument: vi.fn(),
     onMoveDocument: vi.fn(), onDeleteDocument: vi.fn(), ...overrides
   };
@@ -77,11 +77,35 @@ describe("flat Library tree", () => {
     expect(props.onRenameFolder).not.toHaveBeenCalled();
   });
 
-  it("moves pages through the menu and drag-and-drop", () => {
+  it("dismisses only the active menu on Escape and restores its trigger", async () => {
+    renderTree();
+    const trigger = screen.getByRole("button", { name: "Manage Chapter 2" });
+    fireEvent.click(trigger);
+    const rename = screen.getByRole("menuitem", { name: "Rename page" });
+    fireEvent.keyDown(rename, { key: "Escape" });
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(screen.queryByRole("menuitem", { name: "Rename page" })).toBeNull();
+  });
+
+  it("keeps a rejected rename draft focused and editable", async () => {
+    renderTree({ onRenameDocument: vi.fn().mockRejectedValue(new Error("offline")) });
+    fireEvent.click(screen.getByRole("button", { name: "Manage Chapter 2" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename page" }));
+    const input = screen.getByRole("textbox", { name: "Rename Chapter 2" });
+    fireEvent.change(input, { target: { value: "Renamed" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not save");
+    expect(input).toHaveFocus();
+    expect(input).toBeEnabled();
+  });
+
+  it("moves pages through the menu and drag-and-drop", async () => {
     const { props } = renderTree();
     fireEvent.click(screen.getByRole("button", { name: "Manage Chapter 2" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "Move Chapter 2" }), { target: { value: "book-b" } });
-    expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Move to…" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Research" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move page" }));
+    await waitFor(() => expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b"));
     const transfer = { getData: () => "p2", setData: vi.fn(), effectAllowed: "move", dropEffect: "move" };
     fireEvent.drop(screen.getByTestId("collection-book-b"), { dataTransfer: transfer });
     expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b");

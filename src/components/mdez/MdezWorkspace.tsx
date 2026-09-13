@@ -155,7 +155,7 @@ export function MdezWorkspace() {
 
   useEffect(() => {
     function closeOverlays(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !isDrawerOpen) {
+      if (event.defaultPrevented || event.key !== "Escape" || !isDrawerOpen) {
         return;
       }
 
