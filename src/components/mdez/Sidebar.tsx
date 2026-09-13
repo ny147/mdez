@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, RefObject } from "react";
-import { Clock3, Library, Star, X } from "lucide-react";
+import { BookPlus, Clock3, Library, Star, X } from "lucide-react";
 
 import type { Document, Folder } from "@/types/content";
 import type { GitHubSource } from "@/types/github";
@@ -109,6 +109,10 @@ export function Sidebar({
           </p>
         ) : null}
 
+        <div className="sidebar-section-heading">
+          <strong>Library</strong>
+          <button type="button" className="workspace-icon-button" onClick={() => onCreateFolder(null)} aria-label="Create book" title="Create book"><BookPlus aria-hidden="true" /></button>
+        </div>
         <div className="sidebar-library-scroll">
           <div className="sidebar-library-sections">
             <LibraryTree
@@ -121,7 +125,6 @@ export function Sidebar({
               filter={filter}
               onSelectFolder={onSelectFolder}
               onToggleCollection={onToggleFolder}
-              onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
               onSelectDocument={onSelectDocument}
