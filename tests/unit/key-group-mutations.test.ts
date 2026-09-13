@@ -51,6 +51,24 @@ function fakeTransactionSql() {
 }
 
 describe("Key Group transactional mutations", () => {
+  it("locks the group before the folder when deleting a book", async () => {
+    const queries: string[] = [];
+    const tag = async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      const query = strings.join("?").replace(/\s+/g, " ").trim().toLowerCase();
+      queries.push(query);
+      if (query.includes("select revision, deleted_at from public.key_groups")) return [{ revision: 4, deleted_at: null }];
+      if (query.includes("select version from public.group_folders")) return [{ version: 1 }];
+      if (query.includes("select id from public.group_documents")) return [];
+      if (query.startsWith("delete from public.group_folders")) return [{ id: String(values[1]) }];
+      return [];
+    };
+    (tag as unknown as { begin: (callback: (tx: unknown) => unknown) => unknown }).begin = (callback) => callback(tag);
+    await new PostgresKeyGroupStore(tag as unknown as Sql).deleteFolder(groupId, "00000000-0000-4000-8000-000000000003", 1);
+    expect(queries.findIndex((query) => query.includes("from public.key_groups"))).toBeLessThan(
+      queries.findIndex((query) => query.includes("from public.group_folders"))
+    );
+  });
+
   it("increments entity version and group revision in one mutation", async () => {
     const { sql } = fakeTransactionSql();
     const store = new PostgresKeyGroupStore(sql);
