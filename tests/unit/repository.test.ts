@@ -409,6 +409,20 @@ describe("repository", () => {
     expect(content.documents.find((document) => document.id === localDocument.id)?.body).toBe("keep");
   });
 
+  it("keeps local book names reserved when refreshing a GitHub source", async () => {
+    const local = await createFolder("codex / guides", null);
+    const localPage = await createDocument({ title: "Local guide", body: "keep", folderId: local.id });
+    const imported = await importGitHubSource(githubSession());
+    expect((await listContent()).folders.find((folder) => folder.sourceId === imported.source.id && folder.name.startsWith("codex / guides"))?.name).toBe("codex / guides (2)");
+
+    await refreshGitHubSource(imported.source.id, githubSession());
+
+    const content = await listContent();
+    expect(content.folders.find((folder) => folder.id === local.id)?.name).toBe("codex / guides");
+    expect(content.documents.find((document) => document.id === localPage.id)?.body).toBe("keep");
+    expect(content.folders.find((folder) => folder.sourceId === imported.source.id && folder.name.startsWith("codex / guides"))?.name).toBe("codex / guides (2)");
+  });
+
   it("rolls back a failed refresh and leaves the previous source intact", async () => {
     const imported = await importGitHubSource(githubSession());
     const before = await listContent();

@@ -376,7 +376,8 @@ export async function refreshGitHubSource(
       lastRefreshedAt: session.fetchedAt,
       updatedAt: timestamp
     };
-    const existingFolders = await db.folders.where("sourceId").notEqual(sourceId).toArray();
+    const existingFolders = (await db.folders.toArray())
+      .filter((folder) => folder.sourceId !== sourceId);
     const records = flattenSourceRecords(buildSourceRecords(
       session,
       sourceId,
