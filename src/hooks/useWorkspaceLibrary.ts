@@ -28,6 +28,7 @@ export type WorkspaceLibraryController = {
   selectedFolderId: string | null;
   selectedDocumentId: string | null;
   expandedCollectionId: string | null;
+  pageReveal: { documentId: string; sequence: number } | null;
   selectedFolder: Folder | null;
   selectedDocument: Document | null;
   isReady: boolean;
@@ -61,6 +62,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [expandedCollectionId, setExpandedCollectionId] = useState<string | null>(null);
+  const [pageReveal, setPageReveal] = useState<{ documentId: string; sequence: number } | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,6 +114,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     if (!document) return;
     setSelectedFolderId(document.folderId);
     setSelectedDocumentId(document.id);
+    setPageReveal((current) => ({ documentId, sequence: (current?.sequence ?? 0) + 1 }));
     const collectionId = document.folderId ?? UNSORTED_COLLECTION_ID;
     setExpandedCollectionId(collectionId);
     saveExpandedCollection("local", collectionId);
@@ -189,6 +192,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
       setError(null);
       setSelectedFolderId(targetFolderId);
       setSelectedDocumentId(document.id);
+      setPageReveal((current) => ({ documentId: document.id, sequence: (current?.sequence ?? 0) + 1 }));
       const collectionId = targetFolderId ?? UNSORTED_COLLECTION_ID;
       setExpandedCollectionId(collectionId);
       saveExpandedCollection("local", collectionId);
@@ -208,6 +212,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
       setExpandedCollectionId(folderId ?? UNSORTED_COLLECTION_ID);
       saveExpandedCollection("local", folderId ?? UNSORTED_COLLECTION_ID);
       await loadContent(newestDocumentId);
+      if (newestDocumentId) setPageReveal((current) => ({ documentId: newestDocumentId, sequence: (current?.sequence ?? 0) + 1 }));
     } catch {
       setError("Could not import markdown.");
       throw new Error("Could not import markdown.");
@@ -218,6 +223,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     void title;
     setError((current) => (current === "Could not rename page." ? null : current));
     await loadContent(selectedDocumentId === documentId ? documentId : undefined);
+    if (selectedDocumentId === documentId) setPageReveal((current) => ({ documentId, sequence: (current?.sequence ?? 0) + 1 }));
   }, [loadContent, selectedDocumentId]);
 
   const movePage = useCallback(async (documentId: string, folderId: string | null) => {
@@ -230,6 +236,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
         setSelectedFolderId(folderId);
         setExpandedCollectionId(collectionId);
         saveExpandedCollection("local", collectionId);
+        setPageReveal((current) => ({ documentId, sequence: (current?.sequence ?? 0) + 1 }));
       }
       await loadContent(active ? documentId : selectedDocumentId);
     } catch (cause) {
@@ -266,6 +273,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     setSelectedFolderId(folderId);
     setExpandedCollectionId(folderId ?? UNSORTED_COLLECTION_ID);
     saveExpandedCollection("local", folderId ?? UNSORTED_COLLECTION_ID);
+    setPageReveal((current) => result.firstDocumentId ? ({ documentId: result.firstDocumentId, sequence: (current?.sequence ?? 0) + 1 }) : current);
     return result;
   }, [loadContent]);
 
@@ -290,6 +298,7 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     selectedFolderId,
     selectedDocumentId,
     expandedCollectionId,
+    pageReveal,
     selectedFolder,
     selectedDocument,
     isReady,
@@ -312,5 +321,5 @@ export function useWorkspaceLibrary(): WorkspaceLibraryController {
     refreshGitHub
   }), [createBook, createPage, deleteBook, deletePage, documents, error, expandedCollectionId, folders, importGitHub,
     importPages, isReady, movePage, refreshContent, refreshGitHub, renameBook, renamePage, selectDocument, selectFolder,
-    selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, sources, toggleFolder]);
+    pageReveal, selectedDocument, selectedDocumentId, selectedFolder, selectedFolderId, sources, toggleFolder]);
 }

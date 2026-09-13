@@ -553,6 +553,7 @@ export function MdezWorkspace() {
           selectedFolderId={library.selectedFolderId}
           selectedDocumentId={library.selectedDocumentId}
           expandedCollectionId={library.expandedCollectionId}
+          pageReveal={library.pageReveal}
           error={library.error}
           githubSource={activeGitHubSource}
           refreshingSourceId={refreshingSourceId}

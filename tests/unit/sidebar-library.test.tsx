@@ -18,7 +18,7 @@ const pages: Document[] = [
 const renderTree = (overrides: Partial<React.ComponentProps<typeof LibraryTree>> = {}) => {
   const props: React.ComponentProps<typeof LibraryTree> = {
     folders: books, documents: pages, selectedFolderId: "book-a", selectedDocumentId: "p2",
-    expandedCollectionId: "book-a", onSelectFolder: vi.fn(), onToggleCollection: vi.fn(),
+    expandedCollectionId: "book-a", pageReveal: null, onSelectFolder: vi.fn(), onToggleCollection: vi.fn(),
     onCreateFolder: vi.fn(), onRenameFolder: vi.fn(), onDeleteFolder: vi.fn(),
     onSelectDocument: vi.fn(), onCreateDocument: vi.fn(), onRenameDocument: vi.fn(),
     onMoveDocument: vi.fn(), onDeleteDocument: vi.fn(), ...overrides

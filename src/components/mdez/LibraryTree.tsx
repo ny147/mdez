@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, BookPlus, ChevronDown, ChevronRight, FilePlus, FileText, Files, MoreHorizontal, Trash2 } from "lucide-react";
 import type { Document, Folder } from "@/types/content";
 import { groupPagesByCollection, sortBooks, UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
+import { mergeRetainedIndices } from "@/lib/library-virtual-window";
 import { WORKSPACE_COPY } from "@/lib/workspace-copy";
 
 export { UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
@@ -15,6 +16,7 @@ export type LibraryTreeProps = {
   selectedFolderId: string | null;
   selectedDocumentId: string | null;
   expandedCollectionId: string | null;
+  pageReveal: { documentId: string; sequence: number } | null;
   onSelectFolder: (folderId: string | null) => void;
   onToggleCollection: (collectionId: string) => void;
   onCreateFolder: (parentId: null) => void;
@@ -42,6 +44,7 @@ export function LibraryTree(props: LibraryTreeProps) {
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [virtualRange, setVirtualRange] = useState({ start: 0, end: 60 });
   const pageListRef = useRef<HTMLUListElement>(null);
+  const rowHeightsRef = useRef(new Map<string, number>());
   const expandedPages = props.expandedCollectionId === UNSORTED_COLLECTION_ID
     ? pagesByCollection.get(null) ?? []
     : pagesByCollection.get(props.expandedCollectionId) ?? [];
@@ -63,13 +66,29 @@ export function LibraryTree(props: LibraryTreeProps) {
   }, [expandedPages.length, props.expandedCollectionId]);
 
   useEffect(() => {
-    if (!props.selectedDocumentId) return;
-    const frame = window.requestAnimationFrame(() => {
-      const selected = pageListRef.current?.querySelector<HTMLElement>("[aria-current='page']");
-      selected?.scrollIntoView?.({ block: "nearest" });
+    const list = pageListRef.current;
+    if (!list || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const id = (entry.target as HTMLElement).dataset.pageId;
+        if (id) rowHeightsRef.current.set(id, entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+      }
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, [expandedPages.length, props.expandedCollectionId, props.selectedDocumentId, virtualRange]);
+    list.querySelectorAll<HTMLElement>("[data-page-id]").forEach((row) => observer.observe(row));
+    return () => observer.disconnect();
+  });
+
+  useEffect(() => {
+    const request = props.pageReveal;
+    const list = pageListRef.current;
+    const scroller = list?.closest<HTMLElement>(".sidebar-library-scroll");
+    if (!request || !list || !scroller) return;
+    const index = expandedPages.findIndex((page) => page.id === request.documentId);
+    if (index < 0) return;
+    const listTop = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const offset = expandedPages.slice(0, index).reduce((total, page) => total + (rowHeightsRef.current.get(page.id) ?? 44), 0);
+    scroller.scrollTo?.({ top: Math.max(0, listTop + offset - 44), behavior: "auto" });
+  }, [expandedPages, props.pageReveal?.sequence]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -176,22 +195,30 @@ export function LibraryTree(props: LibraryTreeProps) {
   function pageRows(collectionId: string, name: string, pages: Document[]) {
     if (props.expandedCollectionId !== collectionId) return null;
     const virtual = pages.length > 100;
-    let start = virtual ? virtualRange.start : 0;
-    let end = virtual ? virtualRange.end : pages.length;
+    const start = virtual ? virtualRange.start : 0;
+    const end = virtual ? virtualRange.end : pages.length;
     const openMenuPageId = openMenu?.startsWith("page:") ? openMenu.slice(5) : null;
-    const retainedPageId = editing?.kind === "page" ? editing.id : openMenuPageId ?? focusedPageId ?? props.selectedDocumentId;
-    const selectedIndex = pages.findIndex((page) => page.id === retainedPageId);
-    if (selectedIndex >= 0 && (selectedIndex < start || selectedIndex >= end)) {
-      start = Math.max(0, selectedIndex - 10);
-      end = Math.min(pages.length, start + 60);
-    }
-    const visiblePages = pages.slice(start, end);
+    const retainedIds = [editing?.kind === "page" ? editing.id : null, openMenuPageId, focusedPageId].filter((id): id is string => Boolean(id));
+    const retained = retainedIds.map((id) => pages.findIndex((page) => page.id === id));
+    const indices = virtual ? mergeRetainedIndices(start, end, pages.length, retained) : pages.map((_, index) => index);
+    let previousIndex = -1;
+    const rowHeight = (index: number) => rowHeightsRef.current.get(pages[index].id) ?? 44;
+    const gapHeight = (from: number, to: number) => {
+      let height = 0;
+      for (let index = from; index < to; index += 1) height += rowHeight(index);
+      return height;
+    };
     return (
       <ul ref={pageListRef} className="library-tree-pages" aria-label={`Pages in ${name}`}>
-        {virtual && start > 0 ? <li aria-hidden="true" className="library-virtual-spacer" style={{ height: `${start * 44}px` }} /> : null}
-        {pages.length === 0 ? <li className="library-tree-empty">No pages yet</li> : visiblePages.map((page, visibleIndex) => (
-          <li key={page.id} className="library-tree-page" data-selected={props.selectedDocumentId === page.id} draggable
-            aria-posinset={start + visibleIndex + 1} aria-setsize={pages.length}
+        {pages.length === 0 ? <li className="library-tree-empty">No pages yet</li> : indices.map((pageIndex) => {
+          const page = pages[pageIndex];
+          const gap = pageIndex - previousIndex - 1;
+          const gapStart = previousIndex + 1;
+          previousIndex = pageIndex;
+          return <Fragment key={page.id}>
+          {gap > 0 ? <li aria-hidden="true" className="library-virtual-spacer" style={{ height: `${gapHeight(gapStart, pageIndex)}px` }} /> : null}
+          <li className="library-tree-page" data-page-id={page.id} data-selected={props.selectedDocumentId === page.id} draggable
+            aria-posinset={pageIndex + 1} aria-setsize={pages.length}
             onFocusCapture={() => setFocusedPageId(page.id)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedPageId((current) => current === page.id ? null : current); }}
             onDragStart={(event) => { event.dataTransfer.setData("text/mdez-document-id", page.id); event.dataTransfer.effectAllowed = "move"; }}>
             <FileText aria-hidden="true" />
@@ -216,9 +243,9 @@ export function LibraryTree(props: LibraryTreeProps) {
                 <button type="button" role="menuitem" className="danger" onClick={() => { setOpenMenu(null); props.onDeleteDocument(page.id); }}><Trash2 aria-hidden="true" />Delete page</button>
               </>)}
             </div>
-          </li>
-        ))}
-        {virtual && end < pages.length ? <li aria-hidden="true" className="library-virtual-spacer" style={{ height: `${(pages.length - end) * 44}px` }} /> : null}
+          </li></Fragment>;
+        })}
+        {virtual && previousIndex + 1 < pages.length ? <li aria-hidden="true" className="library-virtual-spacer" style={{ height: `${gapHeight(previousIndex + 1, pages.length)}px` }} /> : null}
         <li><button type="button" className="library-add-page" onClick={() => props.onCreateDocument(collectionId === UNSORTED_COLLECTION_ID ? null : collectionId)}><FilePlus aria-hidden="true" />Add page</button></li>
       </ul>
     );

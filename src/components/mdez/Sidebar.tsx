@@ -15,6 +15,7 @@ type SidebarProps = {
   selectedFolderId: string | null;
   selectedDocumentId: string | null;
   expandedCollectionId: string | null;
+  pageReveal: { documentId: string; sequence: number } | null;
   error: string | null;
   githubSource: GitHubSource | null;
   refreshingSourceId: string | null;
@@ -45,6 +46,7 @@ export function Sidebar({
   selectedFolderId,
   selectedDocumentId,
   expandedCollectionId,
+  pageReveal,
   error,
   githubSource,
   refreshingSourceId,
@@ -115,6 +117,7 @@ export function Sidebar({
               selectedFolderId={selectedFolderId}
               selectedDocumentId={selectedDocumentId}
               expandedCollectionId={expandedCollectionId}
+              pageReveal={pageReveal}
               onSelectFolder={onSelectFolder}
               onToggleCollection={onToggleFolder}
               onCreateFolder={onCreateFolder}
