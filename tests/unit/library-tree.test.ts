@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFlatBookMigration, naturalCompare } from "@/lib/library-tree";
+import { buildFlatBookMigration, generatedNameCandidate, naturalCompare } from "@/lib/library-tree";
 import type { Folder } from "@/types/content";
 
 const folder = (id: string, name: string, parentId: string | null): Folder => ({
@@ -58,5 +58,32 @@ describe("flat library model", () => {
       { id: "cycle-a", name: "Alpha / Beta / Alpha" },
       { id: "cycle-b", name: "Beta / Alpha / Beta" }
     ]);
+  });
+
+  it("preserves duplicate root names and allocates generated collisions in stable ID order", () => {
+    const input = [
+      folder("root-b", "Notes", null),
+      folder("root-a", "Notes", null),
+      folder("reserved", "Notes / Ideas (2)", null),
+      folder("child-b", "Ideas", "root-b"),
+      folder("child-a", "Ideas", "root-a")
+    ];
+    const names = (items: Folder[]) => new Map(buildFlatBookMigration(items).map((item) => [item.id, item.name]));
+    expect(names(input)).toEqual(names([...input].reverse()));
+    expect(names(input)).toEqual(new Map([
+      ["root-b", "Notes"], ["root-a", "Notes"], ["reserved", "Notes / Ideas (2)"],
+      ["child-b", "Notes / Ideas (3)"], ["child-a", "Notes / Ideas"]
+    ]));
+  });
+
+  it("reserves suffix room when limiting generated names", () => {
+    expect(Array.from(generatedNameCandidate("x".repeat(323), 2, 300))).toHaveLength(300);
+    expect(generatedNameCandidate("x".repeat(323), 2, 300).endsWith(" (2)")).toBe(true);
+    const result = buildFlatBookMigration([
+      folder("root", "x".repeat(160), null),
+      folder("child", "y".repeat(160), "root")
+    ], { maxGeneratedNameLength: 300 });
+    expect(Array.from(result[1].name).length).toBe(300);
+    expect(result[0].name).toBe("x".repeat(160));
   });
 });

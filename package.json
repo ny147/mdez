@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:postgres": "vitest run --config vitest.postgres.config.ts"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.3",

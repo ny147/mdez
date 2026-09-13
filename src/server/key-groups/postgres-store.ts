@@ -51,7 +51,7 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
         createdAt: folder.createdAt,
         updatedAt: folder.updatedAt
       }));
-      const flatNames = new Map(buildFlatBookMigration(migrationInput).map((folder) => [folder.id, folder.name]));
+      const flatNames = new Map(buildFlatBookMigration(migrationInput, { maxGeneratedNameLength: 300 }).map((folder) => [folder.id, folder.name]));
       for (const folder of input.folders) {
         const id = randomUUID();
         folderIds.set(folder.clientId, id);
@@ -134,17 +134,16 @@ export class PostgresKeyGroupStore implements KeyGroupStore {
 
   async deleteFolder(groupId: string, id: string, expectedVersion: number): Promise<number> {
     return this.sql.begin(async (tx) => {
+      let revision = await this.nextRevision(tx, groupId);
       const current = await tx<{ version: number }[]>`select version from public.group_folders where group_id = ${groupId} and id = ${id} for update`;
       if (!current[0]) throw new KeyGroupError("NOT_FOUND", "Folder not found");
       if (current[0].version !== expectedVersion) throw new KeyGroupError("CONFLICT", "Folder version conflict", { entityType: "folder", entityId: id, expectedVersion, currentVersion: current[0].version });
       const moved = await tx<{ id: string }[]>`select id from public.group_documents where group_id = ${groupId} and folder_id = ${id} order by id for update`;
-      let revision = 0;
       for (const document of moved) {
-        revision = await this.nextRevision(tx, groupId);
         await tx`update public.group_documents set folder_id = null, version = version + 1, group_revision = ${revision}, updated_at = now() where group_id = ${groupId} and id = ${document.id}`;
         await this.finishMutation(tx, groupId, revision, "document", document.id, "update");
+        revision += 1;
       }
-      revision = await this.nextRevision(tx, groupId);
       const rows = await tx<FolderRow[]>`delete from public.group_folders where group_id = ${groupId} and id = ${id} and version = ${expectedVersion} returning id`;
       if (!rows[0]) throw new KeyGroupError("CONFLICT", "Folder version conflict", { entityType: "folder", entityId: id, expectedVersion, currentVersion: current[0].version });
       await this.finishMutation(tx, groupId, revision, "folder", id, "delete");

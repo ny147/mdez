@@ -24,6 +24,14 @@ create temporary table mdez_reserved_book_names (
   primary key (group_id, normalized_name)
 ) on commit drop;
 
+-- Root names are user-authored data. Reserve them without modifying or
+-- deduplicating them; only generated names receive suffixes.
+insert into mdez_reserved_book_names (group_id, normalized_name)
+select distinct group_id, lower(btrim(base_name))
+from mdez_flat_book_names
+where parent_id is null
+on conflict do nothing;
+
 do $$
 declare
   folder_row record;
@@ -33,7 +41,8 @@ declare
 begin
   for folder_row in
     select * from mdez_flat_book_names
-    order by group_id, (parent_id is not null), lower(base_name), id
+    where parent_id is not null
+    order by group_id, id
   loop
     suffix_number := 1;
     candidate := left(folder_row.base_name, 300);
@@ -67,7 +76,7 @@ declare
 begin
   for group_row in select id, revision from public.key_groups order by id for update loop
     next_revision := group_row.revision;
-    for folder_row in select id from public.group_folders where group_id = group_row.id order by id loop
+    for folder_row in select id from mdez_flat_book_names where group_id = group_row.id and parent_id is not null order by id loop
       next_revision := next_revision + 1;
       update public.group_folders
       set group_revision = next_revision

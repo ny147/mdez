@@ -15,9 +15,21 @@ export function sortPages(documents: Document[]): Document[] {
   return [...documents].sort((left, right) => naturalCompare(left.title, right.title) || left.id.localeCompare(right.id));
 }
 
-export function buildFlatBookMigration(folders: Folder[]): Array<{ id: string; name: string }> {
+const collisionKey = (value: string) => value.toLocaleLowerCase("en-US");
+const truncateCodePoints = (value: string, length: number) => Array.from(value).slice(0, Math.max(0, length)).join("");
+
+export function generatedNameCandidate(base: string, ordinal: number, max: number): string {
+  const suffix = ordinal === 1 ? "" : ` (${ordinal})`;
+  return truncateCodePoints(base, max - Array.from(suffix).length) + suffix;
+}
+
+export function buildFlatBookMigration(
+  folders: Folder[],
+  options: { maxGeneratedNameLength?: number } = {}
+): Array<{ id: string; name: string }> {
   const byId = new Map(folders.map((item) => [item.id, item]));
-  const reserved = new Set(folders.filter((item) => item.parentId === null).map((item) => item.name.trim().toLocaleLowerCase()));
+  // PostgreSQL uses lower(text) for the same case-insensitive reservation rule.
+  const reserved = new Set(folders.filter((item) => item.parentId === null).map((item) => collisionKey(item.name.trim())));
 
   function pathFor(folder: Folder): string {
     const names = [folder.name.trim() || "Untitled Book"];
@@ -34,15 +46,24 @@ export function buildFlatBookMigration(folders: Folder[]): Array<{ id: string; n
     return names.join(" / ");
   }
 
-  return folders.map((folder) => {
-    if (folder.parentId === null) return { id: folder.id, name: folder.name };
+  const generated = new Map<string, string>();
+  const nested = folders.filter((folder) => folder.parentId !== null).sort((left, right) => left.id.localeCompare(right.id));
+  for (const folder of nested) {
     const base = pathFor(folder);
-    let name = base;
-    let suffix = 2;
-    while (reserved.has(name.toLocaleLowerCase())) name = `${base} (${suffix++})`;
-    reserved.add(name.toLocaleLowerCase());
-    return { id: folder.id, name };
-  });
+    let ordinal = 1;
+    let name = options.maxGeneratedNameLength
+      ? generatedNameCandidate(base, ordinal, options.maxGeneratedNameLength)
+      : base;
+    while (reserved.has(collisionKey(name))) {
+      ordinal += 1;
+      name = options.maxGeneratedNameLength
+        ? generatedNameCandidate(base, ordinal, options.maxGeneratedNameLength)
+        : `${base} (${ordinal})`;
+    }
+    reserved.add(collisionKey(name));
+    generated.set(folder.id, name);
+  }
+  return folders.map((folder) => ({ id: folder.id, name: folder.parentId === null ? folder.name : generated.get(folder.id) ?? folder.name }));
 }
 
 export function groupPagesByCollection(folders: Folder[], documents: Document[]) {
