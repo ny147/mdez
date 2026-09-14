@@ -1,6 +1,6 @@
 # Mdez Library Workspace Design
 
-Status: Prism Pages brand plus flat Library sidebar implemented on `codex/library-sidebar` on 2026-09-12.
+Status: Prism Pages brand plus flat Library sidebar review fixes implemented on `codex/prism-pages-brand` on 2026-09-14.
 
 The library behavior remains defined by `docs/superpowers/specs/2026-09-06-library-redesign.md`. The current brand specification is `docs/superpowers/specs/2026-09-09-prism-pages-brand-design.md`; approved concept references are in `docs/design-assets/prism-pages/`.
 
@@ -27,7 +27,7 @@ Workspace colors are defined in `src/app/styles/tokens.css`. The vector identity
 - Writing and peeking PNGs are genuinely transparent, 384×256 and 416×277 respectively, each under 145KB. The writing companion appears on the resume card; peeking art appears in welcome and contextual empty states. Only one full mascot appears per Shelf view, and none appears inside the editor/reader.
 - First-use requires a ready, empty root library in All with no non-whitespace search. It replaces the two redundant main-panel empty messages with one welcome panel; actions stay available above it.
 - Resume artwork uses 192px desktop and 96px compact width and is hidden below 430px. Welcome artwork stacks above copy on mobile.
-- The Library uses compact 44px book and page rows. A disclosure controls the page list, the name opens Shelf, and a quiet ellipsis opens actions without reducing the title to zero width.
+- The Library uses compact 44px book and page rows. Its heading and Create book action remain fixed while one continuous list scrolls. A disclosure controls the page list, the name opens Shelf, and a quiet ellipsis opens actions without reducing the title to zero width.
 
 ## Information architecture
 
@@ -58,6 +58,9 @@ Dexie schema version 6 converts legacy nested books to top-level collections in 
 - Mobile workspace/group/shared-link controls are reached through the inert, focus-managed shelf drawer.
 - Every compact mobile control meets the 44px target contract.
 - Expansion and the last non-Shelf mode are remembered separately per workspace. Opening a page from Shelf restores Edit, Read, or Split; page selection closes the mobile drawer while disclosure and menu actions leave it open.
+- Manual Library scrolling is independent of page selection. Explicit opens, creations, imports, and active-page moves issue a one-shot reveal request; passive refresh and typing do not snap the list.
+- Moving a page uses a searchable, focus-managed destination dialog. The current book is excluded, Unsorted is an explicit destination, and a failed move leaves the dialog and source state intact.
+- Escape dismisses only the innermost active Library menu, inline rename, or dialog before a later Escape may close the mobile drawer; focus returns to the initiating control.
 
 ## Editor and reader
 
@@ -67,13 +70,13 @@ CodeMirror, the MarkdownReader pipeline, math, syntax highlighting, table of con
 
 The final implementation passes:
 
-- 47 Vitest files / 311 tests.
+- 49 Vitest files / 323 tests.
 - ESLint with zero warnings.
 - Next.js type generation and TypeScript checking.
 - Optimized Next.js production build.
 - 170 Playwright tests across desktop and mobile projects.
 
-Visual review passed for populated/welcome Shelf, mobile, Edit, Read, and Split. Screenshots and local logs are in `.superpowers/sdd/2026-09-09-prism-pages-brand/`; that scratch directory is ignored. Seventeen text/background token pairs exceeded 4.5:1 (lowest checked: 4.92:1). The mechanical design detector returned no findings. Code review's animation replay and whitespace-search findings were reproduced and resolved. Actual Chromium tab zoom at 200% passed on 2026-09-11 for welcome, Shelf, Edit, Read, and Split: 1424 to 712 CSS pixels, DPR 1 to 2, no horizontal overflow. External ink and white wordmark SVGs with portable outlined lettering are delivered in public/brand/.
+Visual review passed for populated/welcome Shelf, mobile, Edit, Read, and Split. Screenshots and local logs are in `.superpowers/sdd/2026-09-09-prism-pages-brand/`; that scratch directory is ignored. Seventeen text/background token pairs exceeded 4.5:1 (lowest checked: 4.92:1). The mechanical design detector returned no findings for the review-fix markup. Code review's animation replay, whitespace-search, and flat-Library findings were reproduced and resolved. Actual Chromium tab zoom at 200% passed on 2026-09-11 for welcome, Shelf, Edit, Read, and Split: 1424 to 712 CSS pixels, DPR 1 to 2, no horizontal overflow; the review-fix session did not repeat that manual zoom check. External ink and white wordmark SVGs with portable outlined lettering are delivered in public/brand/.
 
 Browser coverage includes persistence, search/bookmark/resume reload, key groups, Quick Share, GitHub import/refresh, Markdown and ZIP export, reader math/code/TOC, reduced motion, keyboard navigation, inert overlays, 44px touch targets, and no horizontal page overflow at 390, 430, 768, 1024, and 1440 pixels.
 
