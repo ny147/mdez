@@ -25,6 +25,11 @@ export function MovePageDialog({ page, books, onMove, onClose }: MovePageDialogP
     .sort((left, right) => naturalCompare(left.name, right.name) || left.id.localeCompare(right.id)), [books, page.folderId, query]);
 
   useEffect(() => { searchRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (destination !== null && destination !== undefined && !matches.some((book) => book.id === destination)) {
+      setDestination(undefined);
+    }
+  }, [destination, matches]);
 
   function keys(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "Escape" && !pending) {

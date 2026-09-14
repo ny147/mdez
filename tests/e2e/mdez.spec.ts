@@ -547,8 +547,11 @@ test("sidebar page rows reveal management actions on demand", async ({ page }) =
   expect(manageBox?.width).toBe(44);
   await manageButton.click();
   await expect(page.getByRole("menuitem", { name: "Rename page" })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Move untitled.md" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Delete page" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Move to…" }).click();
+  await expect(page.getByRole("dialog", { name: "Choose a destination" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search books" })).toBeFocused();
+  await page.getByRole("button", { name: "Close move dialog" }).click();
 });
 
 test("large flat libraries keep page rows bounded and reveal distant search results", async ({ page }) => {
@@ -591,6 +594,16 @@ test("large flat libraries keep page rows bounded and reveal distant search resu
   await expect(pageList).toBeVisible();
   expect(await pageList.getByRole("button", { name: /^Open Page / }).count()).toBeLessThan(100);
 
+  const scrollArea = sidebar.locator(".sidebar-library-scroll");
+  await scrollArea.evaluate(async (element) => {
+    element.scrollTop = 51 * 44 + 500 * 44;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  const manualTarget = sidebar.getByRole("button", { name: "Open Page 500" });
+  await expect(manualTarget).toBeVisible();
+  expect(await pageList.getByRole("button", { name: /^Open Page / }).count()).toBeLessThan(100);
+  await manualTarget.click();
+
   await showShelfIfAvailable(page);
   const search = page.getByRole("searchbox", { name: "Search pages and books" });
   await search.fill("Page 999");
@@ -600,7 +613,9 @@ test("large flat libraries keep page rows bounded and reveal distant search resu
   await expect(distantPage).toBeVisible();
   await expect(distantPage).toHaveAttribute("aria-current", "page");
 
-  await sidebar.getByRole("button", { name: "Manage Page 999" }).click();
+  const distantManage = sidebar.getByRole("button", { name: "Manage Page 999" });
+  await distantManage.click();
+  await expect(distantManage).toHaveAttribute("aria-expanded", "true");
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();
   const menuBox = await menu.boundingBox();
@@ -1409,6 +1424,7 @@ test("tablet drawer keeps its close control below the desktop breakpoint", async
 test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
   await clickViewportModeTab(page, "Split");
 
   const openShelf = page.getByRole("button", { name: "Open library shelf" });

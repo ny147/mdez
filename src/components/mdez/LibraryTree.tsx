@@ -48,9 +48,9 @@ export function LibraryTree(props: LibraryTreeProps) {
   const [virtualRange, setVirtualRange] = useState({ start: 0, end: 60 });
   const pageListRef = useRef<HTMLUListElement>(null);
   const rowHeightsRef = useRef(new Map<string, number>());
-  const expandedPages = props.expandedCollectionId === UNSORTED_COLLECTION_ID
+  const expandedPages = useMemo(() => props.expandedCollectionId === UNSORTED_COLLECTION_ID
     ? pagesByCollection.get(null) ?? []
-    : pagesByCollection.get(props.expandedCollectionId) ?? [];
+    : pagesByCollection.get(props.expandedCollectionId) ?? [], [pagesByCollection, props.expandedCollectionId]);
 
   useEffect(() => {
     const list = pageListRef.current;
@@ -91,14 +91,17 @@ export function LibraryTree(props: LibraryTreeProps) {
     const listTop = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     const offset = expandedPages.slice(0, index).reduce((total, page) => total + (rowHeightsRef.current.get(page.id) ?? 44), 0);
     scroller.scrollTo?.({ top: Math.max(0, listTop + offset - 44), behavior: "auto" });
-  }, [expandedPages, props.pageReveal?.sequence]);
+  }, [expandedPages, props.pageReveal]);
 
   useEffect(() => {
     if (!openMenu) return;
     const closeOutside = (event: PointerEvent) => {
       const target = event.target;
       if (target instanceof Element && target.closest(`[data-menu-key="${CSS.escape(openMenu)}"]`)) return;
-      restoreMenuFocus(openMenu);
+      setOpenMenu(null);
+      const [kind, id] = openMenu.split(":", 2) as ["book" | "page", string];
+      if (kind === "page") setFocusedPageId(id);
+      window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-menu-key="${CSS.escape(openMenu)}"] .library-row-menu-trigger`)?.focus());
     };
     const closeForViewportChange = () => setOpenMenu(null);
     document.addEventListener("pointerdown", closeOutside);
@@ -216,7 +219,7 @@ export function LibraryTree(props: LibraryTreeProps) {
     const start = virtual ? virtualRange.start : 0;
     const end = virtual ? virtualRange.end : pages.length;
     const openMenuPageId = openMenu?.startsWith("page:") ? openMenu.slice(5) : null;
-    const retainedIds = [editing?.kind === "page" ? editing.id : null, openMenuPageId, focusedPageId].filter((id): id is string => Boolean(id));
+    const retainedIds = [editing?.kind === "page" ? editing.id : null, openMenuPageId, focusedPageId, props.pageReveal?.documentId ?? null].filter((id): id is string => Boolean(id));
     const retained = retainedIds.map((id) => pages.findIndex((page) => page.id === id));
     const indices = virtual ? mergeRetainedIndices(start, end, pages.length, retained) : pages.map((_, index) => index);
     let previousIndex = -1;
@@ -237,7 +240,7 @@ export function LibraryTree(props: LibraryTreeProps) {
           {gap > 0 ? <li aria-hidden="true" className="library-virtual-spacer" style={{ height: `${gapHeight(gapStart, pageIndex)}px` }} /> : null}
           <li className="library-tree-page" data-page-id={page.id} data-selected={props.selectedDocumentId === page.id} draggable
             aria-posinset={pageIndex + 1} aria-setsize={pages.length}
-            onFocusCapture={() => setFocusedPageId(page.id)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedPageId((current) => current === page.id ? null : current); }}
+            onFocusCapture={() => window.requestAnimationFrame(() => setFocusedPageId(page.id))} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedPageId((current) => current === page.id ? null : current); }}
             onDragStart={(event) => { event.dataTransfer.setData("text/mdez-document-id", page.id); event.dataTransfer.effectAllowed = "move"; }}>
             <FileText aria-hidden="true" />
             {editing?.kind === "page" && editing.id === page.id ? (

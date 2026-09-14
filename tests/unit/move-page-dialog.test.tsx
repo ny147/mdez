@@ -30,4 +30,14 @@ describe("MovePageDialog", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("could not move");
     expect(screen.getByRole("dialog")).toBeVisible();
   });
+
+  it("clears a destination when filtering hides it", () => {
+    render(<MovePageDialog page={page} books={books} onMove={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Research notes" }));
+    expect(screen.getByRole("button", { name: "Move page" })).toBeEnabled();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search books" }), { target: { value: "missing" } });
+
+    expect(screen.getByRole("button", { name: "Move page" })).toBeDisabled();
+  });
 });
