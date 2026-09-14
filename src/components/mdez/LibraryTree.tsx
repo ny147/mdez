@@ -51,6 +51,8 @@ export function LibraryTree(props: LibraryTreeProps) {
   const pageListRef = useRef<HTMLUListElement>(null);
   const rowHeightsRef = useRef(new Map<string, number>());
   const handledPageRevealRef = useRef<string | null>(null);
+  const pageListTopRef = useRef<{ key: string; top: number } | null>(null);
+  const collectionLayoutKey = `${props.expandedCollectionId ?? "collapsed"}:${books.map((book) => `${book.id}:${book.name}`).join("|")}`;
   const expandedPages = useMemo(() => props.expandedCollectionId === UNSORTED_COLLECTION_ID
     ? pagesByCollection.get(null) ?? []
     : pagesByCollection.get(props.expandedCollectionId) ?? [], [pagesByCollection, props.expandedCollectionId]);
@@ -59,8 +61,11 @@ export function LibraryTree(props: LibraryTreeProps) {
     const list = pageListRef.current;
     const scroller = list?.closest<HTMLElement>(".sidebar-library-scroll");
     if (!list || !scroller || expandedPages.length <= 100) return;
+    const listTop = pageListTopRef.current?.key === collectionLayoutKey
+      ? pageListTopRef.current.top
+      : list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    pageListTopRef.current = { key: collectionLayoutKey, top: listTop };
     const update = () => {
-      const listTop = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       const viewportTop = Math.max(0, scroller.scrollTop - listTop);
       const viewportBottom = viewportTop + scroller.clientHeight;
       const rowHeight = (index: number) => rowHeightsRef.current.get(expandedPages[index].id) ?? 44;
@@ -81,7 +86,7 @@ export function LibraryTree(props: LibraryTreeProps) {
     scroller.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => { scroller.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
-  }, [expandedPages, props.expandedCollectionId, rowMeasurementVersion]);
+  }, [collectionLayoutKey, expandedPages, props.expandedCollectionId, rowMeasurementVersion]);
 
   useEffect(() => {
     const list = pageListRef.current;
@@ -91,7 +96,8 @@ export function LibraryTree(props: LibraryTreeProps) {
       for (const entry of entries) {
         const id = (entry.target as HTMLElement).dataset.pageId;
         if (!id) continue;
-        const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+        const height = (entry.target as HTMLElement).getBoundingClientRect().height || entry.contentRect.height;
+        if (height < 1) continue;
         if (Math.abs((rowHeightsRef.current.get(id) ?? 44) - height) < 0.5) continue;
         rowHeightsRef.current.set(id, height);
         changed = true;
@@ -115,11 +121,14 @@ export function LibraryTree(props: LibraryTreeProps) {
     if (!list || !scroller) return;
     const index = expandedPages.findIndex((page) => page.id === request.documentId);
     if (index < 0) return;
-    const listTop = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const listTop = pageListTopRef.current?.key === collectionLayoutKey
+      ? pageListTopRef.current.top
+      : list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    pageListTopRef.current = { key: collectionLayoutKey, top: listTop };
     const offset = expandedPages.slice(0, index).reduce((total, page) => total + (rowHeightsRef.current.get(page.id) ?? 44), 0);
     scroller.scrollTo?.({ top: Math.max(0, listTop + offset - 44), behavior: "auto" });
     handledPageRevealRef.current = requestKey;
-  }, [expandedPages, props.pageReveal, rowMeasurementVersion]);
+  }, [collectionLayoutKey, expandedPages, props.pageReveal, rowMeasurementVersion]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -328,7 +337,7 @@ export function LibraryTree(props: LibraryTreeProps) {
           {pageRows(UNSORTED_COLLECTION_ID, WORKSPACE_COPY.pagesWithoutBook, pagesByCollection.get(null) ?? [])}
         </li>
       </ul>
-      <p className="visually-hidden" role="status" aria-live="polite">{moveAnnouncement}</p>
+      <p className="visually-hidden" aria-live="polite" aria-atomic="true">{moveAnnouncement}</p>
       {movingPage ? <MovePageDialog page={movingPage} books={books} onMove={async (documentId, folderId) => {
         await props.onMoveDocument(documentId, folderId);
         const destinationName = folderId === null ? WORKSPACE_COPY.pagesWithoutBook : books.find((book) => book.id === folderId)?.name ?? "the selected book";

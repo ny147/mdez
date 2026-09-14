@@ -594,9 +594,11 @@ test("large flat libraries keep page rows bounded and reveal distant search resu
   await expect(pageList).toBeVisible();
   expect(await pageList.getByRole("button", { name: /^Open Page / }).count()).toBeLessThan(100);
 
-  const scrollArea = sidebar.locator(".sidebar-library-scroll");
-  await scrollArea.evaluate(async (element) => {
-    element.scrollTop = 51 * 44 + 500 * 44;
+  await pageList.evaluate(async (list) => {
+    const element = list.closest<HTMLElement>(".sidebar-library-scroll")!;
+    const listTop = list.getBoundingClientRect().top - element.getBoundingClientRect().top + element.scrollTop;
+    const measuredRowHeight = list.querySelector<HTMLElement>("[data-page-id]")?.getBoundingClientRect().height ?? 44;
+    element.scrollTop = listTop + 500 * measuredRowHeight;
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   const manualTarget = sidebar.getByRole("button", { name: "Open Page 500" });

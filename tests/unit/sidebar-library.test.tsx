@@ -106,7 +106,7 @@ describe("flat Library tree", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Research" }));
     fireEvent.click(screen.getByRole("button", { name: "Move page" }));
     await waitFor(() => expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b"));
-    expect(await screen.findByRole("status")).toHaveTextContent("Chapter 2 moved to Research.");
+    expect(await screen.findByText("Chapter 2 moved to Research.")).toHaveAttribute("aria-live", "polite");
     const transfer = { getData: () => "p2", setData: vi.fn(), effectAllowed: "move", dropEffect: "move" };
     fireEvent.drop(screen.getByTestId("collection-book-b"), { dataTransfer: transfer });
     expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b");
