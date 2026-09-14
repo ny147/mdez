@@ -27,7 +27,7 @@ create temporary table mdez_reserved_book_names (
 -- Root names are user-authored data. Reserve them without modifying or
 -- deduplicating them; only generated names receive suffixes.
 insert into mdez_reserved_book_names (group_id, normalized_name)
-select distinct group_id, lower(btrim(base_name))
+select distinct group_id, translate(btrim(base_name), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')
 from mdez_flat_book_names
 where parent_id is null
 on conflict do nothing;
@@ -48,7 +48,8 @@ begin
     candidate := left(folder_row.base_name, 300);
     while exists (
       select 1 from mdez_reserved_book_names
-      where group_id = folder_row.group_id and normalized_name = lower(candidate)
+      where group_id = folder_row.group_id
+        and normalized_name = translate(btrim(candidate), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')
     ) loop
       suffix_number := suffix_number + 1;
       suffix := ' (' || suffix_number || ')';
@@ -56,7 +57,7 @@ begin
     end loop;
 
     insert into mdez_reserved_book_names (group_id, normalized_name)
-    values (folder_row.group_id, lower(candidate));
+    values (folder_row.group_id, translate(btrim(candidate), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'));
     update public.group_folders
     set name = candidate,
         parent_id = null,

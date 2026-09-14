@@ -43,11 +43,14 @@ export function LibraryTree(props: LibraryTreeProps) {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [movingPage, setMovingPage] = useState<Document | null>(null);
+  const [moveAnnouncement, setMoveAnnouncement] = useState("");
   const [focusedPageId, setFocusedPageId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const [virtualRange, setVirtualRange] = useState({ start: 0, end: 60 });
+  const [rowMeasurementVersion, setRowMeasurementVersion] = useState(0);
   const pageListRef = useRef<HTMLUListElement>(null);
   const rowHeightsRef = useRef(new Map<string, number>());
+  const handledPageRevealRef = useRef<string | null>(null);
   const expandedPages = useMemo(() => props.expandedCollectionId === UNSORTED_COLLECTION_ID
     ? pagesByCollection.get(null) ?? []
     : pagesByCollection.get(props.expandedCollectionId) ?? [], [pagesByCollection, props.expandedCollectionId]);
@@ -58,24 +61,42 @@ export function LibraryTree(props: LibraryTreeProps) {
     if (!list || !scroller || expandedPages.length <= 100) return;
     const update = () => {
       const listTop = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-      const start = Math.max(0, Math.floor((scroller.scrollTop - listTop) / 44) - 10);
-      const visible = Math.ceil(scroller.clientHeight / 44) + 20;
-      setVirtualRange({ start, end: Math.min(expandedPages.length, start + visible) });
+      const viewportTop = Math.max(0, scroller.scrollTop - listTop);
+      const viewportBottom = viewportTop + scroller.clientHeight;
+      const rowHeight = (index: number) => rowHeightsRef.current.get(expandedPages[index].id) ?? 44;
+      let firstVisible = 0;
+      let offset = 0;
+      while (firstVisible < expandedPages.length && offset + rowHeight(firstVisible) <= viewportTop) {
+        offset += rowHeight(firstVisible);
+        firstVisible += 1;
+      }
+      let endVisible = firstVisible;
+      while (endVisible < expandedPages.length && offset < viewportBottom) {
+        offset += rowHeight(endVisible);
+        endVisible += 1;
+      }
+      setVirtualRange({ start: Math.max(0, firstVisible - 10), end: Math.min(expandedPages.length, endVisible + 10) });
     };
     update();
     scroller.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => { scroller.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
-  }, [expandedPages.length, props.expandedCollectionId]);
+  }, [expandedPages, props.expandedCollectionId, rowMeasurementVersion]);
 
   useEffect(() => {
     const list = pageListRef.current;
     if (!list || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver((entries) => {
+      let changed = false;
       for (const entry of entries) {
         const id = (entry.target as HTMLElement).dataset.pageId;
-        if (id) rowHeightsRef.current.set(id, entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+        if (!id) continue;
+        const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+        if (Math.abs((rowHeightsRef.current.get(id) ?? 44) - height) < 0.5) continue;
+        rowHeightsRef.current.set(id, height);
+        changed = true;
       }
+      if (changed) setRowMeasurementVersion((version) => version + 1);
     });
     list.querySelectorAll<HTMLElement>("[data-page-id]").forEach((row) => observer.observe(row));
     return () => observer.disconnect();
@@ -83,15 +104,22 @@ export function LibraryTree(props: LibraryTreeProps) {
 
   useEffect(() => {
     const request = props.pageReveal;
+    if (!request) {
+      handledPageRevealRef.current = null;
+      return;
+    }
+    const requestKey = `${request.documentId}:${request.sequence}`;
+    if (handledPageRevealRef.current === requestKey) return;
     const list = pageListRef.current;
     const scroller = list?.closest<HTMLElement>(".sidebar-library-scroll");
-    if (!request || !list || !scroller) return;
+    if (!list || !scroller) return;
     const index = expandedPages.findIndex((page) => page.id === request.documentId);
     if (index < 0) return;
     const listTop = list.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
     const offset = expandedPages.slice(0, index).reduce((total, page) => total + (rowHeightsRef.current.get(page.id) ?? 44), 0);
     scroller.scrollTo?.({ top: Math.max(0, listTop + offset - 44), behavior: "auto" });
-  }, [expandedPages, props.pageReveal]);
+    handledPageRevealRef.current = requestKey;
+  }, [expandedPages, props.pageReveal, rowMeasurementVersion]);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -300,7 +328,12 @@ export function LibraryTree(props: LibraryTreeProps) {
           {pageRows(UNSORTED_COLLECTION_ID, WORKSPACE_COPY.pagesWithoutBook, pagesByCollection.get(null) ?? [])}
         </li>
       </ul>
-      {movingPage ? <MovePageDialog page={movingPage} books={books} onMove={async (documentId, folderId) => { await props.onMoveDocument(documentId, folderId); }} onClose={() => { focusEntity("page", movingPage.id); setMovingPage(null); }} /> : null}
+      <p className="visually-hidden" role="status" aria-live="polite">{moveAnnouncement}</p>
+      {movingPage ? <MovePageDialog page={movingPage} books={books} onMove={async (documentId, folderId) => {
+        await props.onMoveDocument(documentId, folderId);
+        const destinationName = folderId === null ? WORKSPACE_COPY.pagesWithoutBook : books.find((book) => book.id === folderId)?.name ?? "the selected book";
+        setMoveAnnouncement(`${movingPage.title} moved to ${destinationName}.`);
+      }} onClose={() => { focusEntity("page", movingPage.id); setMovingPage(null); }} /> : null}
     </section>
   );
 }

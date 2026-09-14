@@ -15,7 +15,9 @@ export function sortPages(documents: Document[]): Document[] {
   return [...documents].sort((left, right) => naturalCompare(left.title, right.title) || left.id.localeCompare(right.id));
 }
 
-const collisionKey = (value: string) => value.toLocaleLowerCase("en-US");
+// Match PostgreSQL's explicit ASCII folding exactly instead of relying on the
+// host or database locale for generated-name collision allocation.
+export const generatedNameCollisionKey = (value: string) => value.trim().replace(/[A-Z]/g, (character) => character.toLowerCase());
 const truncateCodePoints = (value: string, length: number) => Array.from(value).slice(0, Math.max(0, length)).join("");
 
 export function generatedNameCandidate(base: string, ordinal: number, max: number): string {
@@ -28,8 +30,7 @@ export function buildFlatBookMigration(
   options: { maxGeneratedNameLength?: number } = {}
 ): Array<{ id: string; name: string }> {
   const byId = new Map(folders.map((item) => [item.id, item]));
-  // PostgreSQL uses lower(text) for the same case-insensitive reservation rule.
-  const reserved = new Set(folders.filter((item) => item.parentId === null).map((item) => collisionKey(item.name.trim())));
+  const reserved = new Set(folders.filter((item) => item.parentId === null).map((item) => generatedNameCollisionKey(item.name)));
 
   function pathFor(folder: Folder): string {
     const names = [folder.name.trim() || "Untitled Book"];
@@ -54,13 +55,13 @@ export function buildFlatBookMigration(
     let name = options.maxGeneratedNameLength
       ? generatedNameCandidate(base, ordinal, options.maxGeneratedNameLength)
       : base;
-    while (reserved.has(collisionKey(name))) {
+    while (reserved.has(generatedNameCollisionKey(name))) {
       ordinal += 1;
       name = options.maxGeneratedNameLength
         ? generatedNameCandidate(base, ordinal, options.maxGeneratedNameLength)
         : `${base} (${ordinal})`;
     }
-    reserved.add(collisionKey(name));
+    reserved.add(generatedNameCollisionKey(name));
     generated.set(folder.id, name);
   }
   return folders.map((folder) => ({ id: folder.id, name: folder.parentId === null ? folder.name : generated.get(folder.id) ?? folder.name }));

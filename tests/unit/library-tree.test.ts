@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFlatBookMigration, generatedNameCandidate, naturalCompare } from "@/lib/library-tree";
+import { buildFlatBookMigration, generatedNameCandidate, generatedNameCollisionKey, naturalCompare } from "@/lib/library-tree";
 import type { Folder } from "@/types/content";
 
 const folder = (id: string, name: string, parentId: string | null): Folder => ({
@@ -85,5 +85,11 @@ describe("flat library model", () => {
     ], { maxGeneratedNameLength: 300 });
     expect(Array.from(result[1].name).length).toBe(300);
     expect(result[0].name).toBe("x".repeat(160));
+  });
+
+  it("uses the documented locale-independent ASCII collision key", () => {
+    expect(generatedNameCollisionKey(" NOTES ")).toBe("notes");
+    expect(generatedNameCollisionKey("İ")).toBe("İ");
+    expect(generatedNameCollisionKey("I")).toBe("i");
   });
 });

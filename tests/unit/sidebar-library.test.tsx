@@ -106,9 +106,26 @@ describe("flat Library tree", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Research" }));
     fireEvent.click(screen.getByRole("button", { name: "Move page" }));
     await waitFor(() => expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b"));
+    expect(await screen.findByRole("status")).toHaveTextContent("Chapter 2 moved to Research.");
     const transfer = { getData: () => "p2", setData: vi.fn(), effectAllowed: "move", dropEffect: "move" };
     fireEvent.drop(screen.getByTestId("collection-book-b"), { dataTransfer: transfer });
     expect(props.onMoveDocument).toHaveBeenCalledWith("p2", "book-b");
+  });
+
+  it("handles each explicit reveal only once when page data changes", () => {
+    const scrollTo = vi.fn();
+    const initial = renderTree();
+    const props = initial.props;
+    initial.unmount();
+    const tree = (documents: Document[], sequence: number) => <div className="sidebar-library-scroll" ref={(node) => {
+      if (node) Object.defineProperty(node, "scrollTo", { value: scrollTo, configurable: true });
+    }}><LibraryTree {...props} documents={documents} pageReveal={{ documentId: "p2", sequence }} /></div>;
+    const { rerender } = render(tree(pages, 1));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    rerender(tree(pages.map((page) => ({ ...page })), 1));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    rerender(tree(pages, 2));
+    expect(scrollTo).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the mounted page rows bounded for very large books", () => {
