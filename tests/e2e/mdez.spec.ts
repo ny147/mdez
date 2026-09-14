@@ -62,6 +62,11 @@ async function clickViewportModeTab(page: import("@playwright/test").Page, name:
   await expect(control).toHaveAttribute("aria-selected", "true");
 }
 
+async function createPageAndWait(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
+}
+
 async function expectModeReady(page: import("@playwright/test").Page, mode: "Shelf" | "Edit" | "Read" | "Split") {
   if (mode === "Edit") {
     await expect(page.getByTestId("screen-editor")).toBeVisible();
@@ -809,7 +814,7 @@ test("mobile editor follows visual toolbar focus order and keeps actions visible
 });
 
 test("read mode exposes one workspace-level document heading", async ({ page }) => {
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await createPageAndWait(page);
   await clickViewportModeTab(page, "Read");
 
   const main = page.getByRole("main");
@@ -842,7 +847,7 @@ test("each workspace mode exposes the intended h1 hierarchy", async ({ page }) =
   await expect(main.locator(".workspace-title, .reader-document-title")).toHaveCount(1);
 });
 test("reader prose uses the reader token and only overlays receive elevation", async ({ page }) => {
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await createPageAndWait(page);
   await clickViewportModeTab(page, "Read");
 
   await expect(page.locator(".markdown-preview")).toBeVisible();
@@ -864,7 +869,7 @@ test("reader prose uses the reader token and only overlays receive elevation", a
 
 test("drawer, table of contents, and dialog share floating elevation", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await createPageAndWait(page);
   await clickViewportModeTab(page, "Read");
 
   await page.getByRole("button", { name: "Open table of contents" }).click();
@@ -1391,7 +1396,7 @@ test("split separator resizes from 30 to 70 percent", async ({ page }) => {
 });
 test("mobile Split switches between editor and preview without a separator", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await createPageAndWait(page);
   await clickViewportModeTab(page, "Split");
 
   const split = page.locator(".split-workspace");
@@ -1425,8 +1430,7 @@ test("tablet drawer keeps its close control below the desktop breakpoint", async
 });
 test("tablet split stacks full-width panes and keeps the shelf in a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await expect(page.getByRole("textbox", { name: "Page title" })).toBeVisible();
+  await createPageAndWait(page);
   await clickViewportModeTab(page, "Split");
 
   const openShelf = page.getByRole("button", { name: "Open library shelf" });
@@ -1444,7 +1448,7 @@ test("tablet split stacks full-width panes and keeps the shelf in a drawer", asy
 });
 test("responsive layout switches exactly between 1023 and 1024 pixels", async ({ page }) => {
   await page.setViewportSize({ width: 1023, height: 900 });
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await createPageAndWait(page);
   await clickViewportModeTab(page, "Split");
   await expectModeReady(page, "Split");
 
