@@ -70,7 +70,7 @@ CodeMirror, the MarkdownReader pipeline, math, syntax highlighting, table of con
 
 The final implementation passes:
 
-- 49 Vitest files / 323 tests.
+- 49 Vitest files / 325 tests.
 - ESLint with zero warnings.
 - Next.js type generation and TypeScript checking.
 - Optimized Next.js production build.

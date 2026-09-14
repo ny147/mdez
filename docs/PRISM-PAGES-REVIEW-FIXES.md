@@ -19,14 +19,14 @@ Implemented on `codex/prism-pages-brand` from reviewed commit `1df8100` on 2026-
 
 `d45fb7c` keeps the Library heading and Create book action outside the single scrolling region, protects full-width names beside 44px controls, and introduces a searchable, focus-trapped move dialog with an explicit destination and submit action. The current book is excluded; hidden filtered selections are cleared; rejected moves preserve the dialog and source state.
 
-The follow-up virtualized-menu race fix defers focus retention until the pointer activation sequence completes. Its large-library browser regression passed five concurrent repetitions. The existing tablet Split test now waits for asynchronous page creation before changing modes and also passed five concurrent repetitions.
+The follow-up virtualized-menu race fix defers focus retention until the pointer activation sequence completes. Its large-library browser regression passed five concurrent repetitions. The existing tablet Split test now waits for asynchronous page creation before changing modes and also passed five concurrent repetitions. Independent review produced `c617275`, which enforces one-shot reveal handling, feeds measured row heights back into viewport calculations, gives JavaScript and SQL the same locale-independent ASCII collision key, and publishes successful move destinations through a persistent live region. `273314c` then made measurement feedback stable across virtual row unmounts; the desktop/mobile large-library regression passed ten concurrent repetitions.
 
 ## Verification evidence
 
 - Focused virtual-window, sidebar, and move-dialog unit tests: 3 files / 14 tests passed.
-- Virtualized large-library Playwright stress run: 5/5 passed with five workers.
+- Virtualized large-library Playwright stress run: 10/10 passed across desktop and mobile with five workers.
 - Tablet Split Playwright stress run: 5/5 passed with five workers.
-- `npm test`: 49 files / 323 tests passed.
+- `npm test`: 49 files / 325 tests passed.
 - `npm run lint`: passed with zero warnings.
 - `npm run typecheck`: Next.js route generation and TypeScript checking passed.
 - `npm run build`: optimized Next.js production build passed.
