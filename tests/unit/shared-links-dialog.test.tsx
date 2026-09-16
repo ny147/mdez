@@ -1,6 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SharedLinksDialog } from "@/components/mdez/SharedLinksDialog";
 import { deleteQuickShare } from "@/lib/quick-share-client";
@@ -31,6 +31,10 @@ describe("SharedLinksDialog", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("deletes with the locally stored management token", async () => {
     vi.mocked(deleteQuickShare).mockResolvedValue();
     render(<SharedLinksDialog open onClose={vi.fn()} />);
@@ -53,13 +57,50 @@ describe("SharedLinksDialog", () => {
     expect(forgetSharedLink).not.toHaveBeenCalled();
   });
 
-  it("labels expired and never-expiring links", async () => {
+  it("hides expired and malformed links returned by storage", async () => {
     vi.mocked(listSharedLinks).mockResolvedValue([
       link,
-      { ...link, publicId: "expired", title: "Old", expiresAt: "2020-01-01T00:00:00Z" }
+      { ...link, publicId: "expired", title: "Old", expiresAt: "2020-01-01T00:00:00Z" },
+      { ...link, publicId: "invalid", title: "Invalid", expiresAt: "not-a-date" }
     ]);
     render(<SharedLinksDialog open onClose={vi.fn()} />);
     expect(await screen.findByText("Never expires")).toBeVisible();
-    expect(screen.getByText("Expired")).toBeVisible();
+    expect(screen.queryByText("Old")).toBeNull();
+    expect(screen.queryByText("Invalid")).toBeNull();
+  });
+
+  it("removes the last active link when it expires while open", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T00:00:00.000Z"));
+    vi.mocked(listSharedLinks).mockResolvedValue([{
+      ...link,
+      expiresAt: "2026-09-15T00:00:01.000Z"
+    }]);
+
+    render(<SharedLinksDialog open onClose={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText("Guide")).toBeVisible();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.queryByText("Guide")).toBeNull();
+    expect(screen.getByRole("heading", { name: "No active shared links" })).toBeVisible();
+  });
+
+  it("dismisses deletion confirmation if its link expires", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T00:00:00.000Z"));
+    vi.mocked(listSharedLinks).mockResolvedValue([{
+      ...link,
+      expiresAt: "2026-09-15T00:00:01.000Z"
+    }]);
+
+    render(<SharedLinksDialog open onClose={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    fireEvent.click(screen.getByRole("button", { name: "Delete Guide shared link" }));
+    expect(screen.getByRole("heading", { name: "Delete Guide?" })).toBeVisible();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.queryByRole("heading", { name: "Delete Guide?" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "No active shared links" })).toBeVisible();
   });
 });

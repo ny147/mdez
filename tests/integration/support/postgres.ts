@@ -13,6 +13,20 @@ export function openTestDatabase(): Sql {
   return postgres(testDatabaseUrl(), { max: 4, prepare: false });
 }
 
+export async function ensureQuickShareSchema(sql: Sql): Promise<void> {
+  await sql`select pg_advisory_lock(734620)`;
+  try {
+    const rows = await sql<{ table_name: string | null }[]>`
+      select to_regclass('public.quick_shares')::text as table_name
+    `;
+    if (!rows[0]?.table_name) {
+      await sql.unsafe(readFileSync("supabase/migrations/202608090001_quick_shares.sql", "utf8"));
+    }
+  } finally {
+    await sql`select pg_advisory_unlock(734620)`;
+  }
+}
+
 export async function ensureKeyGroupSchema(sql: Sql): Promise<void> {
   await sql`select pg_advisory_lock(734621)`;
   try {

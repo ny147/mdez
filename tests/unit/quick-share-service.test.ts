@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createQuickShareService,
   deleteQuickShareService,
+  purgeExpiredQuickShares,
   readQuickShareService
 } from "@/server/quick-shares/service";
 import type { QuickShareRecord, QuickShareStore } from "@/server/quick-shares/store";
@@ -25,7 +26,16 @@ function memoryStore(): QuickShareStore & { rows: Map<string, QuickShareRecord> 
       rows.delete(id);
       return "deleted";
     },
-    purgeExpired: async () => 0
+    purgeExpired: async (now) => {
+      let deleted = 0;
+      for (const [id, row] of rows) {
+        if (row.expiresAt && row.expiresAt <= now) {
+          rows.delete(id);
+          deleted += 1;
+        }
+      }
+      return deleted;
+    }
   };
 }
 
@@ -42,7 +52,7 @@ describe("Quick Share services", () => {
     expect(store.rows.get(result.publicId)?.managementTokenDigest).toHaveLength(32);
   });
 
-  it("returns expired instead of the Markdown", async () => {
+  it("enforces expiration at the exact deadline independently of cleanup", async () => {
     const store = memoryStore();
     store.rows.set("gone", {
       publicId: "gone",
@@ -50,13 +60,38 @@ describe("Quick Share services", () => {
       title: "Gone",
       markdown: "secret",
       sizeBytes: 6,
-      createdAt: new Date("2026-08-01Z"),
-      expiresAt: new Date("2026-08-02Z")
+      createdAt: new Date("2026-09-14T00:00:00.000Z"),
+      expiresAt: new Date("2026-09-15T00:00:00.000Z")
     });
+    store.rows.set("never", {
+      publicId: "never",
+      managementTokenDigest: Buffer.alloc(32),
+      title: "Never",
+      markdown: "available",
+      sizeBytes: 9,
+      createdAt: new Date("2026-09-14T00:00:00.000Z"),
+      expiresAt: null
+    });
+
     await expect(readQuickShareService("gone", {
       store,
-      now: () => new Date("2026-08-09Z")
+      now: () => new Date("2026-09-14T23:59:59.999Z")
+    })).resolves.toEqual(expect.objectContaining({ markdown: "secret" }));
+    await expect(readQuickShareService("gone", {
+      store,
+      now: () => new Date("2026-09-15T00:00:00.000Z")
     })).rejects.toMatchObject({ code: "EXPIRED" });
+    await expect(readQuickShareService("never", {
+      store,
+      now: () => new Date("2036-09-15T00:00:00.000Z")
+    })).resolves.toEqual(expect.objectContaining({ markdown: "available" }));
+
+    await expect(purgeExpiredQuickShares(new Date("2026-09-15T00:00:00.000Z"), store))
+      .resolves.toBe(1);
+    await expect(readQuickShareService("gone", { store, now: () => new Date() }))
+      .rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(purgeExpiredQuickShares(new Date("2026-09-15T00:00:00.000Z"), store))
+      .resolves.toBe(0);
   });
 
   it("requires the matching management token to delete", async () => {

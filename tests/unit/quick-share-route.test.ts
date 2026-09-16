@@ -74,6 +74,9 @@ describe("Quick Share routes", () => {
     );
     expect(response.status).toBe(status);
     expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body).not.toHaveProperty("markdown");
+    expect(body).not.toHaveProperty("title");
   });
 
   it("passes the management token only through a header", async () => {
@@ -93,6 +96,11 @@ describe("Quick Share routes", () => {
     process.env.CRON_SECRET = "cron-secret";
     const unauthorized = await GET_CRON(new Request("https://mdez.app/api/cron/quick-shares"));
     expect(unauthorized.status).toBe(401);
+    const wrongSecret = await GET_CRON(new Request("https://mdez.app/api/cron/quick-shares", {
+      headers: { authorization: "Bearer wrong-secret" }
+    }));
+    expect(wrongSecret.status).toBe(401);
+    expect(purgeShares).not.toHaveBeenCalled();
 
     vi.mocked(purgeShares).mockResolvedValue({ shares: 2, buckets: 3 });
     const response = await GET_CRON(new Request("https://mdez.app/api/cron/quick-shares", {
@@ -100,6 +108,18 @@ describe("Quick Share routes", () => {
     }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ shares: 2, buckets: 3 });
+  });
+
+  it("returns a generic cleanup failure", async () => {
+    process.env.CRON_SECRET = "cron-secret";
+    vi.mocked(purgeShares).mockRejectedValue(new Error("database details"));
+
+    const response = await GET_CRON(new Request("https://mdez.app/api/cron/quick-shares", {
+      headers: { authorization: "Bearer cron-secret" }
+    }));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Cleanup failed" });
   });
 });
 

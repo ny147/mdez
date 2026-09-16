@@ -28,7 +28,7 @@ npm run build
 npm run test:e2e
 ```
 
-When a change affects Postgres migrations or Key Group concurrency, also run `npm run test:postgres` against a disposable configured database.
+When a change affects Postgres persistence, migrations, cleanup, or Key Group concurrency, also run `npm run test:postgres` with `MDEZ_TEST_DATABASE_URL` pointing to a disposable database whose name ends in `_test`.
 
 Smoke test these user paths on the deployment:
 
@@ -55,7 +55,9 @@ Verify the Quick Share job against a non-production database containing an expir
 curl -H "Authorization: Bearer $CRON_SECRET" https://DEPLOYMENT_HOST/api/cron/quick-shares
 ```
 
-A successful response reports deleted `shares` and `buckets`. Confirm that the expired test row disappears.
+A successful response reports deleted `shares` and `buckets`. Confirm that the expired test row disappears while future and Never rows remain, then remove the test fixtures. Invoke the route a second time and confirm it reports zero fixture shares deleted.
+
+Quick Share access denial does not wait for this job. The read API returns `410 Gone` as soon as `expires_at` is reached, including equality. Physical deletion of the title and Markdown occurs on the next successful daily run at 03:17 UTC. Check the Vercel scheduler history for the invocation and its successful response; a missing or failed run requires operator investigation, but it must never make an expired share readable again.
 
 Verify Key Group deletion and seven-day recovery before testing its cleanup route:
 

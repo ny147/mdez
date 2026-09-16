@@ -41,7 +41,7 @@ Documents, books, bookmarks, recent-page history, and GitHub source metadata are
 
 Sharing is optional and uses server storage:
 
-- **Quick Share** stores an immutable, view-only Markdown snapshot in Supabase until it expires or its creator deletes it.
+- **Quick Share** stores an immutable, view-only Markdown snapshot in Supabase. Access ends at its selected expiration, and the next successful daily cleanup permanently deletes the expired snapshot. Its creator can also delete it early.
 - **Key Groups** store a copied library in Supabase so browsers with the secret group key can collaborate. This is saved collaboration rather than real-time co-editing.
 
 Raw management and group keys stay in the creator's or member's browser and are never stored in the database. Losing a key can permanently remove access or management capability.
