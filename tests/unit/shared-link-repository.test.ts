@@ -58,6 +58,39 @@ describe("creator-owned shared links", () => {
     expect((await listSharedLinks()).map((link) => link.publicId)).toEqual(["newer", "older"]);
   });
 
+  it("lists only active links without deleting expired browser records", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-09-15T00:00:00.000Z"));
+    const rows = [
+      { publicId: "past", expiresAt: "2026-09-14T23:59:59.999Z" },
+      { publicId: "equal", expiresAt: "2026-09-15T00:00:00.000Z" },
+      { publicId: "invalid", expiresAt: "not-a-date" },
+      { publicId: "future", expiresAt: "2026-09-15T00:00:01.000Z" },
+      { publicId: "never", expiresAt: null }
+    ];
+    for (const [index, row] of rows.entries()) {
+      await rememberSharedLink({
+        ...row,
+        url: `/share/${row.publicId}`,
+        title: row.publicId,
+        managementToken: `${row.publicId}-token`,
+        createdAt: `2026-09-14T00:00:0${index}.000Z`
+      });
+    }
+    await db.documents.add({
+      id: "local-page",
+      title: "Local",
+      body: "Preserve me",
+      folderId: null,
+      order: 0,
+      createdAt: "2026-09-14T00:00:00.000Z",
+      updatedAt: "2026-09-14T00:00:00.000Z"
+    });
+
+    expect((await listSharedLinks()).map((stored) => stored.publicId)).toEqual(["never", "future"]);
+    expect(await db.sharedLinks.count()).toBe(5);
+    expect(await db.documents.get("local-page")).toEqual(expect.objectContaining({ body: "Preserve me" }));
+  });
+
   it("preserves version-2 local content during the shared-links upgrade", async () => {
     const databaseName = "mdez-version-2-shared-links-migration";
     await Dexie.delete(databaseName);

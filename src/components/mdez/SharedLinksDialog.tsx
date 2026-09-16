@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { ModalDialog } from "@/components/ui/ModalDialog";
 import { deleteQuickShare } from "@/lib/quick-share-client";
 import type { StoredSharedLink } from "@/lib/db";
+import { isShareExpired, watchShareExpiration } from "@/lib/share-expiration";
 import { forgetSharedLink, listSharedLinks } from "@/lib/shared-link-repository";
 
 type SharedLinksDialogProps = { open: boolean; onClose: () => void };
@@ -14,8 +15,11 @@ type PendingDeletion = { publicId: string; title: string } | null;
 function expirationLabel(expiresAt: string | null) {
   if (!expiresAt) return "Never expires";
   const expiry = new Date(expiresAt);
-  if (expiry.getTime() <= Date.now()) return "Expired";
   return `Expires ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(expiry)}`;
+}
+
+function activeLinks(links: StoredSharedLink[], now = Date.now()) {
+  return links.filter((link) => !isShareExpired(link.expiresAt, now));
 }
 
 export function SharedLinksDialog({ open, onClose }: SharedLinksDialogProps) {
@@ -33,7 +37,7 @@ export function SharedLinksDialog({ open, onClose }: SharedLinksDialogProps) {
     setPendingDeletion(null);
     void listSharedLinks()
       .then((stored) => {
-        if (active) setLinks(stored);
+        if (active) setLinks(activeLinks(stored));
       })
       .catch(() => {
         if (active) setMessage("Could not load shared links from this browser.");
@@ -45,6 +49,28 @@ export function SharedLinksDialog({ open, onClose }: SharedLinksDialogProps) {
       active = false;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const nextExpiry = links.reduce<string | null>((earliest, link) => {
+      if (link.expiresAt === null) return earliest;
+      if (earliest === null || Date.parse(link.expiresAt) < Date.parse(earliest)) {
+        return link.expiresAt;
+      }
+      return earliest;
+    }, null);
+    if (nextExpiry === null) return;
+
+    return watchShareExpiration(nextExpiry, () => {
+      const now = Date.now();
+      setLinks((current) => activeLinks(current, now));
+      setPendingDeletion((current) => {
+        if (!current) return null;
+        const target = links.find((link) => link.publicId === current.publicId);
+        return target && !isShareExpired(target.expiresAt, now) ? current : null;
+      });
+    });
+  }, [links, open]);
 
   if (!open) return null;
 
@@ -120,7 +146,7 @@ export function SharedLinksDialog({ open, onClose }: SharedLinksDialogProps) {
           <div className="mt-5 flex items-start gap-3 border-t border-border pt-5">
             <Link2 aria-hidden="true" className="mt-0.5 h-5 w-5 text-accent" />
             <div>
-              <h3 className="font-display text-lg font-black text-ink">No shared links yet</h3>
+              <h3 className="font-display text-lg font-black text-ink">No active shared links</h3>
               <p className="mt-1 text-sm font-semibold leading-6 text-muted">
                 Open a page and use Quick Share to create a view-only snapshot.
               </p>
