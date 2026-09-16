@@ -40,7 +40,11 @@ async function openSharedLinks(page: Page) {
   await sharedLinks.click();
 }
 
-async function mockShareApi(context: BrowserContext, deleteStatus = 204) {
+async function mockShareApi(
+  context: BrowserContext,
+  deleteStatus = 204,
+  finiteExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000).toISOString()
+) {
   await context.route("**/api/quick-shares", async (route) => {
     if (route.request().method() !== "POST") return route.continue();
     const body = route.request().postDataJSON() as { title: string; markdown: string; expiry: string };
@@ -53,7 +57,7 @@ async function mockShareApi(context: BrowserContext, deleteStatus = 204) {
         title: body.title,
         markdown: body.markdown,
         createdAt: "2026-08-09T00:00:00.000Z",
-        expiresAt: body.expiry === "never" ? null : "2026-08-16T00:00:00.000Z"
+        expiresAt: body.expiry === "never" ? null : finiteExpiry
       }
     });
   });
@@ -110,7 +114,7 @@ test("creates, opens, and deletes a view-only snapshot", async ({ page, context 
   await openSharedLinks(page);
   await page.getByRole("button", { name: "Delete untitled.md shared link" }).click();
   await page.getByRole("button", { name: "Delete link" }).click();
-  await expect(page.getByText("No shared links yet")).toBeVisible();
+  await expect(page.getByText("No active shared links")).toBeVisible();
 });
 
 test("defaults new links to seven days", async ({ page }) => {
@@ -129,6 +133,50 @@ for (const [status, message] of [
     await expect(page.getByRole("heading", { name: message })).toBeVisible();
   });
 }
+
+test("clears an open public reader at its expiration deadline", async ({ page }) => {
+  const now = new Date("2026-09-15T00:00:00.000Z");
+  await page.clock.install({ time: new Date("2026-09-14T23:59:00.000Z") });
+  await page.route("**/api/quick-shares/deadline", (route) => route.fulfill({
+    status: 200,
+    json: {
+      publicId: "deadline",
+      title: "Deadline",
+      markdown: "# Private until expiry",
+      createdAt: "2026-09-14T00:00:00.000Z",
+      expiresAt: "2026-09-15T00:00:01.000Z"
+    }
+  }));
+
+  await page.goto("/share/deadline");
+  await page.clock.pauseAt(now);
+  await expect(page.getByRole("heading", { name: "Private until expiry" })).toBeVisible();
+
+  await page.clock.fastForward(1_000);
+  await expect(page.getByRole("heading", { name: "Private until expiry" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "This shared page has expired" })).toBeVisible();
+});
+
+test("hides a creator link when it expires while the dialog is open", async ({ page, context }) => {
+  const now = new Date("2026-09-15T00:00:00.000Z");
+  await page.clock.install({ time: new Date("2026-09-14T23:59:00.000Z") });
+  await mockShareApi(context, 204, "2026-09-15T00:00:01.000Z");
+  await createLocalPage(page);
+  await page.getByRole("button", { name: "Quick Share", exact: true }).click();
+  await page.getByRole("button", { name: "Create view-only link" }).click();
+  await expect(page.getByLabel("Public URL")).toHaveValue(/\/share\/share-1$/);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.clock.pauseAt(now);
+
+  await openSharedLinks(page);
+  await expect(page.getByRole("button", { name: "Delete untitled.md shared link" })).toBeVisible();
+  await page.clock.fastForward(1_000);
+  await expect(page.getByRole("heading", { name: "No active shared links" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await openSharedLinks(page);
+  await expect(page.getByRole("heading", { name: "No active shared links" })).toBeVisible();
+});
 
 test("failed deletion keeps its creator-owned local row", async ({ page, context }) => {
   await mockShareApi(context, 500);
