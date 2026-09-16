@@ -55,7 +55,9 @@ No production database or scheduler has been inspected or modified.
    browser records for this fix rather than introducing destructive local
    cleanup based on a potentially incorrect device clock. Server cleanup deletes
    the actual shared snapshot, including its title and Markdown, on the next
-   successful daily run. It leaves future and Never shares untouched.
+   successful daily run. It leaves future and Never shares untouched. Treat a
+   404 from an explicit creator delete as success because the server snapshot is
+   already absent; clear that browser record instead of showing a stale error.
 
 ## Implementation boundaries
 

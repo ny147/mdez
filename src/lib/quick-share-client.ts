@@ -30,6 +30,6 @@ export async function deleteQuickShare(
     method: "DELETE",
     headers: { "x-mdez-management-token": managementToken }
   });
-  if (response.status === 204) return;
+  if (response.status === 204 || response.status === 404) return;
   throw await responseError(response, "Could not delete shared page");
 }

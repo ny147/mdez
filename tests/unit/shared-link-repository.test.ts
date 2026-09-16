@@ -162,4 +162,23 @@ describe("Quick Share browser client", () => {
       headers: { "x-mdez-management-token": "private" }
     });
   });
+
+  it("treats an already-missing server share as successfully deleted", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
+      JSON.stringify({ error: "Shared page not found" }),
+      { status: 404, headers: { "content-type": "application/json" } }
+    ));
+
+    await expect(deleteQuickShare("abc", "private")).resolves.toBeUndefined();
+  });
+
+  it("still rejects invalid management tokens", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
+      JSON.stringify({ error: "Management token is invalid" }),
+      { status: 403, headers: { "content-type": "application/json" } }
+    ));
+
+    await expect(deleteQuickShare("abc", "wrong"))
+      .rejects.toThrow("Management token is invalid");
+  });
 });

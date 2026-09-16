@@ -117,6 +117,20 @@ test("creates, opens, and deletes a view-only snapshot", async ({ page, context 
   await expect(page.getByText("No active shared links")).toBeVisible();
 });
 
+test("forgets a creator link when server cleanup already removed it", async ({ page, context }) => {
+  await mockShareApi(context, 404);
+  await createLocalPage(page);
+  await page.getByRole("button", { name: "Quick Share", exact: true }).click();
+  await page.getByRole("button", { name: "Create view-only link" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  await openSharedLinks(page);
+  await page.getByRole("button", { name: "Delete untitled.md shared link" }).click();
+  await page.getByRole("button", { name: "Delete link" }).click();
+  await expect(page.getByRole("heading", { name: "No active shared links" })).toBeVisible();
+  await expect(page.getByText("Shared page not found")).toHaveCount(0);
+});
+
 test("defaults new links to seven days", async ({ page }) => {
   await createLocalPage(page);
   await page.getByRole("button", { name: "Quick Share", exact: true }).click();
