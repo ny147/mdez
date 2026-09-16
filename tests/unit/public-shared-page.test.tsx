@@ -1,11 +1,12 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PublicSharedPage } from "@/components/mdez/PublicSharedPage";
 
 describe("PublicSharedPage", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -42,5 +43,82 @@ describe("PublicSharedPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 500 })));
     render(<PublicSharedPage publicId="abc" />);
     expect(await screen.findByText("Could not load this shared page")).toBeVisible();
+  });
+
+  it("removes loaded Markdown when its deadline is reached", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T00:00:00.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      publicId: "abc",
+      title: "Guide",
+      markdown: "# Private snapshot",
+      createdAt: "2026-09-14T00:00:00Z",
+      expiresAt: "2026-09-15T00:00:01.000Z"
+    }), { status: 200 })));
+
+    render(<PublicSharedPage publicId="abc" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole("heading", { name: "Private snapshot" })).toBeVisible();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.queryByRole("heading", { name: "Private snapshot" })).toBeNull();
+    expect(screen.getByText("This shared page has expired")).toBeVisible();
+  });
+
+  it.each([
+    ["2026-09-14T23:59:59.999Z", "This shared page has expired"],
+    ["invalid", "Could not load this shared page"]
+  ])("does not render a stale payload with expiry %s", async (expiresAt, message) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T00:00:00.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      publicId: "abc",
+      title: "Guide",
+      markdown: "# Private snapshot",
+      createdAt: "2026-09-14T00:00:00Z",
+      expiresAt
+    }), { status: 200 })));
+
+    render(<PublicSharedPage publicId="abc" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    expect(screen.queryByRole("heading", { name: "Private snapshot" })).toBeNull();
+    expect(screen.getByText(message)).toBeVisible();
+  });
+
+  it("ignores an old request that resolves after the public ID changes", async () => {
+    let resolveOld: ((response: Response) => void) | undefined;
+    const oldResponse = new Promise<Response>((resolve) => {
+      resolveOld = resolve;
+    });
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith("/old")) return oldResponse;
+      return Promise.resolve(new Response(JSON.stringify({
+        publicId: "new",
+        title: "New",
+        markdown: "# New snapshot",
+        createdAt: "2026-09-15T00:00:00Z",
+        expiresAt: null
+      }), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const view = render(<PublicSharedPage publicId="old" />);
+    view.rerender(<PublicSharedPage publicId="new" />);
+    expect(await screen.findByRole("heading", { name: "New snapshot" })).toBeVisible();
+
+    await act(async () => {
+      resolveOld?.(new Response(JSON.stringify({
+        publicId: "old",
+        title: "Old",
+        markdown: "# Old snapshot",
+        createdAt: "2026-09-14T00:00:00Z",
+        expiresAt: null
+      }), { status: 200 }));
+      await oldResponse;
+    });
+
+    expect(screen.getByRole("heading", { name: "New snapshot" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Old snapshot" })).toBeNull();
   });
 });

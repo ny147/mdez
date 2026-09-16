@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 
 import { MarkdownReader } from "@/components/mdez/MarkdownReader";
 import { BrandLogo } from "@/components/mdez/BrandLogo";
+import { isShareExpired, watchShareExpiration } from "@/lib/share-expiration";
 import type { QuickSharePayload } from "@/types/quick-share";
 
 type SharedPageState =
@@ -42,24 +43,42 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
+    let active = true;
     setState({ status: "loading" });
     void fetch(`/api/quick-shares/${encodeURIComponent(publicId)}`, {
       cache: "no-store",
       signal: controller.signal
     })
       .then(async (response) => {
+        if (!active) return;
         if (response.status === 404) return setState({ status: "not-found" });
         if (response.status === 410) return setState({ status: "expired" });
         if (!response.ok) return setState({ status: "error" });
         const payload = await response.json() as QuickSharePayload;
+        if (!active) return;
+        if (payload.expiresAt !== null && !Number.isFinite(Date.parse(payload.expiresAt))) {
+          return setState({ status: "error" });
+        }
+        if (isShareExpired(payload.expiresAt)) return setState({ status: "expired" });
         setState({ status: "ready", payload });
       })
       .catch((error: unknown) => {
+        if (!active) return;
         if (error instanceof DOMException && error.name === "AbortError") return;
         setState({ status: "error" });
       });
-    return () => controller.abort();
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicId]);
+
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    return watchShareExpiration(state.payload.expiresAt, () => {
+      setState({ status: "expired" });
+    });
+  }, [state]);
 
   if (state.status === "not-found") {
     return <TerminalState title="Shared page not found" message="This link does not point to an available snapshot." />;
