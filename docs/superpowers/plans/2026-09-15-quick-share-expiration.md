@@ -39,20 +39,20 @@ export function watchShareExpiration(
 ): () => void;
 ```
 
-- [ ] Write fake-clock tests with `now = 2026-09-15T00:00:00Z` and a deadline one
+- [x] Write fake-clock tests with `now = 2026-09-15T00:00:00Z` and a deadline one
   second later. Assert availability at +999ms, expiry at +1000ms, no callback
   for null, cancellation on unsubscribe, and no early expiry for a 30-day share.
   Add focus, visible `visibilitychange`, and `pageshow` checks after moving the
   system clock past the deadline without executing queued timers.
-- [ ] Run `npm test -- tests/unit/share-expiration.test.ts`; confirm missing
+- [x] Run `npm test -- tests/unit/share-expiration.test.ts`; confirm missing
   behavior fails before implementation.
-- [ ] Implement the watcher: check immediately, calculate remaining milliseconds,
+- [x] Implement the watcher: check immediately, calculate remaining milliseconds,
   and schedule a timeout capped at `2_147_483_647`. At every wake, recompute
   remaining time; expire once or reschedule. Register the three lifecycle
   listeners and return a function clearing the timeout and all listeners.
   Null returns a no-op unsubscribe function. Keep browser access inside the
   watcher, so importing the pure predicate does not touch `window`.
-- [ ] Add a reader regression based on this exact clock sequence:
+- [x] Add a reader regression based on this exact clock sequence:
 
 ```tsx
 vi.useFakeTimers();
@@ -72,12 +72,12 @@ expect(screen.getByText("This shared page has expired")).toBeVisible();
   Import `act` from Testing Library and restore real timers after each test.
   Also cover already-expired 200 payloads, malformed timestamps, null expiry,
   unmount, and an old fetch resolving after `publicId` changes.
-- [ ] Run `npm test -- tests/unit/public-shared-page.test.tsx` and record the
+- [x] Run `npm test -- tests/unit/public-shared-page.test.tsx` and record the
   failing expiration regression. Before setting ready state, check timestamp
   validity and expiry. Ignore aborted/stale fetch completions. In a separate
   effect watching ready state, subscribe to the deadline and replace ready
   state with `{ status: "expired" }`; return unsubscribe on state change.
-- [ ] Run both targeted test files. Review the diff and commit only these files
+- [x] Run both targeted test files. Review the diff and commit only these files
   with message `fix: expire loaded Quick Share readers`.
 
 ## Task 2: Active-only creator list
@@ -91,11 +91,11 @@ Consumes `isShareExpired` and `watchShareExpiration` from Task 1.
 Preserve `listSharedLinks(): Promise<StoredSharedLink[]>` and its newest-first
 ordering. Do not delete browser records as a side effect of listing.
 
-- [ ] Add repository tests with past, equal-now, future, invalid, and null
+- [x] Add repository tests with past, equal-now, future, invalid, and null
   timestamps. Expect only future and null rows, in newest-first order. Verify
   excluded rows still exist in `db.sharedLinks` and source documents survive.
   Freeze `Date.now` with a spy so IndexedDB scheduling uses real timers.
-- [ ] Run `npm test -- tests/unit/shared-link-repository.test.ts`; confirm the
+- [x] Run `npm test -- tests/unit/shared-link-repository.test.ts`; confirm the
   active-only assertion fails. Filter the existing ordered result:
 
 ```ts
@@ -104,17 +104,17 @@ const now = Date.now();
 return links.filter((link) => !isShareExpired(link.expiresAt, now));
 ```
 
-- [ ] Replace the test requiring the Expired label with assertions that expired
+- [x] Replace the test requiring the Expired label with assertions that expired
   rows are absent. Add fake-clock tests for a row expiring while the dialog is
   open, the last row disappearing, an expiring deletion confirmation, resume,
   and close/unmount cleanup. Keep existing successful/failed early deletion tests.
-- [ ] Run `npm test -- tests/unit/shared-links-dialog.test.tsx`; record failures.
+- [x] Run `npm test -- tests/unit/shared-links-dialog.test.tsx`; record failures.
   Filter again at the component boundary because mocked or delayed list results
   can be stale. Subscribe to the earliest finite active deadline while open.
   On expiration, filter state and clear a matching pending deletion. Resubscribe
   when links change; unsubscribe on close. Change the empty-state heading to
   `No active shared links`. Remove the obsolete Expired label branch.
-- [ ] Run both targeted files and Task 1 tests, review the diff, and commit the
+- [x] Run both targeted files and Task 1 tests, review the diff, and commit the
   four task files with message `fix: hide expired creator share links`.
 
 ## Task 3: Server and cleanup verification
@@ -128,22 +128,25 @@ before extending its integration suite. Update `docs/operations.md` and README.m
 Interfaces retained: `readQuickShareService(publicId, { store, now })`,
 `purgeExpiredQuickShares(now, store)`, and cron `GET(request)`.
 
-- [ ] Add service assertions at one millisecond before, exactly at, and after
+- [x] Add service assertions at one millisecond before, exactly at, and after
   expiration. Assert `EXPIRED` at equality and `NOT_FOUND` after the record is
   purged. Keep null-expiry reads available. The existing service should pass;
   do not manufacture server changes if enforcement is already correct.
-- [ ] Extend route tests to assert 410 contains no Markdown/title and has
+- [x] Extend route tests to assert 410 contains no Markdown/title and has
   `cache-control: no-store`. For cron tests, mock `purgeShares`; missing/wrong
   credentials must return 401 without calling it, correct credentials return
   counts, and rejected cleanup returns the generic 500 message.
-- [ ] Run `npm test -- tests/unit/quick-share-service.test.ts tests/unit/quick-share-route.test.ts tests/unit/quick-share-runtime.test.ts tests/unit/quick-share-cron.test.ts`.
+- [x] Run the targeted Quick Share service, route, runtime, and persistence tests.
 - [ ] In an explicitly configured test database, insert four isolated fixture
   records: past, equal-now, future, and null expiry. Call the actual Postgres
   store purge with that fixed instant; expect two removed and two retained.
   Run it again; expect zero. Remove only test fixtures afterward. Run
   `npm run test:postgres`; if the test database is absent, record the blocker
   and do not substitute a production connection.
-- [ ] Update operations guidance: access denial is immediate; physical deletion
+
+  Blocked on 2026-09-16: `MDEZ_TEST_DATABASE_URL` is not configured. The command
+  reached the dedicated-test-database guard and did not connect to PostgreSQL.
+- [x] Update operations guidance: access denial is immediate; physical deletion
   occurs on the next successful daily 03:17 UTC run. Describe checking scheduler
   invocation, authorized response counts, and fixture removal. State that a
   failed job requires operator investigation and never prolongs API access.
@@ -153,19 +156,19 @@ Interfaces retained: `readQuickShareService(publicId, { store, now })`,
 
 Files: modify `tests/e2e/quick-share.spec.ts` and reuse `playwright.config.ts`.
 
-- [ ] Replace the fixed August 2026 finite mock expiry with a future timestamp
+- [x] Replace the fixed August 2026 finite mock expiry with a future timestamp
   derived from the test clock so active-share tests do not become expired tests.
   Update the existing empty-state assertion to `No active shared links`.
-- [ ] Add browser tests using a fixed installed Playwright clock: load a reader
+- [x] Add browser tests using a fixed installed Playwright clock: load a reader
   with expiry in one second, advance past it, and assert its heading disappears
   and the expired terminal state appears. Create a finite share through mocked
   POST, open Shared links, advance its deadline, and assert the row disappears.
   Reopen the dialog and verify it stays hidden. Keep Never and failed-deletion
   flows as controls. Run on the configured desktop and mobile projects.
-- [ ] Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and
+- [x] Run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and
   `npm run test:e2e -- tests/e2e/quick-share.spec.ts`. Inspect every result and
   check desktop/mobile terminal and empty-state layouts for overflow and focus.
-- [ ] Review `git diff --check`, all task changes, and
+- [x] Review `git diff --check`, all task changes, and
   `git status --short --branch`. Commit only task-owned changes, fetch origin,
   and report `git rev-list --count HEAD..origin/main`; do not integrate main.
 - [ ] Push with `git push -u origin fix/quick-share-expiration`. Create or update
