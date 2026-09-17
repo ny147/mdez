@@ -14,6 +14,8 @@ Mdez is a local-first Markdown workspace for reading, editing, organizing, and s
 
 Mdez renders GitHub Flavored Markdown, syntax-highlighted code blocks, and KaTeX math.
 
+Use **Theme** in the header to choose **Light**, **Dark**, or **System**. System follows your device appearance by default; an explicit choice is remembered in this browser across workspaces and Quick Share pages. Dark mode uses a midnight blue palette with muted book covers. If browser storage is unavailable, theme switching still works for the current session.
+
 In Read and Split preview, use **A− / A+** to adjust reading text from 12–28 px.
 In Read, drag the handle on the document's right edge to change its width. In
 Split, drag the divider between the editor and preview. Both handles also support

@@ -3,6 +3,8 @@ import { DM_Sans, JetBrains_Mono, Manrope, Shippori_Mincho_B1 } from "next/font/
 import "katex/dist/katex.min.css";
 import "./globals.css";
 import { appMetadata } from "@/app/metadata";
+import { ThemeProvider } from "@/components/mdez/ThemeProvider";
+import { themeScript } from "@/lib/theme";
 
 const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"], display: "swap" });
 const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin"], display: "swap" });
@@ -26,7 +28,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const fontVariables = `${dmSans.variable} ${manrope.variable} ${jetBrainsMono.variable} ${shipporiMincho.variable}`;
 
   return (
-    <html lang="en" className={fontVariables}>
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body>
         {/*
           THESIS: A roomy working library where real books and pages lead; refuse the compact app-console frame.
@@ -36,7 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           FORM: Desktop writing library, ranked first; seed key library-shelf-238.
           FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
         */}
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

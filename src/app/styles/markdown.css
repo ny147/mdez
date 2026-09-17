@@ -63,9 +63,9 @@
 .markdown-preview pre {
   overflow-x: auto;
   border-radius: 0.375rem;
-  background: var(--color-ink);
+  background: var(--color-code-background);
   padding: 1rem;
-  color: var(--color-paper);
+  color: var(--color-code-foreground);
 }
 
 .markdown-preview pre code {
@@ -77,7 +77,7 @@
   margin-block: 1rem;
   overflow: hidden;
   border-radius: 0.375rem;
-  background: var(--color-ink);
+  background: var(--color-code-background);
 }
 
 .markdown-preview .markdown-code-toolbar {
@@ -86,9 +86,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-paper) 18%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-code-foreground) 18%, transparent);
   padding-inline: 0.75rem;
-  color: var(--color-paper);
+  color: var(--color-code-foreground);
   font-family: var(--font-mono);
   font-size: 0.75rem;
 }
@@ -122,7 +122,7 @@
 
 .markdown-preview .markdown-code-copy:hover,
 .markdown-preview .markdown-code-copy:focus-visible {
-  background: color-mix(in srgb, var(--color-paper) 14%, transparent);
+  background: color-mix(in srgb, var(--color-code-foreground) 14%, transparent);
 }
 
 .markdown-preview .markdown-code-block pre {
@@ -220,4 +220,16 @@
 .editor-frame .cm-activeLine,
 .editor-frame .cm-activeLineGutter {
   background-color: color-mix(in srgb, var(--color-edit) 8%, transparent);
+}
+
+.editor-frame .cm-cursor { border-left-color: var(--color-ink); }
+.editor-frame .cm-selectionBackground,
+.editor-frame .cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--color-edit) 28%, var(--color-paper));
+}
+.editor-frame .cm-panels,
+.editor-frame .cm-tooltip {
+  background: var(--color-panel);
+  color: var(--color-ink);
+  border-color: var(--color-rule);
 }

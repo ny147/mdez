@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 
 import { MarkdownReader } from "@/components/mdez/MarkdownReader";
 import { BrandLogo } from "@/components/mdez/BrandLogo";
+import { ThemeControl } from "@/components/mdez/ThemeControl";
 import { isShareExpired, watchShareExpiration } from "@/lib/share-expiration";
 import type { QuickSharePayload } from "@/types/quick-share";
 
@@ -26,7 +27,7 @@ function TerminalState({ title, message }: { title: string; message: string }) {
   return (
     <main className="grid min-h-screen place-items-center bg-canvas px-5 py-12 text-ink">
       <div className="w-full max-w-xl border-t border-border pt-8">
-        <BrandLogo />
+        <div className="flex items-center justify-between gap-3"><BrandLogo /><ThemeControl /></div>
         <p className="field-label mt-4">Mdez shared snapshot</p>
         <h1 className="mt-2 text-wrap-balance font-display text-3xl font-black">{title}</h1>
         <p className="mt-4 max-w-prose text-pretty text-base font-semibold leading-7 text-muted">{message}</p>
@@ -92,6 +93,7 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
   if (state.status === "loading") {
     return (
       <main className="min-h-screen bg-canvas px-5 py-10 text-ink">
+        <div className="mx-auto mb-6 flex max-w-[760px] justify-end"><ThemeControl /></div>
         <div className="shared-page-loading mx-auto w-full max-w-[760px] animate-pulse" role="status">
           <span className="sr-only">Loading shared page...</span>
           <div className="h-4 w-28 rounded bg-panel" />
@@ -111,7 +113,7 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
       <header className="border-b border-border bg-paper px-5 py-3">
         <div className="mx-auto flex w-full max-w-[760px] flex-wrap items-center justify-between gap-2">
           <a href="/" aria-label="Open Mdez" className="inline-flex min-h-11 items-center"><BrandLogo /></a>
-          <p className="text-sm font-semibold text-muted">View-only snapshot</p>
+          <div className="flex items-center gap-3"><p className="text-sm font-semibold text-muted">View-only snapshot</p><ThemeControl /></div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-[760px] px-5 py-8 sm:py-12">

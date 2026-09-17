@@ -35,7 +35,7 @@ a:focus-visible {
     position: relative;
     border: 1px solid var(--color-rule);
     background:
-      linear-gradient(135deg, color-mix(in srgb, white 72%, transparent), color-mix(in srgb, var(--color-panel) 82%, transparent)),
+      linear-gradient(135deg, color-mix(in srgb, var(--color-paper) 72%, transparent), color-mix(in srgb, var(--color-panel) 82%, transparent)),
       var(--color-panel);
     box-shadow: none;
   }
@@ -138,7 +138,7 @@ a:focus-visible {
     border: 1px solid color-mix(in srgb, var(--color-shelf) 28%, transparent);
     border-radius: 0.375rem 0.375rem 0.125rem 0.125rem;
     background:
-      linear-gradient(90deg, color-mix(in srgb, white 34%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--color-ink) 8%, transparent)),
+      linear-gradient(90deg, color-mix(in srgb, var(--color-paper) 34%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--color-ink) 8%, transparent)),
       linear-gradient(180deg, var(--color-panel), var(--color-lavender));
     color: var(--color-ink);
     padding: 0.75rem 0.5rem;
@@ -163,7 +163,7 @@ a:focus-visible {
   .book-spine-open {
     border-color: var(--color-shelf);
     background:
-      linear-gradient(90deg, color-mix(in srgb, white 38%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--color-ink) 12%, transparent)),
+      linear-gradient(90deg, color-mix(in srgb, var(--color-paper) 38%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--color-ink) 12%, transparent)),
       linear-gradient(180deg, var(--color-shelf), var(--color-edit));
     color: var(--color-on-accent);
   }
@@ -188,7 +188,7 @@ a:focus-visible {
     right: 0;
     width: 1.1rem;
     height: 1.1rem;
-    background: linear-gradient(135deg, color-mix(in srgb, white 72%, transparent) 0 50%, color-mix(in srgb, var(--color-rule) 95%, transparent) 51% 100%);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-paper) 72%, transparent) 0 50%, color-mix(in srgb, var(--color-rule) 95%, transparent) 51% 100%);
     content: "";
   }
 
@@ -1062,7 +1062,7 @@ a:focus-visible {
 }
 
 /* Accepted library redesign */
-.library-search-wrap { position: relative; width: min(28rem, 46vw); justify-self: center; }
+.library-search-wrap { position: relative; width: min(28rem, 46vw); max-width: 100%; min-width: 0; justify-self: center; }
 .library-search { display: grid; grid-template-columns: 1rem minmax(0, 1fr) max-content; align-items: center; gap: 0.6rem; color: var(--color-search-muted); }
 .library-search > svg { width: 1rem; height: 1rem; }
 .library-search input { min-width: 0; border: 0; background: transparent; color: var(--color-ink); font-size: 0.8125rem; outline: 0; }
@@ -1252,6 +1252,27 @@ a:focus-visible {
 }
 
 @media (max-width: 429px) { .library-resume-art { display: none; } }
+
+.theme-control { position: relative; flex: 0 0 auto; }
+.workspace-icon-button.theme-trigger { width: 2.75rem; height: 2.75rem; }
+.theme-options {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 80;
+  width: 11rem;
+  margin: 0;
+  border: 1px solid var(--color-control-rule);
+  border-radius: var(--radius-surface);
+  background: var(--color-panel);
+  padding: 0.5rem;
+  color: var(--color-ink);
+}
+.theme-options-title { display: block; padding: 0.35rem 0.5rem; color: var(--color-muted); font-size: 0.75rem; }
+.theme-option { display: flex; min-height: 2.75rem; align-items: center; gap: 0.65rem; border-radius: var(--radius-control); padding: 0.5rem; cursor: pointer; }
+.theme-option span { flex: 1; }
+.theme-option:hover, .theme-option:has(input:checked) { background: var(--color-sidebar-selected); }
+.theme-option input { accent-color: var(--color-edit); }
 
 @media (max-width: 319px) {
   .workspace-sidebar {
