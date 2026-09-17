@@ -9,6 +9,8 @@ type SplitWorkspaceProps = {
   reader: ReactNode;
   orientation: "horizontal" | "vertical";
   compact: boolean;
+  value: number;
+  onChange: (value: number) => void;
 };
 
 const compactOptions: { value: CompactPane; label: string }[] = [
@@ -20,8 +22,7 @@ function clampSplit(value: number) {
   return Math.max(30, Math.min(70, Math.round(value)));
 }
 
-export function SplitWorkspace({ editor, reader, orientation, compact }: SplitWorkspaceProps) {
-  const [value, setValue] = useState(50);
+export function SplitWorkspace({ editor, reader, orientation, compact, value, onChange }: SplitWorkspaceProps) {
   const [compactPane, setCompactPane] = useState<CompactPane>("editor");
   const containerRef = useRef<HTMLDivElement>(null);
   const isHorizontal = orientation === "horizontal";
@@ -37,7 +38,7 @@ export function SplitWorkspace({ editor, reader, orientation, compact }: SplitWo
     };
     if (!(event.key in changes)) return;
     event.preventDefault();
-    setValue(clampSplit(changes[event.key]));
+    onChange(clampSplit(changes[event.key]));
   }
 
   function handlePointerMove(event: PointerEvent<HTMLButtonElement>) {
@@ -45,7 +46,7 @@ export function SplitWorkspace({ editor, reader, orientation, compact }: SplitWo
     const rect = containerRef.current.getBoundingClientRect();
     const position = isHorizontal ? event.clientY - rect.top : event.clientX - rect.left;
     const extent = isHorizontal ? rect.height : rect.width;
-    setValue(clampSplit((position / extent) * 100));
+    if (extent > 0) onChange(clampSplit((position / extent) * 100));
   }
 
   const style = isHorizontal

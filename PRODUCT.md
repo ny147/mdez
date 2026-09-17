@@ -20,8 +20,8 @@ To provide a friction-free markdown experience where users can organize, edit, a
 - **Workspace Modes:**
     - **Shelf:** Central library organization with books, pages, bookmarks, and contextual export.
     - **Edit:** Focused writing console with CodeMirror and syntax highlighting.
-    - **Read:** High-readability preview mode optimized for long-form consumption.
-    - **Split:** Simultaneous editing and reading with an adjustable separator.
+    - **Read:** High-readability preview with adjustable text size and a draggable reading-width handle on tablet and desktop.
+    - **Split:** Simultaneous editing and reading with an adjustable separator and the same preview text-size controls. Text size, Read width, and Split position are saved independently across pages in the current browser, with a Reset action.
 - **Export & Portability:** Export a page as `.md` or an open book as `.zip` while preserving its nested structure and metadata.
 
 ## Brand Personality

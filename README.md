@@ -14,6 +14,15 @@ Mdez is a local-first Markdown workspace for reading, editing, organizing, and s
 
 Mdez renders GitHub Flavored Markdown, syntax-highlighted code blocks, and KaTeX math.
 
+In Read and Split preview, use **A− / A+** to adjust reading text from 12–28 px.
+In Read, drag the handle on the document's right edge to change its width. In
+Split, drag the divider between the editor and preview. Both handles also support
+arrow keys and Home/End. Mobile keeps the document within the screen and uses
+Edit/Preview tabs in Split; tablets retain the stacked, vertically adjustable Split.
+Text size, Read width, and Split position are remembered independently across all
+pages in this browser. **Reset** restores all three reading settings. These
+preferences do not alter exported Markdown or shared document content.
+
 ## Quick start
 
 You need [Node.js 22](https://nodejs.org/) and npm.
