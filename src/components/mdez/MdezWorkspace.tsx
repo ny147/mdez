@@ -18,6 +18,7 @@ import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
 import { useDocumentDrafts, type PersistedDraftConflict } from "@/hooks/useDocumentDrafts";
 import { useWorkspaceViewport } from "@/hooks/useWorkspaceViewport";
+import { useReaderPreferences } from "@/hooks/useReaderPreferences";
 import { useWorkspaceLibrary } from "@/hooks/useWorkspaceLibrary";
 import { makeMarkdownFileName } from "@/lib/markdown";
 import { WORKSPACE_COPY } from "@/lib/workspace-copy";
@@ -89,6 +90,7 @@ function modeTabId(location: "desktop" | "mobile", mode: ViewMode) {
 }
 
 export function MdezWorkspace() {
+  const { preferences, updatePreferences, resetPreferences } = useReaderPreferences();
   const localLibrary = useWorkspaceLibrary();
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const groupLibrary = useKeyGroupLibrary(activeGroupId);
@@ -502,6 +504,9 @@ export function MdezWorkspace() {
       title={draftTitle}
       body={draftBody}
       previewOnly={viewMode === "preview"}
+      preferences={preferences}
+      onPreferencesChange={updatePreferences}
+      onResetPreferences={resetPreferences}
       onCreateDocument={handleCreateDocument}
       onOpenImport={handleOpenImport}
     />
@@ -639,6 +644,8 @@ export function MdezWorkspace() {
               />
             ) : viewMode === "split" ? (
               <SplitWorkspace
+                value={preferences.splitPosition}
+                onChange={(splitPosition) => updatePreferences({ splitPosition })}
                 editor={editorPane}
                 reader={readerPane}
                 orientation={isTabletLayout ? "horizontal" : "vertical"}

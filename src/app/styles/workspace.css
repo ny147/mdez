@@ -819,6 +819,7 @@ a:focus-visible {
   color: var(--mode-accent);
 }
 .split-separator {
+  touch-action: none;
   position: relative;
   min-width: 0.5rem;
   min-height: 0.5rem;
@@ -958,9 +959,26 @@ a:focus-visible {
   padding-top: 0.5rem;
 }
 
-.reader-pane[data-preview-only="true"] .reader-pane-label {
-  width: min(100%, 45rem);
-  margin-inline: auto;
+.reader-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.reader-toolbar .reader-pane-label { margin: 0; }
+.reader-controls { display: flex; align-items: center; gap: 0.25rem; font-size: 0.8125rem; }
+.reader-controls output { min-width: 3rem; text-align: center; font-variant-numeric: tabular-nums; }
+.reader-controls button { min-width: 2.75rem; min-height: 2.75rem; }
+.reader-controls button:disabled { opacity: 0.45; cursor: default; }
+.reader-reset { padding-inline: 0.5rem; border-radius: var(--radius-control); color: var(--color-muted); }
+.reader-reset:hover { background: var(--color-panel); color: var(--color-ink); }
+.reader-content-column { position: relative; width: 100%; min-width: 0; margin-inline: auto; }
+.reader-content-resizable { max-width: var(--reader-width, 720px); padding-inline: 2.75rem; }
+.reader-pane .markdown-preview { max-width: none; overflow-wrap: anywhere; }
+.reading-width-handle { position: absolute; inset: 0 0 0 auto; width: 2.75rem; min-height: 2.75rem; border: 0; background: transparent; cursor: col-resize; touch-action: none; }
+.reading-width-grip { position: absolute; z-index: 1; top: 3rem; left: 50%; width: 1rem; height: 1.75rem; transform: translateX(-50%); background: var(--color-paper); color: var(--color-reader-muted); }
+.reading-width-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; border-radius: 2px; background: var(--color-rule); }
+.reading-width-handle:hover::after,
+.reading-width-handle:focus-visible::after { background: var(--color-read); }
+
+@media (max-width: 767px) {
+  .reading-width-handle { display: none; }
+  .reader-content-resizable { max-width: none; padding-inline: 0; }
 }
 
 .editor-format-actions {

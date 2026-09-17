@@ -1040,13 +1040,15 @@ test("preview prose uses reader typography while markdown code stays monospaced"
   const paragraphFamily = await paragraph.evaluate((node) => getComputedStyle(node).fontFamily);
   const inlineCodeFamily = await inlineCode.evaluate((node) => getComputedStyle(node).fontFamily);
   const blockCodeFamily = await blockCode.evaluate((node) => getComputedStyle(node).fontFamily);
-  const previewMaxWidth = await preview.evaluate((node) => getComputedStyle(node).maxWidth);
+  const previewBox = (await preview.boundingBox())!;
+  const columnBox = (await page.locator(".reader-content-column").boundingBox())!;
 
   expect(paragraphFamily).not.toMatch(/JetBrains|Consolas|monospace/i);
   expect(inlineCodeFamily).toMatch(/JetBrains|Consolas|monospace/i);
   expect(blockCodeFamily).toMatch(/JetBrains|Consolas|monospace/i);
-  expect(previewMaxWidth).not.toBe("none");
-  expect(previewMaxWidth).not.toBe("");
+  expect(columnBox.width).toBeLessThanOrEqual(720);
+  expect(previewBox.width).toBeGreaterThan(0);
+  expect(previewBox.width).toBeLessThanOrEqual(columnBox.width);
 });
 
 test("reader renders compatibility math and enhanced code blocks", async ({ page }) => {
