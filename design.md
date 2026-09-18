@@ -10,7 +10,7 @@ Mdez opens into a calm, single-page writing library. Books are folders, pages ar
 
 ## Visual system
 
-- Appearance: the header Theme control offers Light, Dark, and System (default). A browser-local preference applies across routes and workspaces, follows device changes in System mode, and synchronizes between tabs. The initial resolved theme is applied in the document head before hydration.
+- Appearance: the header sun/moon button switches directly between Light and Dark. Its icon, tooltip, and accessible name describe the next action. The initial preference follows device changes until the first click; a saved choice then applies across routes and workspaces and synchronizes between tabs. The initial resolved theme is applied in the document head before hydration. There is no appearance menu or System option in the UI.
 - Dark mode uses midnight blue canvas/panel/paper surfaces (#101827 / #172238 / #141e30), soft text, lavender/cyan accents, and muted book covers. Dedicated code tokens keep code blocks dark in both themes. Theme changes reconfigure CodeMirror without remounting it. See `docs/superpowers/specs/2026-09-17-dark-mode-design.md`.
 
 - Manrope carries display hierarchy; DM Sans carries interface text.

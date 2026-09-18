@@ -1,10 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function choose(page: Page, name: "Light" | "Dark" | "System") {
-  const trigger = page.getByRole("button", { name: "Theme", exact: true });
-  if (await trigger.getAttribute("aria-expanded") !== "true") await trigger.click();
-  await page.getByRole("radio", { name, exact: true }).check();
-  await page.keyboard.press("Escape");
+async function choose(page: Page, name: "Light" | "Dark") {
+  if (await page.locator("html").getAttribute("data-theme") !== name.toLowerCase()) {
+    await page.getByRole("button", { name: `Switch to ${name.toLowerCase()} mode`, exact: true }).click();
+  }
 }
 
 async function mode(page: Page, name: string) {
@@ -16,16 +15,14 @@ test("theme follows the device until an explicit choice is saved", async ({ page
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("button", { name: "Theme", exact: true }).click();
-  await page.getByRole("radio", { name: "Light", exact: true }).check();
+  await page.getByRole("button", { name: "Switch to light mode", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  await page.getByRole("button", { name: "Theme", exact: true }).click();
-  await page.getByRole("radio", { name: "System", exact: true }).check();
+  await page.getByRole("button", { name: "Switch to dark mode", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.emulateMedia({ colorScheme: "light" });
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
 test("initial theme is applied even before the application JavaScript loads", async ({ page }) => {
@@ -134,25 +131,28 @@ test("public shared pages and terminal states expose the same theme choice", asy
   }
 });
 
-test("theme menu supports keyboard dismissal without overflowing the header", async ({ page }) => {
+test("theme toggle supports keyboard activation without opening a menu", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  const trigger = page.getByRole("button", { name: "Theme", exact: true });
+  const trigger = page.locator(".theme-trigger");
   await trigger.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("group", { name: "Appearance" })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("group", { name: "Appearance" })).not.toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(trigger).toHaveAccessibleName("Switch to light mode");
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await page.keyboard.press("Space");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(trigger).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("opening Theme dismisses the mobile library drawer", async ({ page }, info) => {
+test("toggling theme dismisses the mobile library drawer", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "The library drawer is a compact-layout interaction.");
+  await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
   await page.getByRole("button", { name: "Open library shelf" }).click();
   await expect(page.locator(".workspace-scrim")).toBeVisible();
-  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  await page.getByRole("button", { name: "Switch to dark mode", exact: true }).click();
   await expect(page.locator(".workspace-scrim")).not.toBeVisible();
-  await page.getByRole("radio", { name: "Dark", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });

@@ -537,7 +537,7 @@ export function MdezWorkspace() {
         <LibrarySearch query={libraryQuery} onQueryChange={setLibraryQuery} onSubmit={handleLibrarySearchSubmit} hasResults={libraryView.books.length + libraryView.pages.length > 0} onClear={() => setLibraryQuery("")} inputRef={librarySearchRef} />
 
         <div className="workspace-actions">
-          <ThemeControl onOpen={() => setIsDrawerOpen(false)} />
+          <ThemeControl onToggle={() => setIsDrawerOpen(false)} />
           <button
             ref={drawerTriggerRef}
             type="button"

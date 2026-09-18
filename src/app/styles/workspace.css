@@ -1253,26 +1253,7 @@ a:focus-visible {
 
 @media (max-width: 429px) { .library-resume-art { display: none; } }
 
-.theme-control { position: relative; flex: 0 0 auto; }
-.workspace-icon-button.theme-trigger { width: 2.75rem; height: 2.75rem; }
-.theme-options {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  z-index: 80;
-  width: 11rem;
-  margin: 0;
-  border: 1px solid var(--color-control-rule);
-  border-radius: var(--radius-surface);
-  background: var(--color-panel);
-  padding: 0.5rem;
-  color: var(--color-ink);
-}
-.theme-options-title { display: block; padding: 0.35rem 0.5rem; color: var(--color-muted); font-size: 0.75rem; }
-.theme-option { display: flex; min-height: 2.75rem; align-items: center; gap: 0.65rem; border-radius: var(--radius-control); padding: 0.5rem; cursor: pointer; }
-.theme-option span { flex: 1; }
-.theme-option:hover, .theme-option:has(input:checked) { background: var(--color-sidebar-selected); }
-.theme-option input { accent-color: var(--color-edit); }
+.workspace-icon-button.theme-trigger { width: 2.75rem; height: 2.75rem; flex: 0 0 auto; }
 
 @media (max-width: 319px) {
   .workspace-sidebar {

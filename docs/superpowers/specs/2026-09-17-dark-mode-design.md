@@ -2,6 +2,10 @@
 
 Approved in the planning conversation on 2026-09-17; implementation authorized by the user.
 
+## Approved simplification
+
+The user's subsequent UI feedback supersedes the chooser described below: remove the menu and expose only a one-click Light/Dark toggle. The sun icon and accessible name "Switch to light mode" select Light; the moon icon and name "Switch to dark mode" select Dark. Follow the device before the first explicit choice, and retain compatibility with existing stored System preferences. A click saves the opposite of the currently resolved theme and dismisses the mobile drawer. Native button keyboard activation replaces menu navigation. All persistence, editor preservation, palette, and shared-page requirements remain unchanged.
+
 ## Experience
 
 Dark mode covers Shelf, Edit, Read, Split, dialogs, local libraries, Key Groups, and all public Quick Share states. A header Theme button opens Light, Dark, and System radio choices. System is the initial preference. The browser remembers an explicit preference across workspaces and routes; a shared page follows its viewer's preference, never its author's.

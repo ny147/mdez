@@ -41,25 +41,27 @@ describe("theme initialization", () => {
 });
 
 describe("theme interaction", () => {
-  it("follows device changes only while System is selected", () => {
+  it("follows device changes until the first click and toggles directly thereafter", () => {
     mount();
     expect(screen.getByText("system:dark")).toBeInTheDocument();
     dark = false;
     act(() => { Object.assign(media, { matches: dark }); media.dispatchEvent(new Event("change")); });
     expect(screen.getByText("system:light")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Theme" }));
-    fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch to dark mode" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(localStorage.getItem("mdez-theme")).toBe("dark");
     act(() => media.dispatchEvent(new Event("change")));
     expect(screen.getByText("dark:dark")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to light mode" }));
+    expect(screen.getByText("light:light")).toBeInTheDocument();
+    expect(localStorage.getItem("mdez-theme")).toBe("light");
   });
   it("still switches themes when storage is blocked", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("blocked"); });
     mount();
-    fireEvent.click(screen.getByRole("button", { name: "Theme" }));
-    fireEvent.click(screen.getByRole("radio", { name: "Light" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch to light mode" }));
     expect(screen.getByText("light:light")).toBeInTheDocument();
     expect(document.documentElement.dataset.theme).toBe("light");
   });

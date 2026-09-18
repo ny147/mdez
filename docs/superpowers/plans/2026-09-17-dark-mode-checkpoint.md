@@ -2,6 +2,14 @@
 
 Date: 2026-09-18. Branch: `codex/dark-mode-plan`. Implementation checkpoint: `9b464cd`.
 
+## Latest user-requested simplification
+
+The header now switches directly between Light and Dark on one click. The menu and visible System option are removed. The icon, tooltip, and accessible name identify the next action. Before the first click, the existing device preference still applies; subsequent choices persist normally. This supersedes the original chooser descriptions below.
+
+Verification for this follow-up: lint, typecheck, all 357 unit tests, and production build passed. Affected desktop/mobile Playwright checks passed (15 passed, one intentional desktop skip for the mobile drawer case). Visual review and independent static code review found no remaining issues. An existing dev server was rewriting `.next`; after stopping those verified project processes and rebuilding, browser checks passed on isolated port 3107 using the existing Playwright projects. The development preview was restored on port 3000 afterward.
+
+The previous remote publication approval restriction still applies to agent pushes. The original implementation is now tracked on origin; this simplification is committed locally for review.
+
 ## Approved scope
 
 App-wide midnight blue dark mode; Light / Dark / System in a header chooser; default System; browser-wide saved preference; muted pastel covers. User authorized implementation and requested a save point if work remains unfinished.
