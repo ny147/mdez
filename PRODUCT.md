@@ -36,6 +36,7 @@ The product feels like a polished writing library: friendly enough to invite exp
 5. **Protect reading comfort:** Long markdown content needs contrast, width control, and stable layout over decorative intensity.
 
 ## Accessibility & Inclusion
+- A single header button switches directly between Light and Dark without a menu. Follow the device appearance until the first choice, then persist the viewer's preference across workspaces and public Quick Share pages. The dark palette uses midnight blue surfaces, lavender/cyan accents, and muted pastel covers.
 - Target WCAG AA contrast for text and controls.
 - Visible keyboard focus and semantic landmarks.
 - Labeled icon buttons and clear text status for state changes (save/import/export).

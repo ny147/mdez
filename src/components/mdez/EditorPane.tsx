@@ -9,6 +9,7 @@ import React, { type ReactNode, useCallback, useMemo, useRef } from "react";
 import { EditorToolbar, type FormatAction } from "@/components/mdez/EditorToolbar";
 import { createMarkdownFormatEdit } from "@/lib/markdown-format";
 import type { Document, SaveStatus, ViewMode } from "@/types/content";
+import { useTheme } from "@/components/mdez/ThemeProvider";
 
 type EditorPaneProps = {
   document: Document | null;
@@ -40,6 +41,7 @@ export function EditorPane({
   onRename
 }: EditorPaneProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
+  const { resolvedTheme } = useTheme();
   void viewMode;
   void onViewModeChange;
 
@@ -131,6 +133,7 @@ export function EditorPane({
 
       <div className="editor-frame mt-3 min-h-0 flex-1 overflow-hidden rounded border border-border bg-surface">
         <CodeMirror
+          theme={resolvedTheme}
           ref={editorRef}
           aria-label="Markdown editor"
           value={body}

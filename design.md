@@ -10,6 +10,9 @@ Mdez opens into a calm, single-page writing library. Books are folders, pages ar
 
 ## Visual system
 
+- Appearance: the header sun/moon button switches directly between Light and Dark. Its icon, tooltip, and accessible name describe the next action. The initial preference follows device changes until the first click; a saved choice then applies across routes and workspaces and synchronizes between tabs. The initial resolved theme is applied in the document head before hydration. There is no appearance menu or System option in the UI.
+- Dark mode uses midnight blue canvas/panel/paper surfaces (#101827 / #172238 / #141e30), soft text, lavender/cyan accents, and muted book covers. Dedicated code tokens keep code blocks dark in both themes. Theme changes reconfigure CodeMirror without remounting it. See `docs/superpowers/specs/2026-09-17-dark-mode-design.md`.
+
 - Manrope carries display hierarchy; DM Sans carries interface text.
 - JetBrains Mono remains the editor/status/code face.
 - Reader prose uses Georgia for Latin glyphs with the existing Shippori Mincho multilingual fallback.
@@ -23,6 +26,7 @@ Workspace colors are defined in `src/app/styles/tokens.css`. The vector identity
 ## Prism Pages identity and companion
 
 - The header uses a combined open-book and mascot-head silhouette, plus a lowercase Manrope wordmark. The compact mobile header keeps the symbol only. Favicon uses the book-only mark.
+- The live logo has theme-aware mascot variants: dark ink with a white detail in light mode, soft white with a navy detail in dark mode. Shared `--color-logo-ink` and `--color-logo-clip` tokens update static and animated logos before hydration, while the pastel book and sparkle keep their brand colours. Exported artwork and the full illustrated companions are unchanged.
 - AnimatedBrandLogo reveals the mascot in 360ms and finishes the sparkle at 600ms, once per tab session. Reduced motion and unavailable browser storage produce a static mark. Sidebar collapse and reload do not replay it. Public shared pages and recovery surfaces use static branding.
 - Writing and peeking PNGs are genuinely transparent, 384×256 and 416×277 respectively, each under 145KB. The writing companion appears on the resume card; peeking art appears in welcome and contextual empty states. Only one full mascot appears per Shelf view, and none appears inside the editor/reader.
 - First-use requires a ready, empty root library in All with no non-whitespace search. It replaces the two redundant main-panel empty messages with one welcome panel; actions stay available above it.

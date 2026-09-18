@@ -5,6 +5,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        canvas: "var(--color-canvas)",
+        paper: "var(--color-paper)",
         blush: "var(--color-canvas)",
         panel: "var(--color-panel)",
         surface: "var(--color-paper)",

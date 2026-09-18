@@ -13,6 +13,7 @@ import { Sidebar } from "@/components/mdez/Sidebar";
 import { AnimatedBrandLogo } from "@/components/mdez/AnimatedBrandLogo";
 import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { LibrarySearch } from "@/components/mdez/LibrarySearch";
+import { ThemeControl } from "@/components/mdez/ThemeControl";
 import { WorkspaceStatus } from "@/components/mdez/WorkspaceStatus";
 import { SplitWorkspace } from "@/components/mdez/SplitWorkspace";
 import { createFolderZipBlob } from "@/lib/export";
@@ -536,6 +537,7 @@ export function MdezWorkspace() {
         <LibrarySearch query={libraryQuery} onQueryChange={setLibraryQuery} onSubmit={handleLibrarySearchSubmit} hasResults={libraryView.books.length + libraryView.pages.length > 0} onClear={() => setLibraryQuery("")} inputRef={librarySearchRef} />
 
         <div className="workspace-actions">
+          <ThemeControl onToggle={() => setIsDrawerOpen(false)} />
           <button
             ref={drawerTriggerRef}
             type="button"

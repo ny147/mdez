@@ -13,7 +13,7 @@ export function BrandLogo({ showWordmark = true, className = "" }: BrandLogoProp
         {(["mascot", "book", "sparkle"] as const).map((part) => (
           <g key={part} className={`brand-logo-${part}`}>
             {mark[part].map((shape, index) => (
-              <path key={index} d={shape.d} fill={mark.colors[shape.color as keyof typeof mark.colors]} />
+              <path key={index} d={shape.d} fill={`var(--color-logo-${shape.color}, ${mark.colors[shape.color as keyof typeof mark.colors]})`} />
             ))}
           </g>
         ))}
