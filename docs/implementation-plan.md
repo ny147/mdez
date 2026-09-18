@@ -1,5 +1,13 @@
 # Mdez Active Implementation Plan
 
+> **Deployment update — 2026-09-18:** Mdez is already live at
+> https://mdez.vercel.app/. The historical P2 checklist below is superseded by
+> the [deployment verification and manual release plan](superpowers/plans/2026-09-18-deployment-release.md).
+> See the [dated audit](deployment-audit-2026-09-18.md) for observed evidence and
+> pending checks. Preview isolation, real database CI, and manual promotion are
+> approved next work, not completed configuration changes. Older milestone
+> labels and checkboxes below are retained as historical records.
+
 **Approved:** 2026-07-13  
 **Order:** P0 Public GitHub import, P1 focused UX/UI improvement, P2 production deployment  
 **Baseline:** Keep the completed renewed workspace in design.md.
