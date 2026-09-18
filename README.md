@@ -2,6 +2,8 @@
 
 # Mdez
 
+Open [Mdez in production](https://mdez.vercel.app/).
+
 Mdez is a local-first Markdown workspace for reading, editing, organizing, and sharing Markdown. Your everyday library stays in your browser, works without an account, and can be exported whenever you need a portable copy.
 
 ## Why Mdez?

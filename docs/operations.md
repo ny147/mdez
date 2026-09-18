@@ -2,6 +2,13 @@
 
 This guide covers deployment checks, scheduled cleanup, recovery, and rollback for a self-hosted Mdez instance.
 
+Production is [mdez.vercel.app](https://mdez.vercel.app/). The
+[2026-09-18 audit](deployment-audit-2026-09-18.md) records the checks actually
+performed. Follow the approved [release improvement plan](superpowers/plans/2026-09-18-deployment-release.md)
+to isolate previews, add disposable-database CI, and establish manual promotion.
+Those improvements are planned; this guide does not claim the hosting settings
+or CI have already changed.
+
 ## Deployment configuration
 
 The intended Vercel configuration is:
