@@ -26,6 +26,7 @@ Workspace colors are defined in `src/app/styles/tokens.css`. The vector identity
 ## Prism Pages identity and companion
 
 - The header uses a combined open-book and mascot-head silhouette, plus a lowercase Manrope wordmark. The compact mobile header keeps the symbol only. Favicon uses the book-only mark.
+- The live logo has theme-aware mascot variants: dark ink with a white detail in light mode, soft white with a navy detail in dark mode. Shared `--color-logo-ink` and `--color-logo-clip` tokens update static and animated logos before hydration, while the pastel book and sparkle keep their brand colours. Exported artwork and the full illustrated companions are unchanged.
 - AnimatedBrandLogo reveals the mascot in 360ms and finishes the sparkle at 600ms, once per tab session. Reduced motion and unavailable browser storage produce a static mark. Sidebar collapse and reload do not replay it. Public shared pages and recovery surfaces use static branding.
 - Writing and peeking PNGs are genuinely transparent, 384×256 and 416×277 respectively, each under 145KB. The writing companion appears on the resume card; peeking art appears in welcome and contextual empty states. Only one full mascot appears per Shelf view, and none appears inside the editor/reader.
 - First-use requires a ready, empty root library in All with no non-whitespace search. It replaces the two redundant main-panel empty messages with one welcome panel; actions stay available above it.

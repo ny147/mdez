@@ -5,6 +5,8 @@
   --color-paper: #ffffff;
   --color-lavender: #eee8fa;
   --color-ink: #211a3d;
+  --color-logo-ink: #211a3d;
+  --color-logo-clip: #ffffff;
   --color-muted: #6c627d;
   --color-rule: #e4ddec;
   --color-brand-pink: #f397cb;
@@ -88,6 +90,8 @@
   --color-paper: #141e30;
   --color-lavender: #242e48;
   --color-ink: #e8eef8;
+  --color-logo-ink: #e8eef8;
+  --color-logo-clip: #141e30;
   --color-muted: #aebcd2;
   --color-rule: #36465f;
   --color-brand-pink: #e9acd0;

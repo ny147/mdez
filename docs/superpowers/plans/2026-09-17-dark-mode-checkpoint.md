@@ -4,6 +4,8 @@ Date: 2026-09-18. Branch: `codex/dark-mode-plan`. Implementation checkpoint: `9b
 
 ## Latest user-requested simplification
 
+Additional mascot follow-up: `BrandLogo` now reads CSS colour tokens for its mascot silhouette and detail. Light mode keeps dark ink/white; dark mode uses soft white/navy. Pastel book/sparkle colours, exported assets, and large illustrated companions are preserved. A browser regression first measured only 1.08:1 contrast for the old dark mascot; the replacement passes the 3:1 minimum in both themes on desktop/mobile. Lint, typecheck, 357 unit tests, 23 affected browser tests (one intentional skip), and production build passed. Header screenshots for both themes were inspected. Latest usage check: 10% five-hour and 71% weekly remaining; saved before the requested 5% threshold.
+
 The header now switches directly between Light and Dark on one click. The menu and visible System option are removed. The icon, tooltip, and accessible name identify the next action. Before the first click, the existing device preference still applies; subsequent choices persist normally. This supersedes the original chooser descriptions below.
 
 Verification for this follow-up: lint, typecheck, all 357 unit tests, and production build passed. Affected desktop/mobile Playwright checks passed (15 passed, one intentional desktop skip for the mobile drawer case). Visual review and independent static code review found no remaining issues. An existing dev server was rewriting `.next`; after stopping those verified project processes and rebuilding, browser checks passed on isolated port 3107 using the existing Playwright projects. The development preview was restored on port 3000 afterward.

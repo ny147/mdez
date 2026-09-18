@@ -1,5 +1,28 @@
 import { expect, test } from "@playwright/test";
 
+test("header mascot has contrasting light and dark variants", async ({ page }, info) => {
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto("/");
+  const mascot = page.locator(".workspace-brand .brand-logo-mascot path").first();
+  const contrast = () => mascot.evaluate((node) => {
+    const luminance = (colour: string) => {
+      const values = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number).map((v) => v / 255)
+        .map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
+    };
+    const fill = luminance(getComputedStyle(node).fill);
+    const background = luminance(getComputedStyle(document.body).backgroundColor);
+    return (Math.max(fill, background) + 0.05) / (Math.min(fill, background) + 0.05);
+  });
+  expect(await contrast()).toBeGreaterThanOrEqual(3);
+  const darkFill = await mascot.evaluate((node) => getComputedStyle(node).fill);
+  await page.locator(".workspace-brand").screenshot({ path: info.outputPath("mascot-dark.png") });
+  await page.getByRole("button", { name: "Switch to light mode" }).click();
+  expect(await contrast()).toBeGreaterThanOrEqual(3);
+  expect(await mascot.evaluate((node) => getComputedStyle(node).fill)).not.toBe(darkFill);
+  await page.locator(".workspace-brand").screenshot({ path: info.outputPath("mascot-light.png") });
+});
+
 test("sidebar book names retain readable space beside their management controls", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
