@@ -29,6 +29,14 @@ Theme bootstrap before hydration; shared preference provider; device and cross-t
 2. Implementation and required checks are complete. Do not rerun checks unless code changes or a new concern warrants it. Browser/subprocess commands require the approved elevated execution context in this Windows sandbox.
 3. Retain only task-owned documentation/code in git. `test-results/` is ignored and regenerated on each browser run.
 4. Fetch origin before handoff and report whether the branch is behind without integrating upstream changes; the most recent completed freshness check showed zero commits behind.
-5. Push this branch with its own upstream and create a PR targeting main. The first push was rejected by automatic approval review for unverified remote data transfer. A subsequent read-only GitHub API check confirmed the configured destination is the public repository `ny147/mdez`, default branch main. Retry only with this evidence or explicit user approval; never bypass a rejection. GitHub CLI (`gh`) is not on PATH; use an available authenticated GitHub route or report the exact PR-creation blocker. Do not expose credentials in tool output.
+5. Push this branch with its own upstream and create a PR targeting main **only after explicit user approval to publish this branch's source and history to public `https://github.com/ny147/mdez`**. Automatic approval review rejected both the initial push and the evidence-backed retry. A read-only GitHub API check confirmed the configured destination is that public repository, default branch main, but the reviewer still required explicit payload/destination authorization. Do not bypass or retry without that approval. GitHub CLI (`gh`) is not on PATH; use an available authenticated GitHub route or report the exact PR-creation blocker. Do not expose credentials in tool output.
+
+## Prepared PR
+
+Title: `Add midnight blue dark mode with remembered appearance preferences`
+
+Body: Mdez now offers Light, Dark, and System from the header across local and group workspaces and public Quick Share pages. The midnight blue palette preserves muted book identities, readable Markdown/code, and editor state. Device appearance is the default; browser preferences persist and synchronize across tabs, with a pre-hydration initializer and restricted-storage fallback. Opening Theme dismisses the mobile drawer so its overlay cannot hide the choices.
+
+Validation: lint, typecheck, 357 unit tests, production build, and the full production Playwright suite passed. Desktop/mobile visual review and dark text/cover contrast checks passed. The full browser run scheduled 198 cases and its saved report has no failures; exact final passed/skipped counts were not recovered. No dependencies, database migrations, deployment, or merge are included. The user merges manually.
 
 The user merges manually. No deployment, automatic merge, or branch deletion is authorized.
