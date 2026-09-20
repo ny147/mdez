@@ -49,6 +49,31 @@ VERCEL_ENV=preview PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start" npm run test:e2
 
 The preview-boundary suite runs both configured Playwright projects and verifies the real HTTP response as well as the user-facing unavailable states.
 
+## Run disposable PostgreSQL checks
+
+The PostgreSQL integration suite uses two separate local databases: `mdez_test` for persistence, concurrency, upgrade, and cleanup behavior, and a fresh `mdez_chain_test` for applying every migration in order. Both URLs must use `localhost` or `127.0.0.1`, end in `_test`, and refer to different databases. Never point these variables at a hosted or production database.
+
+Start a disposable PostgreSQL container whose major version matches Production. The CI baseline is PostgreSQL 17 until the production major version is verified:
+
+```bash
+docker run --rm --name mdez-postgres-test \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=mdez_ci_only \
+  -e POSTGRES_DB=mdez_test \
+  -p 5432:5432 postgres:17
+```
+
+From another shell, bootstrap the fresh container and run the suite:
+
+```bash
+export MDEZ_TEST_DATABASE_URL=postgres://postgres:mdez_ci_only@127.0.0.1:5432/mdez_test
+export MDEZ_CHAIN_DATABASE_URL=postgres://postgres:mdez_ci_only@127.0.0.1:5432/mdez_chain_test
+psql "$MDEZ_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/test-postgres-bootstrap.sql
+npm run test:postgres
+```
+
+Recreate the container before rerunning the fresh migration-chain test. The bootstrap credentials and database contents are synthetic test fixtures, not deployment secrets.
+
 ## How sharing data is stored
 
 Quick Share stores a readable title and immutable Markdown snapshot in Supabase. The database stores an HMAC digest of the management token; the raw token stays in the creator browser's IndexedDB. Clearing that browser's site data removes the creator's ability to delete the link early.

@@ -1,0 +1,3 @@
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
+CREATE DATABASE mdez_chain_test;

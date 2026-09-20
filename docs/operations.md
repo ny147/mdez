@@ -35,7 +35,9 @@ npm run build
 npm run test:e2e
 ```
 
-When a change affects Postgres persistence, migrations, cleanup, or Key Group concurrency, also run `npm run test:postgres` with `MDEZ_TEST_DATABASE_URL` pointing to a disposable database whose name ends in `_test`.
+Pull-request CI runs the production browser suite on both the desktop and mobile projects, an isolated `VERCEL_ENV=preview` boundary suite, and PostgreSQL integration tests. The database job uses no production secrets and creates separate disposable `mdez_test` and `mdez_chain_test` databases. Follow [Self-hosting](self-hosting.md#run-disposable-postgresql-checks) to reproduce it locally.
+
+The required checks are intended to be `Verify`, `Preview boundary`, and `Database integration`. Requiring those checks in repository branch protection remains an operator action and must be verified after the workflow has completed successfully on the pull request. PostgreSQL 17 is the proposed CI baseline until an operator confirms the Production major version; match Production before accepting the database gate as release evidence.
 
 Smoke test these user paths on the deployment:
 
