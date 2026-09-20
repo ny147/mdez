@@ -59,7 +59,7 @@ describe("Key Group cleanup", () => {
     await store.softDeleteGroup(expiredId, new Date("2026-09-08T00:00:00.000Z"));
     await store.softDeleteGroup(unexpiredId, new Date("2026-09-08T00:00:00.001Z"));
 
-    await expect(store.purgeDeletedGroups(now)).resolves.toBe(2);
+    await expect(store.purgeDeletedGroups(now)).resolves.toBe(1);
     await expect(store.purgeDeletedGroups(now)).resolves.toBe(0);
 
     const remaining = await sql<{ id: string }[]>`
