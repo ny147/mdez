@@ -13,6 +13,7 @@ type SharedPageState =
   | { status: "ready"; payload: QuickSharePayload }
   | { status: "not-found" }
   | { status: "expired" }
+  | { status: "unavailable" }
   | { status: "error" };
 
 function expiryText(expiresAt: string | null) {
@@ -54,6 +55,7 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
         if (!active) return;
         if (response.status === 404) return setState({ status: "not-found" });
         if (response.status === 410) return setState({ status: "expired" });
+        if (response.status === 503) return setState({ status: "unavailable" });
         if (!response.ok) return setState({ status: "error" });
         const payload = await response.json() as QuickSharePayload;
         if (!active) return;
@@ -86,6 +88,9 @@ export function PublicSharedPage({ publicId }: { publicId: string }) {
   }
   if (state.status === "expired") {
     return <TerminalState title="This shared page has expired" message="Its creator chose a limited availability window." />;
+  }
+  if (state.status === "unavailable") {
+    return <TerminalState title="Sharing unavailable" message="Sharing is unavailable on this deployment. Your local library still works." />;
   }
   if (state.status === "error") {
     return <TerminalState title="Could not load this shared page" message="Try opening the link again in a moment." />;

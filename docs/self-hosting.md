@@ -34,6 +34,21 @@ GROUP_KEY_PEPPER=replace-with-an-independent-at-least-32-byte-secret
 
 All five values are server-only. Never give them a `NEXT_PUBLIC_` prefix. Use independent random values for each pepper and secret, and redeploy after changing them.
 
+## Keep hosted previews local-only
+
+Vercel Preview deployments are intentionally disconnected from server-side sharing. Do not assign `SUPABASE_DATABASE_URL`, `MANAGEMENT_TOKEN_PEPPER`, `RATE_LIMIT_PEPPER`, `CRON_SECRET`, or `GROUP_KEY_PEPPER` to the Preview environment, branch overrides, or integration-provided Preview variables. Keep those values scoped to Production when production sharing is enabled.
+
+With `VERCEL_ENV=preview`, Mdez rejects Quick Share, Key Group, and cleanup-route requests with `503 Service Unavailable` before any database work. The local IndexedDB library, public GitHub import, editing, persistence, and export remain available. This application boundary is defense in depth; it does not replace removing credentials from Preview or retiring older Preview deployments that were built with production credentials.
+
+To reproduce the hosted-preview boundary locally without a database URL:
+
+```bash
+VERCEL_ENV=preview npm run build
+VERCEL_ENV=preview PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start" npm run test:e2e -- tests/e2e/preview-boundary.spec.ts
+```
+
+The preview-boundary suite runs both configured Playwright projects and verifies the real HTTP response as well as the user-facing unavailable states.
+
 ## How sharing data is stored
 
 Quick Share stores a readable title and immutable Markdown snapshot in Supabase. The database stores an HMAC digest of the management token; the raw token stays in the creator browser's IndexedDB. Clearing that browser's site data removes the creator's ability to delete the link early.

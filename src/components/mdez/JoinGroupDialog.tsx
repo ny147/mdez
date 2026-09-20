@@ -15,7 +15,7 @@ export function JoinGroupDialog({ open, onClose, onJoined }: Props) {
     if (!isValidGroupKey(candidate)) { setError("Group key is invalid"); return; }
     setBusy(true);
     try { const snapshot = await joinKeyGroup(candidate); const now = new Date().toISOString(); await rememberGroup({ groupId: snapshot.group.id, name: snapshot.group.name, key: candidate, joinedAt: now, lastOpenedAt: now }); await cacheGroupSnapshot(snapshot); onJoined(snapshot.group.id); }
-    catch { setError("Group key is invalid"); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Group key is invalid"); }
     finally { setBusy(false); }
   }
   return <ModalDialog title="Join Key Group" titleId="join-key-group-title" closeLabel="Close group joining" onClose={onClose}>

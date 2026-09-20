@@ -39,6 +39,14 @@ describe("PublicSharedPage", () => {
     expect(await screen.findByText(message)).toBeVisible();
   });
 
+  it("shows an unavailable state for a service-unavailable response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 503 })));
+    render(<PublicSharedPage publicId="abc" />);
+
+    expect(await screen.findByRole("heading", { name: "Sharing unavailable" })).toBeVisible();
+    expect(screen.getByText("Sharing is unavailable on this deployment. Your local library still works.")).toBeVisible();
+  });
+
   it("shows a safe retry message for other failures", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 500 })));
     render(<PublicSharedPage publicId="abc" />);
