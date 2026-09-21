@@ -44,3 +44,24 @@ The user confirmed that Preview shares the production database. This was not ind
 No production sharing records, secrets, migrations, deployment settings, or scheduled jobs were changed in this audit. No claim is made that production is ready for the next release.
 
 Next: follow the [release plan](superpowers/plans/2026-09-18-deployment-release.md).
+
+## Implementation evidence — 2026-09-21
+
+The implementation is preserved as draft [pull request 19](https://github.com/ny147/mdez/pull/19). Application release candidate `f9dc7a8b36f6a8c54e7dd3401c5b7a1988f7de6f` adds the Preview sharing boundary and the CI gates; it has not been merged or promoted.
+
+| Check | Evidence | Limit |
+| --- | --- | --- |
+| Required CI jobs | [Run 35602609742](https://github.com/ny147/mdez/actions/runs/35602609742): `Verify` passed in 4m57s, `Preview boundary` in 1m13s, and `Database integration` in 49s | Repository branch protection has not yet been inspected or changed |
+| Real database checks | PostgreSQL 17 service; five test files and seven tests passed, including fresh/upgrade migrations, RLS and privileges, flat-books upgrade behavior, and both cleanup paths | Production PostgreSQL major version and migration state remain operator evidence |
+| Negative control | [Run 35510132439](https://github.com/ny147/mdez/actions/runs/35510132439) failed only the deliberately inverted cleanup assertion (`expected 1 to be 2`); the assertion was restored in the next commit | This proves the gate observes that regression, not every possible database failure |
+| Hosted Preview | Deployment `CTEPmgAhcKYWBicCB2ynfTF8aJVe` at `https://mdez-rkiaa8oft-ny147s-projects.vercel.app/` was protected by Vercel authentication | Two Vercel projects were visible for the pull request; the canonical project and older deployment inventory remain unconfirmed |
+| Desktop Preview smoke | At 1440×900, a synthetic local page passed edit, autosave, reload, reader rendering, search, bookmark/resume, theme switching, Markdown export, public GitHub preview/import, and direct unavailable-share rendering | GitHub refresh opened its overwrite confirmation, but post-dismissal state could not be re-inspected after a browser-control focus failure |
+| Mobile Preview smoke | Both configured Playwright projects passed the application-level Preview boundary in CI | Hosted 390px validation was blocked: the authenticated Chrome session did not adopt the requested viewport, while the controllable in-app browser could not pass Vercel authentication |
+
+Still pending operator authorization and evidence:
+
+- confirm the production alias, Vercel project, deployment ID, Git SHA, runtime settings, Preview secret scopes, and older Preview inventory;
+- confirm the Production PostgreSQL version, migrations, pooling, backup, and recovery posture;
+- configure or verify required branch-protection checks;
+- complete authenticated hosted-mobile smoke testing and any synthetic sharing submission;
+- merge and promote manually only after every gate is accepted.

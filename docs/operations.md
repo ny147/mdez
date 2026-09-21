@@ -4,10 +4,12 @@ This guide covers deployment checks, scheduled cleanup, recovery, and rollback f
 
 Production is [mdez.vercel.app](https://mdez.vercel.app/). The
 [2026-09-18 audit](deployment-audit-2026-09-18.md) records the checks actually
-performed. Follow the approved [release improvement plan](superpowers/plans/2026-09-18-deployment-release.md)
-to isolate previews, add disposable-database CI, and establish manual promotion.
-Those improvements are planned; this guide does not claim the hosting settings
-or CI have already changed.
+performed. The approved [release improvement plan](superpowers/plans/2026-09-18-deployment-release.md)
+has added an application-level Preview sharing boundary and disposable-database
+CI in [pull request 19](https://github.com/ny147/mdez/pull/19). The
+[release-candidate record](releases/2026-09-21-f9dc7a8.md) distinguishes that
+verified code and CI work from the remaining operator-owned hosting, database,
+branch-protection, and promotion gates.
 
 ## Deployment configuration
 
@@ -35,7 +37,11 @@ npm run build
 npm run test:e2e
 ```
 
-When a change affects Postgres persistence, migrations, cleanup, or Key Group concurrency, also run `npm run test:postgres` with `MDEZ_TEST_DATABASE_URL` pointing to a disposable database whose name ends in `_test`.
+Pull-request CI runs the production browser suite on both the desktop and mobile projects, an isolated `VERCEL_ENV=preview` boundary suite, and PostgreSQL integration tests. The database job uses no production secrets and creates separate disposable `mdez_test` and `mdez_chain_test` databases. Follow [Self-hosting](self-hosting.md#run-disposable-postgresql-checks) to reproduce it locally.
+
+The required checks are intended to be `Verify`, `Preview boundary`, and `Database integration`. Requiring those checks in repository branch protection remains an operator action and must be verified after the workflow has completed successfully on the pull request. PostgreSQL 17 is the proposed CI baseline until an operator confirms the Production major version; match Production before accepting the database gate as release evidence.
+
+For release candidate `f9dc7a8`, [CI run 35602609742](https://github.com/ny147/mdez/actions/runs/35602609742) passed all three jobs. The database gate was also proven to reject a deliberate cleanup-regression assertion in [run 35510132439](https://github.com/ny147/mdez/actions/runs/35510132439) before that assertion was restored.
 
 Smoke test these user paths on the deployment:
 

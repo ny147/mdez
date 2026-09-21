@@ -34,6 +34,46 @@ GROUP_KEY_PEPPER=replace-with-an-independent-at-least-32-byte-secret
 
 All five values are server-only. Never give them a `NEXT_PUBLIC_` prefix. Use independent random values for each pepper and secret, and redeploy after changing them.
 
+## Keep hosted previews local-only
+
+Vercel Preview deployments are intentionally disconnected from server-side sharing. Do not assign `SUPABASE_DATABASE_URL`, `MANAGEMENT_TOKEN_PEPPER`, `RATE_LIMIT_PEPPER`, `CRON_SECRET`, or `GROUP_KEY_PEPPER` to the Preview environment, branch overrides, or integration-provided Preview variables. Keep those values scoped to Production when production sharing is enabled.
+
+With `VERCEL_ENV=preview`, Mdez rejects Quick Share, Key Group, and cleanup-route requests with `503 Service Unavailable` before any database work. The local IndexedDB library, public GitHub import, editing, persistence, and export remain available. This application boundary is defense in depth; it does not replace removing credentials from Preview or retiring older Preview deployments that were built with production credentials.
+
+To reproduce the hosted-preview boundary locally without a database URL:
+
+```bash
+VERCEL_ENV=preview npm run build
+VERCEL_ENV=preview PLAYWRIGHT_WEB_SERVER_COMMAND="npm run start" npm run test:e2e -- tests/e2e/preview-boundary.spec.ts
+```
+
+The preview-boundary suite runs both configured Playwright projects and verifies the real HTTP response as well as the user-facing unavailable states.
+
+## Run disposable PostgreSQL checks
+
+The PostgreSQL integration suite uses two separate local databases: `mdez_test` for persistence, concurrency, upgrade, and cleanup behavior, and a fresh `mdez_chain_test` for applying every migration in order. Both URLs must use `localhost` or `127.0.0.1`, end in `_test`, and refer to different databases. Never point these variables at a hosted or production database.
+
+Start a disposable PostgreSQL container whose major version matches Production. The CI baseline is PostgreSQL 17 until the production major version is verified:
+
+```bash
+docker run --rm --name mdez-postgres-test \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=mdez_ci_only \
+  -e POSTGRES_DB=mdez_test \
+  -p 5432:5432 postgres:17
+```
+
+From another shell, bootstrap the fresh container and run the suite:
+
+```bash
+export MDEZ_TEST_DATABASE_URL=postgres://postgres:mdez_ci_only@127.0.0.1:5432/mdez_test
+export MDEZ_CHAIN_DATABASE_URL=postgres://postgres:mdez_ci_only@127.0.0.1:5432/mdez_chain_test
+psql "$MDEZ_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/test-postgres-bootstrap.sql
+npm run test:postgres
+```
+
+Recreate the container before rerunning the fresh migration-chain test. The bootstrap credentials and database contents are synthetic test fixtures, not deployment secrets.
+
 ## How sharing data is stored
 
 Quick Share stores a readable title and immutable Markdown snapshot in Supabase. The database stores an HMAC digest of the management token; the raw token stays in the creator browser's IndexedDB. Clearing that browser's site data removes the creator's ability to delete the link early.

@@ -43,6 +43,18 @@ describe("Key Group entry", () => {
     expect(onJoined).toHaveBeenCalledWith(snapshot.group.id);
   });
 
+  it("shows the server error when joining is unavailable", async () => {
+    vi.mocked(client.joinKeyGroup).mockRejectedValue(new Error("Sharing is unavailable in this preview. Your local library still works."));
+    render(<JoinGroupDialog open onClose={vi.fn()} onJoined={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Group key"), { target: { value: key } });
+    fireEvent.click(screen.getByRole("button", { name: "Join group" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Sharing is unavailable in this preview. Your local library still works."
+    );
+  });
+
   it("switches among Local Library and remembered groups", async () => {
     const onSelect = vi.fn();
     render(<WorkspaceSwitcher activeGroupId={null} groups={[{ groupId: "g1", name: "Writers", key, joinedAt: timestamp, lastOpenedAt: timestamp }]} onSelect={onSelect} onCreate={vi.fn()} onJoin={vi.fn()} />);
