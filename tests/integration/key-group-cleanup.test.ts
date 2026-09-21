@@ -54,8 +54,15 @@ describe("Key Group cleanup", () => {
       (${expiredId}, 'Expired', decode('32', 'hex')),
       (${unexpiredId}, 'Unexpired', decode('33', 'hex')),
       (${activeId}, 'Active', decode('34', 'hex'))`;
-    await sql`insert into public.group_folders (group_id, parent_id, name, sort_order, group_revision) values (${expiredId}, null, 'Book', 0, 0)`;
-    await sql`insert into public.group_documents (group_id, title, markdown, sort_order, group_revision) values (${expiredId}, 'Draft', '# remove', 0, 0)`;
+    const [{ id: folderId }] = await sql<{ id: string }[]>`
+      insert into public.group_folders (group_id, parent_id, name, sort_order, group_revision)
+      values (${expiredId}, null, 'Book', 0, 0)
+      returning id
+    `;
+    await sql`
+      insert into public.group_documents (group_id, folder_id, title, markdown, sort_order, group_revision)
+      values (${expiredId}, ${folderId}, 'Draft', '# remove', 0, 0)
+    `;
     await store.softDeleteGroup(expiredId, new Date("2026-09-08T00:00:00.000Z"));
     await store.softDeleteGroup(unexpiredId, new Date("2026-09-08T00:00:00.001Z"));
 

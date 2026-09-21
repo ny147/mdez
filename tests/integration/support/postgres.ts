@@ -1,6 +1,21 @@
 import postgres, { type Sql } from "postgres";
 import { readFileSync } from "node:fs";
 
+function localDatabaseIdentity(value: string): string | null {
+  const url = new URL(value);
+  if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1") return null;
+  return `loopback:${url.port || "5432"}${url.pathname}`;
+}
+
+export function assertDistinctLocalTestDatabaseUrls(chainValue: string, primaryValue?: string): void {
+  if (!primaryValue) return;
+  const chainIdentity = localDatabaseIdentity(chainValue);
+  const primaryIdentity = localDatabaseIdentity(primaryValue);
+  if (chainIdentity !== null && chainIdentity === primaryIdentity) {
+    throw new Error("MDEZ_CHAIN_DATABASE_URL must differ from MDEZ_TEST_DATABASE_URL.");
+  }
+}
+
 export function testDatabaseUrl(): string {
   const value = process.env.MDEZ_TEST_DATABASE_URL;
   if (!value) throw new Error("MDEZ_TEST_DATABASE_URL is required for PostgreSQL integration tests.");

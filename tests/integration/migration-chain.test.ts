@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import postgres, { type Sql } from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { assertDistinctLocalTestDatabaseUrls } from "./support/postgres";
+
 const migrations = [
   "supabase/migrations/202608090001_quick_shares.sql",
   "supabase/migrations/202608090002_key_groups.sql",
@@ -21,12 +23,7 @@ function chainDatabaseUrl(): string {
     throw new Error("MDEZ_CHAIN_DATABASE_URL must use localhost or 127.0.0.1.");
   }
   const primaryValue = process.env.MDEZ_TEST_DATABASE_URL;
-  if (primaryValue) {
-    const primary = new URL(primaryValue);
-    if (primary.host === url.host && primary.pathname === url.pathname) {
-      throw new Error("MDEZ_CHAIN_DATABASE_URL must differ from MDEZ_TEST_DATABASE_URL.");
-    }
-  }
+  assertDistinctLocalTestDatabaseUrls(value, primaryValue);
   return value;
 }
 
