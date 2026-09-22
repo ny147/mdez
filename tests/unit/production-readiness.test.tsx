@@ -137,11 +137,11 @@ describe("production readiness", () => {
   it("decomposes the import dialog into a shell and source panels", () => {
     const importDialogSource = readFileSync(resolve(process.cwd(), "src/components/mdez/ImportDialog.tsx"), "utf8");
 
-    for (const component of ["ImportDialogShell", "PasteImportPanel", "FileImportPanel", "GitHubImportPanel"]) {
+    for (const component of ["ImportDialogShell", "PasteImportPanel", "FileImportPanel", "GitHubImportPanel", "BackupImportPanel"]) {
       expect(importDialogSource).toContain(component);
     }
 
-    for (const panel of ["PasteImportPanel.tsx", "FileImportPanel.tsx", "GitHubImportPanel.tsx"]) {
+    for (const panel of ["PasteImportPanel.tsx", "FileImportPanel.tsx", "GitHubImportPanel.tsx", "BackupImportPanel.tsx"]) {
       const panelSource = readFileSync(resolve(process.cwd(), "src/components/mdez/import", panel), "utf8");
       expect(panelSource).not.toContain("@/lib/repository");
     }
