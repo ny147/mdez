@@ -1238,7 +1238,6 @@ a:focus-visible {
   .library-actions { display: grid; grid-template-columns: 1fr 1fr; justify-content: stretch; }
   .library-actions button { width: 100%; }
   .library-actions .primary-button { grid-column: auto; }
-  .library-actions button:last-child { grid-column: 1 / -1; }
   .library-resume { min-height: 9rem; padding: 1.25rem; }
   .library-resume-art { width: 6rem; margin-inline: 0; }
   .library-welcome { flex-direction: column; gap: 1.5rem; padding: 2rem 1rem; text-align: center; }

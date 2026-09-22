@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
-import { renameDocument, updateDocumentBody } from "@/lib/repository";
+import { listContent, renameDocument, restoreWorkspaceBackup, updateDocumentBody } from "@/lib/repository";
+import packageMetadata from "../../../package.json";
 import type { ViewMode } from "@/types/content";
 import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
@@ -36,6 +37,10 @@ import { selectLibraryView, type LibraryFilter } from "@/lib/library-view";
 import { usePageBookmarks } from "@/hooks/usePageBookmarks";
 import { useWorkspaceResume } from "@/hooks/useWorkspaceResume";
 import { loadLastContentMode, saveLastContentMode } from "@/lib/workspace-ui-preferences";
+import { listBookmarks } from "@/lib/page-bookmarks";
+import { createWorkspaceBackupBlob, parseWorkspaceBackup } from "@/lib/workspace-backup";
+import { createWorkspaceRestorePlan } from "@/lib/workspace-restore-plan";
+import type { WorkspaceRestorePlan, WorkspaceRestoreResult } from "@/types/backup";
 
 const EditorPane = dynamic(
   () => import("@/components/mdez/EditorPane").then((module) => module.EditorPane),
@@ -112,6 +117,7 @@ export function MdezWorkspace() {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null);
   const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { isTabletLayout, isMobileLayout } = useWorkspaceViewport();
   const sidebarRef = useRef<HTMLElement>(null);
@@ -344,6 +350,75 @@ export function MdezWorkspace() {
       setOperationStatus({ message: "GitHub import failed", state: "error" });
       throw importError;
     }
+  }
+
+  async function handleLibraryBackup() {
+    if (activeGroupId || backupBusy) return;
+    setBackupBusy(true);
+    setOperationStatus({ message: "Preparing library backup…", state: "loading" });
+    try {
+      const bookmarks = await listBookmarks("local");
+      const blob = await createWorkspaceBackupBlob({
+        appVersion: packageMetadata.version,
+        exportedAt: new Date().toISOString(),
+        books: localLibrary.folders,
+        pages: activeGroupId ? localLibrary.documents : liveDocuments,
+        bookmarks,
+        githubSources: localLibrary.sources
+      });
+      const date = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `mdez-library-${date}.mdez.zip`);
+      setOperationStatus({ message: "Library backup downloaded", state: "saved" });
+    } catch (error) {
+      localLibrary.setError(error instanceof Error ? error.message : "Mdez could not create the library backup.");
+      setOperationStatus({ message: "Library backup failed; your library was not changed", state: "error" });
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function handleRequestBackupPreview(file: File) {
+    setOperationStatus({ message: "Checking library backup", state: "loading" });
+    try {
+      const [parsed, localContent] = await Promise.all([parseWorkspaceBackup(file), listContent()]);
+      const plan = createWorkspaceRestorePlan(parsed, localContent);
+      setOperationStatus({ message: "Library backup ready to restore", state: "saved" });
+      return plan;
+    } catch (error) {
+      setOperationStatus({ message: "Backup preview failed; your library was not changed", state: "error" });
+      throw error;
+    }
+  }
+
+  async function handleRestoreBackup(plan: WorkspaceRestorePlan) {
+    setOperationStatus({ message: "Restoring library backup", state: "loading" });
+    let result: WorkspaceRestoreResult;
+    try {
+      result = await restoreWorkspaceBackup(plan);
+    } catch (error) {
+      setOperationStatus({ message: "Restore failed; your existing library was unchanged", state: "error" });
+      throw error;
+    }
+
+    setActiveGroupId(null);
+    await localLibrary.refreshContent(result.firstDocumentId);
+    let bookmarkRefreshFailed = false;
+    if (activeGroupId === null) {
+      try {
+        await bookmarkMetadata.refresh();
+      } catch {
+        bookmarkRefreshFailed = true;
+      }
+    }
+    setLibraryFilter("all");
+    setLibraryQuery("");
+    setViewMode(result.firstDocumentId ? "editor" : "shelf");
+    setOperationStatus({
+      message: bookmarkRefreshFailed
+        ? "Pages restored; bookmarks will appear after reload"
+        : `Restored ${result.pageCount} ${result.pageCount === 1 ? "page" : "pages"} in ${result.bookCount} ${result.bookCount === 1 ? "book" : "books"}`,
+      state: "saved"
+    });
   }
 
   async function handleRefreshGitHub(source: GitHubSource) {
@@ -643,6 +718,9 @@ export function MdezWorkspace() {
                 onOpenImport={handleOpenImport}
                 onExportFolder={() => void handleSidebarFolderExport()}
                 onClearSearch={() => setLibraryQuery("")}
+                onBackup={activeGroupId === null ? () => void handleLibraryBackup() : null}
+                backupBusy={backupBusy}
+                backupDisabled={localLibrary.folders.length === 0 && localLibrary.documents.length === 0}
               />
             ) : viewMode === "split" ? (
               <SplitWorkspace
@@ -702,6 +780,8 @@ export function MdezWorkspace() {
           onImport={handleImport}
           onRequestGitHubPreview={handleRequestGitHubPreview}
           onImportGitHub={handleImportGitHub}
+          onRequestBackupPreview={handleRequestBackupPreview}
+          onRestoreBackup={handleRestoreBackup}
         />
       ) : null}
       {isQuickShareOpen && liveSelectedDocument ? (

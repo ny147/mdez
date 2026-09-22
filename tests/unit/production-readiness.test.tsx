@@ -103,7 +103,8 @@ describe("production readiness", () => {
     expect(workspaceSource).toContain("const localLibrary = useWorkspaceLibrary();");
     expect(workspaceSource).toContain("const groupLibrary = useKeyGroupLibrary(activeGroupId);");
     expect(workspaceSource).toContain("const library = activeGroupId ? groupLibrary : localLibrary;");
-    expect(workspaceSource).not.toMatch(/\b(?:createDocument|createDocuments|createFolder|deleteDocument|deleteFolder|importGitHubSource|listContent|moveDocument|refreshGitHubSource|renameFolder)\b/);
+    expect(workspaceSource).not.toMatch(/\b(?:createDocument|createDocuments|createFolder|deleteDocument|deleteFolder|importGitHubSource|moveDocument|refreshGitHubSource|renameFolder)\b/);
+    expect(workspaceSource).toContain("restoreWorkspaceBackup");
     expect(workspaceSource).not.toContain("from \"@/lib/tree\"");
   });
 

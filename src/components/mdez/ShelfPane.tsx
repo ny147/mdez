@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Download, FilePlus, Upload } from "lucide-react";
+import { BookOpen, Download, FilePlus, HardDriveDownload, Upload } from "lucide-react";
 import React from "react";
 import { BookCover } from "@/components/mdez/BookCover";
 import { Mascot } from "@/components/mdez/Mascot";
@@ -18,6 +18,7 @@ type ShelfPaneProps = {
   onToggleBookmark: (documentId: string) => void; onCreateDocument: () => void;
   onCreateFolder: (parentId: string | null) => void; onOpenImport: () => void;
   onExportFolder: () => void; onClearSearch: () => void;
+  onBackup: (() => void) | null; backupBusy: boolean; backupDisabled: boolean;
 };
 
 function viewTitle(filter: LibraryFilter, openBook: Folder | null, query: string) {
@@ -29,7 +30,7 @@ function viewTitle(filter: LibraryFilter, openBook: Folder | null, query: string
   return "A little space for big ideas.";
 }
 
-export function ShelfPane({ folders, documents, books, pages, selectedFolderId, selectedDocumentId, filter, query, bookmarkedIds, resumePage, metadataError, isReady, onSelectFolder, onSelectDocument, onToggleBookmark, onCreateDocument, onCreateFolder, onOpenImport, onExportFolder, onClearSearch }: ShelfPaneProps) {
+export function ShelfPane({ folders, documents, books, pages, selectedFolderId, selectedDocumentId, filter, query, bookmarkedIds, resumePage, metadataError, isReady, onSelectFolder, onSelectDocument, onToggleBookmark, onCreateDocument, onCreateFolder, onOpenImport, onExportFolder, onClearSearch, onBackup, backupBusy, backupDisabled }: ShelfPaneProps) {
   const openBook = folders.find((folder) => folder.id === selectedFolderId) ?? null;
   const exportCopy = getBookExportCopy(openBook?.name ?? null);
   const hasQuery = query.trim().length > 0;
@@ -48,6 +49,11 @@ export function ShelfPane({ folders, documents, books, pages, selectedFolderId, 
         </div>
         <div className="library-actions">
           <button type="button" onClick={onOpenImport} aria-label={WORKSPACE_COPY.importMarkdown} className="secondary-button"><Upload aria-hidden="true" />Import</button>
+          {onBackup ? (
+            <button type="button" onClick={onBackup} disabled={backupBusy || backupDisabled} aria-label="Back up library" title={backupDisabled ? "Create a book or page before backing up your library." : undefined} className="secondary-button">
+              <HardDriveDownload aria-hidden="true" />{backupBusy ? "Preparing backup…" : "Back up"}
+            </button>
+          ) : null}
           <button type="button" data-visual-priority="primary" onClick={onCreateDocument} aria-label={openBook ? `Create page in ${openBook.name}` : "Create page"} className="primary-button"><FilePlus aria-hidden="true" />New page</button>
           <button type="button" onClick={() => onCreateFolder(selectedFolderId)} className="secondary-button"><BookOpen aria-hidden="true" />New book</button>
         </div>
