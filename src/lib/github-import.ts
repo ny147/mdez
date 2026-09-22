@@ -1,5 +1,6 @@
 import JSZip, { type JSZipObject } from "jszip";
 
+import { splitSafeArchivePath } from "@/lib/archive-path";
 import { parseGitHubRepositoryUrl } from "@/lib/github";
 import { fileNameToTitle } from "@/lib/markdown";
 import type {
@@ -58,21 +59,11 @@ function invalidArchive(message: string): never {
 function validateEntryPath(entry: JSZipObject): { root: string; segments: string[] } {
   const originalPath = entry.unsafeOriginalName ?? entry.name;
   const path = originalPath.endsWith("/") ? originalPath.slice(0, -1) : originalPath;
+  let segments: string[];
 
-  if (
-    path.length === 0 ||
-    path.startsWith("/") ||
-    path.startsWith("\\") ||
-    /^[A-Za-z]:\//.test(path) ||
-    path.includes("\\") ||
-    CONTROL_CHARACTER.test(path)
-  ) {
-    invalidArchive("The repository contains an unsafe archive path.");
-  }
-
-  const segments = path.split("/");
-
-  if (segments.some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
+  try {
+    segments = splitSafeArchivePath(path);
+  } catch {
     invalidArchive("The repository contains an unsafe archive path.");
   }
 
