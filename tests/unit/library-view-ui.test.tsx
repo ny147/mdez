@@ -18,7 +18,8 @@ describe("redesigned library presentation", () => {
     resumePage: null, metadataError: null, isReady: true,
     onSelectFolder: vi.fn(), onSelectDocument: vi.fn(), onToggleBookmark: vi.fn(),
     onCreateDocument: vi.fn(), onCreateFolder: vi.fn(), onOpenImport: vi.fn(),
-    onExportFolder: vi.fn(), onClearSearch: vi.fn()
+    onExportFolder: vi.fn(), onClearSearch: vi.fn(), onBackup: vi.fn(),
+    backupBusy: false, backupDisabled: true
   };
 
   it("welcomes only a ready empty library and keeps creation available", () => {
@@ -31,6 +32,21 @@ describe("redesigned library presentation", () => {
     expect(screen.getByRole("button", { name: "Create page" })).toBeEnabled();
     result.rerender(<ShelfPane {...emptyShelfProps} folders={[book]} books={[book]} />);
     expect(screen.queryByRole("heading", { name: "Your library starts here." })).not.toBeInTheDocument();
+  });
+
+  it("backs up a populated local library and locks unavailable states", () => {
+    const onBackup = vi.fn();
+    const result = render(<ShelfPane {...emptyShelfProps} onBackup={onBackup} backupDisabled={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Back up library" }));
+    expect(onBackup).toHaveBeenCalledOnce();
+
+    result.rerender(<ShelfPane {...emptyShelfProps} onBackup={onBackup} backupDisabled />);
+    expect(screen.getByRole("button", { name: "Back up library" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Back up library" })).toHaveAttribute("title", "Create a book or page before backing up your library.");
+
+    result.rerender(<ShelfPane {...emptyShelfProps} onBackup={onBackup} backupDisabled={false} backupBusy />);
+    expect(screen.getByRole("button", { name: "Back up library" })).toBeDisabled();
+    expect(screen.getByText("Preparing backup…")).toBeVisible();
   });
 
   it.each([
@@ -114,6 +130,9 @@ describe("redesigned library presentation", () => {
         onOpenImport={vi.fn()}
         onExportFolder={vi.fn()}
         onClearSearch={vi.fn()}
+        onBackup={vi.fn()}
+        backupBusy={false}
+        backupDisabled
       />
     );
 

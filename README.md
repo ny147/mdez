@@ -11,7 +11,7 @@ Mdez is a local-first Markdown workspace for reading, editing, organizing, and s
 - **Write and read in one place.** Switch between Shelf, Edit, Read, and adjustable Split views.
 - **Keep a real library.** Organize pages in top-level books or Unsorted, search titles and content, bookmark useful pages, and resume your last page.
 - **Bring existing Markdown.** Paste text, import local `.md` and `.markdown` files, or preview and import a public GitHub repository.
-- **Own your files.** Export a page as Markdown or a book as a ZIP archive containing its Markdown files and manifest.
+- **Own your files.** Export a page or book for partial portability, or download a complete, restorable Local Library backup.
 - **Share when you choose.** Publish an unlisted, read-only Quick Share or copy a library into a key-protected group workspace.
 
 Mdez renders GitHub Flavored Markdown, syntax-highlighted code blocks, and KaTeX math.
@@ -44,13 +44,16 @@ To try the main workflow:
 
 1. Create a page or import a Markdown file.
 2. Edit it and switch to Read or Split view.
-3. Export the page or its book when you want a backup.
+3. Export a page or book when you want a partial, human-readable copy.
+4. From the Local Library Shelf, choose **Back up library** to download a complete archive that can restore books, pages, bookmarks, and supported GitHub source metadata.
 
 The local library and public GitHub import work without environment variables. Quick Share and Key Groups need the optional server configuration described in [Self-hosting](docs/self-hosting.md).
 
 ## Storage, privacy, and sharing
 
-Documents, books, bookmarks, recent-page history, and GitHub source metadata are stored in IndexedDB for the current browser origin. Data saved on `localhost` does not automatically appear on a preview or production domain. Clearing site data, using private browsing, or changing domains can remove or isolate a library, so export important work first.
+Documents, books, bookmarks, recent-page history, and GitHub source metadata are stored in IndexedDB for the current browser origin. Data saved on `localhost` does not automatically appear on a preview or production domain. Clearing site data, using private browsing, or changing domains can remove or isolate a library, so back up important work first.
+
+Page `.md` and book `.zip` exports are partial exports: they do not contain the complete Local Library recovery state. **Back up library** creates the versioned `.mdez.zip` archive intended for full Local Library recovery. It contains plaintext Markdown and metadata, with no password protection or encryption, so store and share it as carefully as the notes it contains. Restore validates the archive before making any changes and adds recovered content alongside the current library instead of replacing it.
 
 Sharing is optional and uses server storage:
 
@@ -62,6 +65,7 @@ Raw management and group keys stay in the creator's or member's browser and are 
 ## Project guides
 
 - [Public GitHub import](docs/github-import.md) — supported repositories, safety limits, refresh behavior, and exclusions.
+- [Library backup and restore](docs/library-backup.md) — complete Local Library backups, safe additive restore, limits, and troubleshooting.
 - [Self-hosting](docs/self-hosting.md) — optional Supabase migrations, secrets, and sharing setup.
 - [Operations](docs/operations.md) — deployment checks, cleanup jobs, recovery, and rollback.
 - [Product requirements](PRODUCT.md) — product goals, current priorities, and deferred scope.

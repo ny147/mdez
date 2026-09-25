@@ -57,7 +57,7 @@ async function clickViewportModeTab(page: import("@playwright/test").Page, name:
   const control = navigation.getByRole("tab", { name, exact: true });
 
   if ((await control.getAttribute("aria-selected")) !== "true") {
-    await control.click();
+    await control.evaluate((element) => (element as HTMLElement).click());
   }
   await expect(control).toHaveAttribute("aria-selected", "true");
 }
@@ -112,6 +112,40 @@ async function makeGitHubArchive(entries: Record<string, string>) {
   }
 
   return zip.generateAsync({ type: "nodebuffer" });
+}
+
+async function createBook(page: import("@playwright/test").Page, name: string) {
+  await openShelfDrawerIfAvailable(page);
+  const sidebar = page.getByRole("complementary", { name: "Library shelf" });
+  page.once("dialog", (dialog) => dialog.accept(name));
+  await sidebar.getByRole("button", { name: "Create book", exact: true }).click();
+  await expect(sidebar.getByRole("button", { name: `Open ${name} book` })).toBeVisible();
+  return sidebar;
+}
+
+async function fillCurrentPage(page: import("@playwright/test").Page, title: string, body: string) {
+  await page.getByRole("textbox", { name: "Page title" }).fill(title);
+  await page.locator(".cm-content").fill(body);
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
+}
+
+async function localContentCounts(page: import("@playwright/test").Page) {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("mdez");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction(["folders", "documents"], "readonly");
+    const count = (store: "folders" | "documents") => new Promise<number>((resolve, reject) => {
+      const request = transaction.objectStore(store).count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const [books, pages] = await Promise.all([count("folders"), count("documents")]);
+    database.close();
+    return { books, pages };
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -308,6 +342,7 @@ test("markdown syntax colors use readable Mdez semantic tokens", async ({ page }
     "```"
   ].join("\n"));
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Token sample");
   await clickViewportModeTab(page, "Read");
 
   const preview = page.locator(".markdown-preview");
@@ -980,12 +1015,17 @@ test("import source tabs support arrows and the dialog restores focus", async ({
   const pasteTab = dialog.getByRole("tab", { name: "Paste text" });
   const filesTab = dialog.getByRole("tab", { name: "Choose files" });
   const githubTab = dialog.getByRole("tab", { name: "GitHub repository" });
+  const backupTab = dialog.getByRole("tab", { name: "Restore backup" });
 
   await pasteTab.press("ArrowRight");
   await expect(filesTab).toHaveAttribute("aria-selected", "true");
   await expect(filesTab).toBeFocused();
 
   await filesTab.press("End");
+  await expect(backupTab).toHaveAttribute("aria-selected", "true");
+  await expect(backupTab).toBeFocused();
+
+  await backupTab.press("ArrowLeft");
   await expect(githubTab).toHaveAttribute("aria-selected", "true");
   await expect(githubTab).toBeFocused();
 
@@ -1106,6 +1146,143 @@ test("imports markdown from a file", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Release Notes");
   await page.getByRole("tab", { name: "Read" }).click();
   await expect(page.locator(".markdown-preview").getByRole("heading", { name: "File Import" })).toBeVisible();
+});
+
+test("library backup round-trips books, duplicate page titles, Unsorted pages, and bookmarks", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "The complete round-trip is covered in desktop Chromium.");
+  test.setTimeout(60_000);
+
+  await createPageAndWait(page);
+  await fillCurrentPage(page, "Loose note", "# Loose note\n\nKept outside every book.");
+  await showShelfIfAvailable(page);
+  const looseResult = page.getByRole("list", { name: "Library pages" }).getByRole("listitem").filter({ hasText: "Loose note" });
+  await looseResult.getByRole("button", { name: "Bookmark Loose note" }).click();
+
+  const sidebar = await createBook(page, "Archive");
+  await sidebar.getByRole("button", { name: "Manage Archive" }).click();
+  await page.getByRole("menuitem", { name: "Add page", exact: true }).click();
+  await fillCurrentPage(page, "Plan", "# First plan\n\nOriginal A.");
+  await sidebar.getByRole("button", { name: "Manage Archive" }).click();
+  await page.getByRole("menuitem", { name: "Add page", exact: true }).click();
+  await fillCurrentPage(page, "Plan", "# Second plan\n\nOriginal B.");
+  await createBook(page, "Empty");
+
+  await showShelfIfAvailable(page);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Back up library" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^mdez-library-\d{4}-\d{2}-\d{2}\.mdez\.zip$/);
+  const backupPath = await download.path();
+  expect(backupPath).not.toBeNull();
+
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "Restore backup" }).click();
+  await dialog.getByLabel("Choose Mdez backup").setInputFiles(backupPath!);
+
+  const contents = dialog.getByRole("list", { name: "Backup contents" });
+  await expect(contents.getByText("2 books", { exact: true })).toBeVisible();
+  await expect(contents.getByText("1 empty book", { exact: true })).toBeVisible();
+  await expect(contents.getByText("3 pages", { exact: true })).toBeVisible();
+  await expect(contents.getByText("1 Unsorted page", { exact: true })).toBeVisible();
+  await expect(contents.getByText("1 bookmark", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Archive → Archive (restored)", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Empty → Empty (restored)", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Restore backup" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Restored 3 pages in 2 books" })).toBeVisible();
+
+  await page.reload();
+  await openShelfDrawerIfAvailable(page);
+  const restoredSidebar = page.getByRole("complementary", { name: "Library shelf" });
+  for (const name of ["Archive", "Archive (restored)", "Empty", "Empty (restored)"]) {
+    await expect(restoredSidebar.getByRole("button", { name: `Open ${name} book` })).toBeVisible();
+  }
+  await expect(restoredSidebar.getByRole("button", { name: "Open Archive book" }).locator("xpath=following-sibling::*[1]")).toHaveText("2");
+  await expect(restoredSidebar.getByRole("button", { name: "Open Archive (restored) book" }).locator("xpath=following-sibling::*[1]")).toHaveText("2");
+
+  await restoredSidebar.getByRole("button", { name: /Bookmarks/ }).click();
+  await expect(page.getByRole("list", { name: "Library pages" }).getByRole("button", { name: "Open Loose note" })).toHaveCount(2);
+});
+
+test("corrupt backup is rejected without writing books or pages", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Archive corruption is covered in desktop Chromium.");
+
+  await createPageAndWait(page);
+  await fillCurrentPage(page, "Integrity note", "# Integrity note\n\nOriginal bytes.");
+  await showShelfIfAvailable(page);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Back up library" }).click();
+  const backupPath = await (await downloadPromise).path();
+  expect(backupPath).not.toBeNull();
+
+  const archive = await JSZip.loadAsync(await readFile(backupPath!));
+  const markdownPath = Object.keys(archive.files).find((path) => path.endsWith(".md"));
+  expect(markdownPath).toBeTruthy();
+  archive.file(markdownPath!, "# Integrity note\n\nTampered after the manifest was written.");
+  const corruptArchive = await archive.generateAsync({ type: "nodebuffer" });
+  const before = await localContentCounts(page);
+
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "Restore backup" }).click();
+  await dialog.getByLabel("Choose Mdez backup").setInputFiles({
+    name: "corrupt.mdez.zip",
+    mimeType: "application/zip",
+    buffer: corruptArchive
+  });
+  await expect(dialog.getByRole("alert")).toContainText("does not match its manifest byte length");
+  await expect(dialog.getByRole("button", { name: "Restore backup" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Close import dialog" }).click();
+  await page.reload();
+  await expect.poll(() => localContentCounts(page)).toEqual(before);
+});
+
+test("mobile Restore backup keeps four actions and four keyboard tabs reachable", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "The responsive contract is covered by the Pixel 7 project.");
+
+  await createPageAndWait(page);
+  await fillCurrentPage(page, "Pocket note", "# Pocket note");
+  await showShelfIfAvailable(page);
+  const actions = page.locator(".library-actions");
+  await expect(actions.getByRole("button")).toHaveCount(4);
+  const rows = await actions.getByRole("button").evaluateAll((buttons) =>
+    [...new Set(buttons.map((button) => Math.round(button.getBoundingClientRect().top)))]
+  );
+  expect(rows).toHaveLength(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Back up library" }).click();
+  const backupPath = await (await downloadPromise).path();
+  expect(backupPath).not.toBeNull();
+
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  const pasteTab = dialog.getByRole("tab", { name: "Paste text" });
+  const filesTab = dialog.getByRole("tab", { name: "Choose files" });
+  const githubTab = dialog.getByRole("tab", { name: "GitHub repository" });
+  const backupTab = dialog.getByRole("tab", { name: "Restore backup" });
+
+  await pasteTab.press("End");
+  await expect(backupTab).toBeFocused();
+  await backupTab.press("Home");
+  await expect(pasteTab).toBeFocused();
+  await pasteTab.press("ArrowRight");
+  await expect(filesTab).toBeFocused();
+  await filesTab.press("ArrowRight");
+  await expect(githubTab).toBeFocused();
+  await githubTab.press("ArrowRight");
+  await expect(backupTab).toBeFocused();
+  await backupTab.press("ArrowLeft");
+  await expect(githubTab).toBeFocused();
+  await backupTab.click();
+  await dialog.getByLabel("Choose Mdez backup").setInputFiles(backupPath!);
+  await expect(dialog.getByRole("heading", { name: "Backup ready to restore" })).toBeVisible();
+  const restoreButton = dialog.getByRole("button", { name: "Restore backup" });
+  await expect(restoreButton).toBeVisible();
+  await expectInsideViewport(restoreButton, page.viewportSize()!.width);
+  await restoreButton.focus();
+  await expect(restoreButton).toBeFocused();
 });
 
 test("imports a public GitHub repository through preview and persists its source", async ({ page }) => {
@@ -1383,7 +1560,7 @@ test("content refresh keeps the selected page when it still exists", async ({ pa
 
 test("split separator resizes from 30 to 70 percent", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await createPageAndWait(page);
   await clickVisibleButtonIfAvailable(page, "Split");
 
   const separator = page.getByRole("separator", { name: "Resize editor and reader panes" });
@@ -1487,15 +1664,15 @@ test("responsive layout switches exactly between 1023 and 1024 pixels", async ({
   expect(desktopReaderBox!.x).toBeGreaterThan(desktopEditorBox!.x + desktopEditorBox!.width);
 });
 test("switches editor, split, and preview modes", async ({ page }) => {
-  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
-  await page.getByRole("tab", { name: "Read" }).click();
+  await createPageAndWait(page);
+  await clickViewportModeTab(page, "Read");
   await expect(page.getByText("Reader", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "Edit" }).click();
+  await clickViewportModeTab(page, "Edit");
   await expect(page.locator(".cm-editor")).toBeVisible();
   const splitButton = page.getByRole("tab", { name: "Split" });
 
   if (await splitButton.isVisible().catch(() => false)) {
-    await splitButton.click();
+    await clickViewportModeTab(page, "Split");
     await expect(page.locator(".cm-editor")).toBeVisible();
     if ((page.viewportSize()?.width ?? 1280) <= 767) {
       await page.locator(".split-workspace").getByRole("tab", { name: "Preview" }).click();
@@ -1526,7 +1703,7 @@ for (const width of [390, 430, 768, 1024, 1440]) {
     test(`${mode} remains usable without document overflow at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       if (mode !== "Shelf") {
-        await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+        await createPageAndWait(page);
       }
       await clickViewportModeTab(page, mode);
       await expectModeReady(page, mode);

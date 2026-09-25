@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, type KeyboardEvent, type ReactNode, type RefObject, useContext, useEffect, useRef } from "react";
+import React, { createContext, type KeyboardEvent, type ReactNode, type RefObject, useContext, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 import { IconButton } from "@/components/ui/IconButton";

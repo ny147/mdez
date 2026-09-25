@@ -1,18 +1,21 @@
 "use client";
 
-import { type KeyboardEvent, useCallback, useRef, useState } from "react";
-import { ClipboardPaste, FileText, Github } from "lucide-react";
+import React, { type KeyboardEvent, useCallback, useRef, useState } from "react";
+import { ArchiveRestore, ClipboardPaste, FileText, Github } from "lucide-react";
 
 import type { Folder } from "@/types/content";
 import type { GitHubImportSession } from "@/types/github";
+import { WorkspaceBackupError, type WorkspaceRestorePlan } from "@/types/backup";
 import { fileNameToTitle, isMarkdownFile, MAX_MARKDOWN_FILE_BYTES, titleFromBody } from "@/lib/markdown";
 import { FileImportPanel } from "@/components/mdez/import/FileImportPanel";
+import { BackupImportPanel } from "@/components/mdez/import/BackupImportPanel";
 import { GitHubImportPanel } from "@/components/mdez/import/GitHubImportPanel";
 import { ImportDialogBusyProvider, ImportDialogShell } from "@/components/mdez/import/ImportDialogShell";
 import { PasteImportPanel } from "@/components/mdez/import/PasteImportPanel";
 
 type ImportItem = { title: string; body: string };
-type ImportSource = "paste" | "files" | "github";
+type ImportSource = "paste" | "files" | "github" | "backup";
+type BusyAction = "local" | "preview" | "github" | "backup-preview" | "backup-restore" | null;
 
 type ImportDialogProps = {
   folders: Folder[];
@@ -21,12 +24,15 @@ type ImportDialogProps = {
   onImport: (items: ImportItem[], folderId: string | null) => Promise<void>;
   onRequestGitHubPreview: (url: string) => Promise<GitHubImportSession>;
   onImportGitHub: (session: GitHubImportSession) => Promise<void>;
+  onRequestBackupPreview: (file: File) => Promise<WorkspaceRestorePlan>;
+  onRestoreBackup: (plan: WorkspaceRestorePlan) => Promise<void>;
 };
 
 const sourceOptions: { value: ImportSource; label: string; icon: typeof ClipboardPaste }[] = [
   { value: "paste", label: "Paste text", icon: ClipboardPaste },
   { value: "files", label: "Choose files", icon: FileText },
-  { value: "github", label: "GitHub repository", icon: Github }
+  { value: "github", label: "GitHub repository", icon: Github },
+  { value: "backup", label: "Restore backup", icon: ArchiveRestore }
 ];
 
 export function ImportDialog({
@@ -35,18 +41,23 @@ export function ImportDialog({
   onClose,
   onImport,
   onRequestGitHubPreview,
-  onImportGitHub
+  onImportGitHub,
+  onRequestBackupPreview,
+  onRestoreBackup
 }: ImportDialogProps) {
   const [source, setSource] = useState<ImportSource>("paste");
   const [pasteBody, setPasteBody] = useState("");
   const [targetFolderId, setTargetFolderId] = useState<string | null>(selectedFolderId);
   const [githubUrl, setGitHubUrl] = useState("");
   const [githubPreview, setGitHubPreview] = useState<GitHubImportSession | null>(null);
+  const [backupPreview, setBackupPreview] = useState<WorkspaceRestorePlan | null>(null);
   const [message, setMessage] = useState("");
-  const [busyAction, setBusyAction] = useState<"local" | "preview" | "github" | null>(null);
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isBackupDragging, setIsBackupDragging] = useState(false);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
   const githubRef = useRef<HTMLInputElement>(null);
+  const backupRef = useRef<HTMLInputElement>(null);
   const returnFocusElement = useRef<HTMLElement | null>(
     typeof document !== "undefined" && document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -71,6 +82,8 @@ export function ImportDialog({
 
     if (nextSource === "github") {
       window.setTimeout(() => githubRef.current?.focus(), 0);
+    } else if (nextSource === "backup") {
+      window.setTimeout(() => backupRef.current?.focus(), 0);
     } else if (nextSource === "paste") {
       window.setTimeout(() => pasteRef.current?.focus(), 0);
     }
@@ -211,6 +224,35 @@ export function ImportDialog({
     }
   }
 
+  async function previewBackup(file: File) {
+    if (busy) return;
+    setBusyAction("backup-preview");
+    setMessage("");
+    setBackupPreview(null);
+    try {
+      setBackupPreview(await onRequestBackupPreview(file));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Mdez could not preview this backup. Your existing library was unchanged.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function restoreBackup() {
+    if (!backupPreview || busy) return;
+    setBusyAction("backup-restore");
+    setMessage("");
+    try {
+      await onRestoreBackup(backupPreview);
+      setBackupPreview(null);
+      onClose();
+    } catch (error) {
+      if (error instanceof WorkspaceBackupError && error.code === "stale_preview") setBackupPreview(null);
+      setMessage(error instanceof Error ? error.message : "Mdez could not restore this backup. Your existing library was unchanged.");
+      setBusyAction(null);
+    }
+  }
+
   return (
     <ImportDialogBusyProvider busy={busy}>
       <ImportDialogShell
@@ -219,7 +261,7 @@ export function ImportDialog({
         returnFocus={returnFocus}
         onClose={closeDialog}
       >
-        <div className="mt-4 grid grid-cols-3 gap-1 rounded-md border border-border bg-panel p-1" role="tablist" aria-label="Import source">
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-md border border-border bg-panel p-1 sm:grid-cols-4" role="tablist" aria-label="Import source">
           {sourceOptions.map((option) => {
             const Icon = option.icon;
 
@@ -244,7 +286,7 @@ export function ImportDialog({
           })}
         </div>
 
-        {source !== "github" ? (
+        {source !== "github" && source !== "backup" ? (
           <label className="mt-5 grid gap-2 text-sm font-bold text-ink" htmlFor="import-target-folder">
             Add pages to
             <select
@@ -291,7 +333,7 @@ export function ImportDialog({
             url={githubUrl}
             preview={githubPreview}
             message={source === "github" ? message : ""}
-            busyAction={busyAction === "local" ? null : busyAction}
+            busyAction={busyAction === "preview" || busyAction === "github" ? busyAction : null}
             onUrlChange={(url) => {
               setGitHubUrl(url);
               setGitHubPreview(null);
@@ -299,6 +341,18 @@ export function ImportDialog({
             }}
             onPreview={() => void previewGitHubRepository()}
             onImport={() => void importGitHubRepository()}
+          />
+        </div>
+
+        <div hidden={source !== "backup"}>
+          <BackupImportPanel
+            ref={backupRef}
+            preview={backupPreview}
+            message={source === "backup" ? message : ""}
+            busyAction={busyAction}
+            dragging={isBackupDragging}
+            onFile={(file) => void previewBackup(file)}
+            onDraggingChange={setIsBackupDragging}
           />
         </div>
 
@@ -333,6 +387,17 @@ export function ImportDialog({
               {githubPreview
                 ? busyAction === "github" ? "Importing repository..." : "Import repository"
                 : busyAction === "preview" ? "Checking repository..." : "Preview repository"}
+            </button>
+          ) : null}
+
+          {source === "backup" ? (
+            <button
+              type="button"
+              onClick={() => void restoreBackup()}
+              disabled={busy || !backupPreview}
+              className="primary-button px-5 py-3 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busyAction === "backup-preview" ? "Checking backup..." : busyAction === "backup-restore" ? "Restoring backup..." : "Restore backup"}
             </button>
           ) : null}
         </div>

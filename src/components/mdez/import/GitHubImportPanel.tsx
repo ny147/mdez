@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import React, { forwardRef } from "react";
 
 import type { GitHubImportSession } from "@/types/github";
 

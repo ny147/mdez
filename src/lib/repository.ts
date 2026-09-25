@@ -3,6 +3,8 @@ import { createId } from "@/lib/id";
 import type { Document, Folder } from "@/types/content";
 import type { GitHubImportResult, GitHubImportSession, GitHubSource } from "@/types/github";
 import { buildFlatBookMigration } from "@/lib/library-tree";
+import { workspaceRestoreBaseSignature } from "@/lib/workspace-restore-plan";
+import { WorkspaceBackupError, type WorkspaceRestorePlan, type WorkspaceRestoreResult } from "@/types/backup";
 
 function now() {
   return new Date().toISOString();
@@ -414,5 +416,109 @@ export async function deleteGitHubSource(sourceId: string): Promise<void> {
     await db.documents.bulkDelete(documentIds);
     await db.folders.bulkDelete(folderIds);
     await db.githubSources.delete(sourceId);
+  });
+}
+
+export async function restoreWorkspaceBackup(plan: WorkspaceRestorePlan): Promise<WorkspaceRestoreResult> {
+  return db.transaction("rw", db.folders, db.documents, db.githubSources, db.pageBookmarks, async () => {
+    const existing = {
+      folders: await db.folders.toArray(),
+      sources: await db.githubSources.toArray()
+    };
+    if (workspaceRestoreBaseSignature(existing) !== plan.baseSignature) {
+      throw new WorkspaceBackupError(
+        "stale_preview",
+        "The Local Library changed. Preview this backup again before restoring."
+      );
+    }
+
+    const existingDocuments = await db.documents.toArray();
+    const firstBookOrder = Math.max(-1, ...existing.folders.map((folder) => folder.order)) + 1;
+    const firstUnsortedOrder = Math.max(
+      -1,
+      ...existingDocuments.filter((document) => document.folderId === null).map((document) => document.order)
+    ) + 1;
+    const orderedBooks = [...plan.books].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+    const bookPositions = new Map(orderedBooks.map((book, index) => [book.id, index]));
+    const orderedPages = [...plan.parsed.pages].sort((left, right) => {
+      const leftBook = left.metadata.bookId === null ? orderedBooks.length : bookPositions.get(left.metadata.bookId) ?? orderedBooks.length;
+      const rightBook = right.metadata.bookId === null ? orderedBooks.length : bookPositions.get(right.metadata.bookId) ?? orderedBooks.length;
+      return leftBook - rightBook || left.metadata.order - right.metadata.order;
+    });
+    const bookIds = new Map(orderedBooks.map((book) => [book.id, createId("folder")]));
+    const retainedSources = plan.sources.filter((source) => source.action === "retain");
+    const sourceIds = new Map(retainedSources.map((source) => [source.id, createId("github")]));
+
+    for (const source of retainedSources) {
+      const rootFolderId = bookIds.get(source.rootBookId);
+      const id = sourceIds.get(source.id);
+      if (!rootFolderId || !id) throw new Error("The restore plan has an invalid GitHub source mapping.");
+      await db.githubSources.add({
+        id,
+        owner: source.owner,
+        repository: source.repository,
+        normalizedUrl: source.normalizedUrl,
+        branch: source.branch,
+        rootFolderId,
+        lastRefreshedAt: source.lastRefreshedAt,
+        createdAt: source.createdAt,
+        updatedAt: source.updatedAt
+      });
+    }
+
+    for (const [index, book] of orderedBooks.entries()) {
+      const id = bookIds.get(book.id);
+      if (!id) throw new Error("The restore plan has an invalid book mapping.");
+      const mappedSourceId = book.sourceId ? sourceIds.get(book.sourceId) : undefined;
+      await db.folders.add({
+        id,
+        name: book.restoredName,
+        parentId: null,
+        order: firstBookOrder + index,
+        createdAt: book.createdAt,
+        updatedAt: book.updatedAt,
+        ...(mappedSourceId ? { sourceId: mappedSourceId } : {})
+      });
+    }
+
+    const nextOrders = new Map<string, number>();
+    nextOrders.set("unsorted", firstUnsortedOrder);
+    for (const book of orderedBooks) nextOrders.set(book.id, 0);
+    const pageIds = new Map<string, string>();
+    for (const page of orderedPages) {
+      const metadata = page.metadata;
+      const folderId = metadata.bookId === null ? null : bookIds.get(metadata.bookId) ?? null;
+      if (metadata.bookId !== null && !folderId) throw new Error("The restore plan has an invalid page book mapping.");
+      const orderKey = metadata.bookId ?? "unsorted";
+      const order = nextOrders.get(orderKey);
+      if (order === undefined) throw new Error("The restore plan has an invalid page order mapping.");
+      nextOrders.set(orderKey, order + 1);
+      const id = createId("doc");
+      pageIds.set(metadata.id, id);
+      const mappedSourceId = metadata.sourceId ? sourceIds.get(metadata.sourceId) : undefined;
+      await db.documents.add({
+        id,
+        title: metadata.title,
+        body: page.body,
+        folderId,
+        order,
+        createdAt: metadata.createdAt,
+        updatedAt: metadata.updatedAt,
+        ...(mappedSourceId ? { sourceId: mappedSourceId } : {})
+      });
+    }
+
+    for (const bookmark of plan.parsed.manifest.bookmarks) {
+      const documentId = pageIds.get(bookmark.pageId);
+      if (!documentId) throw new Error("The restore plan has an invalid bookmark mapping.");
+      await db.pageBookmarks.add({ workspaceId: "local", documentId, createdAt: bookmark.createdAt });
+    }
+
+    return {
+      bookCount: orderedBooks.length,
+      pageCount: plan.parsed.pages.length,
+      bookmarkCount: plan.parsed.manifest.bookmarks.length,
+      firstDocumentId: orderedPages[0] ? pageIds.get(orderedPages[0].metadata.id) ?? null : null
+    };
   });
 }

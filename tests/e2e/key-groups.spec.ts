@@ -54,3 +54,42 @@ test("two browsers join one key and share saved Markdown", async ({ browser }) =
   for (const page of [creator, joiner]) expect(page.url()).not.toContain(key);
   await creatorContext.close(); await joinerContext.close();
 });
+
+test("Key Group restore exits to Local Library without changing the group snapshot", async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "The workspace-boundary recovery case is covered in desktop Chromium.");
+  test.setTimeout(60_000);
+  const model = await installKeyGroupApiModel(context);
+  await reset(page);
+
+  await page.getByRole("button", { name: "Create page", exact: true }).last().click();
+  await page.getByRole("textbox", { name: "Page title" }).fill("Local seed");
+  await page.locator(".cm-content").fill("# Local seed\n\nThis stays in the browser library.");
+  await expect(page.getByRole("status").filter({ hasText: /^Saved in this browser$/ })).toBeVisible({ timeout: 3000 });
+  await clickVisibleTab(page, "Shelf");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Back up library" }).click();
+  const backupPath = await (await downloadPromise).path();
+  expect(backupPath).not.toBeNull();
+
+  await createGroupFromLocalLibrary(page, "Writers");
+  const originalSnapshot = structuredClone(model.snapshot);
+  await page.getByRole("button", { name: "Close group creation" }).click();
+  await closeShelfDrawerIfAvailable(page);
+  await clickVisibleTab(page, "Shelf");
+  await page.getByRole("button", { name: "Import Markdown", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add Markdown to your library" });
+  await dialog.getByRole("tab", { name: "Restore backup" }).click();
+  await dialog.getByLabel("Choose Mdez backup").setInputFiles(backupPath!);
+  await expect(dialog.getByRole("heading", { name: "Backup ready to restore" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Restore backup" }).click();
+
+  await openShelfDrawerIfAvailable(page);
+  await expect(page.getByRole("button", { name: "Current workspace: Local Library" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Local seed" })).toHaveCount(2);
+  expect(model.snapshot).toEqual(originalSnapshot);
+
+  await page.reload();
+  await openShelfDrawerIfAvailable(page);
+  await expect(page.getByRole("button", { name: "Current workspace: Local Library" })).toBeVisible();
+  expect(model.snapshot).toEqual(originalSnapshot);
+});

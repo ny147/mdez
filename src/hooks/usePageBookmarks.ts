@@ -8,28 +8,41 @@ export function usePageBookmarks(workspaceId: string): {
   isReady: boolean;
   error: string | null;
   toggleBookmark: (documentId: string) => Promise<void>;
+  refresh: () => Promise<void>;
 } {
   const [bookmarkedIds, setBookmarkedIds] = useState<ReadonlySet<string>>(new Set());
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadBookmarks = useCallback(async (isActive: () => boolean = () => true) => {
+    try {
+      const records = await listBookmarks(workspaceId);
+      if (isActive()) {
+        setBookmarkedIds(new Set(records.map((record) => record.documentId)));
+        setError(null);
+      }
+    } catch (cause) {
+      if (isActive()) setError("Bookmarks are unavailable in this browser.");
+      throw cause;
+    }
+  }, [workspaceId]);
 
   useEffect(() => {
     let active = true;
     setIsReady(false);
     setError(null);
     setBookmarkedIds(new Set());
-    void listBookmarks(workspaceId)
-      .then((records) => {
-        if (active) setBookmarkedIds(new Set(records.map((record) => record.documentId)));
-      })
-      .catch(() => {
-        if (active) setError("Bookmarks are unavailable in this browser.");
-      })
+    void loadBookmarks(() => active)
+      .catch(() => undefined)
       .finally(() => {
         if (active) setIsReady(true);
       });
     return () => { active = false; };
-  }, [workspaceId]);
+  }, [loadBookmarks, workspaceId]);
+
+  const refresh = useCallback(async () => {
+    await loadBookmarks();
+  }, [loadBookmarks]);
 
   const toggleBookmark = useCallback(async (documentId: string) => {
     const enabled = !bookmarkedIds.has(documentId);
@@ -48,5 +61,5 @@ export function usePageBookmarks(workspaceId: string): {
     }
   }, [bookmarkedIds, workspaceId]);
 
-  return { bookmarkedIds, isReady, error, toggleBookmark };
+  return { bookmarkedIds, isReady, error, toggleBookmark, refresh };
 }
