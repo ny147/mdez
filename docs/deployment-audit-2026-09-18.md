@@ -43,7 +43,8 @@ The user confirmed that Preview shares the production database. This was not ind
 
 No production sharing records, secrets, migrations, deployment settings, or scheduled jobs were changed in this audit. No claim is made that production is ready for the next release.
 
-Next: follow the [release plan](superpowers/plans/2026-09-18-deployment-release.md).
+Next: use the current release procedure in [Operations](operations.md) and retain
+the resulting evidence in a dated release-candidate record.
 
 ## Implementation evidence — 2026-09-21
 

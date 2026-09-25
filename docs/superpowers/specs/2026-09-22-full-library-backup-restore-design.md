@@ -1,7 +1,7 @@
 # Full-Library Backup and Restore Design
 
 **Date:** 2026-09-22
-**Status:** Approved for implementation planning
+**Status:** Implemented; retained as the version 1 archive and restore contract
 **Scope:** Local Library backup creation and additive restore
 
 ## Objective

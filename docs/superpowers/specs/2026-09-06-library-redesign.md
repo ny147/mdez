@@ -22,7 +22,7 @@ Code evidence checked: `Document` has no bookmark field; `ShelfPane` shows top-l
 
 Apply the visual direction in `mdez-redesign.html` to the production Next.js workspace. Users should recognize the spacious lavender library, pastel graphic covers, clear navigation, resume panel, recent-page list, and quieter editor while retaining their existing data and every shipped workflow.
 
-The HTML is the visual reference, not a replacement application or persistence implementation. `docs/mdez-redesign-notes.md` describes its boundaries. For product capabilities, current source takes precedence over the older PRODUCT.md: the application now includes key groups and public sharing. This spec supersedes the previous visual contract only for the redesigned workspace; unrelated routes retain their behavior.
+The HTML is a visual reference, not a replacement application or persistence implementation. This specification records the approved redesign decisions; use the current source, `PRODUCT.md`, and `README.md` for the implemented product capabilities. Unrelated routes retain their existing behavior.
 
 ## Scope
 

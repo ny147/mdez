@@ -4,9 +4,8 @@ This guide covers deployment checks, scheduled cleanup, recovery, and rollback f
 
 Production is [mdez.vercel.app](https://mdez.vercel.app/). The
 [2026-09-18 audit](deployment-audit-2026-09-18.md) records the checks actually
-performed. The approved [release improvement plan](superpowers/plans/2026-09-18-deployment-release.md)
-has added an application-level Preview sharing boundary and disposable-database
-CI in [pull request 19](https://github.com/ny147/mdez/pull/19). The
+performed. An application-level Preview sharing boundary and disposable-database
+CI were added in [pull request 19](https://github.com/ny147/mdez/pull/19). The
 [release-candidate record](releases/2026-09-21-f9dc7a8.md) distinguishes that
 verified code and CI work from the remaining operator-owned hosting, database,
 branch-protection, and promotion gates.
