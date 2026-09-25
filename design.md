@@ -1,6 +1,6 @@
 # Mdez Library Workspace Design
 
-Status: Prism Pages brand plus flat Library sidebar review fixes implemented on `codex/prism-pages-brand` on 2026-09-14.
+Status: Current design baseline, including the Prism Pages brand, flat Library sidebar, and dark mode.
 
 The library behavior remains defined by `docs/superpowers/specs/2026-09-06-library-redesign.md`. The current brand specification is `docs/superpowers/specs/2026-09-09-prism-pages-brand-design.md`; approved concept references are in `docs/design-assets/prism-pages/`.
 
