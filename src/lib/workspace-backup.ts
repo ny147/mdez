@@ -58,7 +58,10 @@ function byPageOrder(left: Document, right: Document) {
 }
 
 function validTimestamp(value: string) {
-  return value.length > 0 && Number.isFinite(Date.parse(value));
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match || !Number.isFinite(Date.parse(value))) return false;
+  const localTime = `${match[1]}.${(match[2] ?? "").padEnd(3, "0")}Z`;
+  return new Date(localTime).toISOString() === localTime;
 }
 
 function validTimestampPair(createdAt: string, updatedAt: string) {
@@ -142,8 +145,13 @@ function validateBuilderInput(input: WorkspaceBackupInput) {
     sourceUrls.add(fold(source.normalizedUrl));
   }
   for (const book of input.books) {
-    if (book.sourceId && (!sourceIds.has(book.sourceId) || input.githubSources.find((source) => source.id === book.sourceId)?.rootFolderId !== book.id)) {
+    if (book.sourceId && !sourceIds.has(book.sourceId)) {
       structure("A book has an invalid GitHub source reference.");
+    }
+  }
+  for (const source of input.githubSources) {
+    if (input.books.find((book) => book.id === source.rootFolderId)?.sourceId !== source.id) {
+      structure("A GitHub source is not linked to its root book.");
     }
   }
   for (const page of input.pages) {
@@ -234,7 +242,11 @@ export async function createWorkspaceBackupBlob(input: WorkspaceBackupInput): Pr
     bookmarks,
     githubSources
   };
-  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  const manifestJson = JSON.stringify(manifest, null, 2);
+  if (new TextEncoder().encode(manifestJson).byteLength > WORKSPACE_BACKUP_LIMITS.zipBytes) {
+    throw new WorkspaceBackupError("limit_exceeded", "The backup manifest is larger than 100 MiB.");
+  }
+  zip.file("manifest.json", manifestJson);
   const blob = await zip.generateAsync({
     type: "blob",
     compression: "DEFLATE",
@@ -391,13 +403,103 @@ function originalEntryName(entry: JSZipObject) {
   return entry.unsafeOriginalName ?? entry.name;
 }
 
+async function readBlobBytes(blob: Blob): Promise<Uint8Array> {
+  if (blob.arrayBuffer) return new Uint8Array(await blob.arrayBuffer());
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+// Read the original directory before JSZip normalizes paths and collapses names.
+// Version 1 uses single-disk, non-ZIP64 archives, comfortably within its limits.
+function readArchiveDirectory(bytes: Uint8Array) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const invalid = () => { throw new WorkspaceBackupError("invalid_zip", "The backup ZIP directory is invalid or unsupported."); };
+  let end = bytes.length - 22;
+  for (; end >= Math.max(0, bytes.length - 65557); end -= 1) {
+    if (view.getUint32(end, true) === 0x06054b50 && end + 22 + view.getUint16(end + 20, true) === bytes.length) break;
+  }
+  if (end < 0 || end < bytes.length - 65557) return invalid();
+  const count = view.getUint16(end + 10, true);
+  const size = view.getUint32(end + 12, true);
+  const start = view.getUint32(end + 16, true);
+  if (view.getUint16(end + 4, true) || view.getUint16(end + 6, true) || view.getUint16(end + 8, true) !== count || count === 0xffff || start + size !== end) return invalid();
+  const records = new Map<string, { name: string; byteLength: number }>();
+  let offset = start;
+  for (let index = 0; index < count; index += 1) {
+    if (offset + 46 > end || view.getUint32(offset, true) !== 0x02014b50) return invalid();
+    const nameLength = view.getUint16(offset + 28, true);
+    const next = offset + 46 + nameLength + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
+    if (next > end) return invalid();
+    let name: string;
+    try {
+      name = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
+      splitSafeArchivePath(name.endsWith("/") ? name.slice(0, -1) : name);
+    } catch {
+      return structure("The backup contains an unsafe archive path.");
+    }
+    const key = fold(name.endsWith("/") ? name.slice(0, -1) : name);
+    if (records.has(key)) structure("The backup contains duplicate archive paths.");
+    const byteLength = view.getUint32(offset + 24, true);
+    if (byteLength === 0xffffffff || view.getUint32(offset + 20, true) === 0xffffffff || view.getUint32(offset + 42, true) === 0xffffffff) return invalid();
+    records.set(key, { name, byteLength });
+    offset = next;
+  }
+  if (offset !== end) return invalid();
+  return records;
+}
+
+// JSZip's public streaming API is missing from its JSZipObject typings. Bound
+// accumulation as well as the directory size, since ZIP metadata is untrusted.
+function readEntryBytes(entry: JSZipObject, limit: number): Promise<Uint8Array> {
+  const stream = (entry as JSZipObject & {
+    internalStream(type: "uint8array"): JSZip.JSZipStreamHelper<Uint8Array>;
+  }).internalStream("uint8array");
+  return new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+    let length = 0;
+    let failed = false;
+    stream.on("data", (chunk) => {
+      if (failed) return;
+      length += chunk.length;
+      if (length > limit) {
+        failed = true;
+        chunks.length = 0;
+        stream.pause();
+        reject(new WorkspaceBackupError("damaged_content", "An archive entry exceeds its declared size."));
+        return;
+      }
+      chunks.push(chunk);
+    }).on("error", () => reject(new WorkspaceBackupError("damaged_content", "An archive entry could not be decoded.")))
+      .on("end", () => {
+        if (failed) return;
+        const bytes = new Uint8Array(length);
+        let offset = 0;
+        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+        resolve(bytes);
+      }).resume();
+  });
+}
+
 export async function parseWorkspaceBackup(blob: Blob): Promise<ParsedWorkspaceBackup> {
   if (blob.size > WORKSPACE_BACKUP_LIMITS.zipBytes) {
     throw new WorkspaceBackupError("limit_exceeded", "The backup ZIP is larger than 100 MiB.");
   }
+  let archiveBytes: Uint8Array;
+  try {
+    archiveBytes = await readBlobBytes(blob);
+  } catch {
+    throw new WorkspaceBackupError("unreadable_file", "Mdez could not read this backup file.");
+  }
+  const directory = readArchiveDirectory(archiveBytes);
   let zip: JSZip;
   try {
-    zip = await JSZip.loadAsync(blob, { checkCRC32: true });
+    // CRC loading eagerly inflates every entry, including undeclared files.
+    // Accepted Markdown is checked against its manifest SHA-256 below instead.
+    zip = await JSZip.loadAsync(archiveBytes, { checkCRC32: false });
   } catch {
     throw new WorkspaceBackupError("invalid_zip", "Mdez could not read this ZIP file.");
   }
@@ -414,14 +516,20 @@ export async function parseWorkspaceBackup(blob: Blob): Promise<ParsedWorkspaceB
     const folded = fold(path);
     if (archivePaths.has(folded)) structure("The backup contains duplicate archive paths.");
     archivePaths.add(folded);
+    if (directory.get(folded)?.name !== original) structure("The backup contains inconsistent archive paths.");
   }
+  if (entries.length !== directory.size) structure("The backup contains inconsistent archive entries.");
   const manifestEntries = entries.filter((entry) => !entry.dir && fold(originalEntryName(entry)) === "manifest.json");
   if (manifestEntries.length !== 1) {
     throw new WorkspaceBackupError("invalid_zip", "The backup is missing one readable manifest.json file.");
   }
+  const manifestSize = directory.get("manifest.json")!.byteLength;
+  if (manifestSize > WORKSPACE_BACKUP_LIMITS.zipBytes) {
+    throw new WorkspaceBackupError("limit_exceeded", "The backup manifest is larger than 100 MiB.");
+  }
   let rawManifest: unknown;
   try {
-    rawManifest = JSON.parse(await manifestEntries[0].async("string"));
+    rawManifest = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await readEntryBytes(manifestEntries[0], manifestSize)));
   } catch {
     throw new WorkspaceBackupError("invalid_zip", "The backup manifest is unreadable.");
   }
@@ -440,12 +548,20 @@ export async function parseWorkspaceBackup(blob: Blob): Promise<ParsedWorkspaceB
       structure("The backup contains undeclared archive entries.");
     }
   }
+  // Validate every declared entry's uncompressed size before materializing any
+  // page; a small compressed file can otherwise inflate far beyond the limits.
+  validateBackupByteLimits(manifest.pages.map((page) => directory.get(fold(page.path))?.byteLength ?? 0));
+  for (const page of manifest.pages) {
+    const record = directory.get(fold(page.path));
+    if (!record) damaged(`${page.path} is missing from the backup.`);
+    if (record.byteLength !== page.byteLength) damaged(`${page.path} does not match its manifest byte length.`);
+  }
   const parsedPages = [];
   const lengths: number[] = [];
   for (const metadata of manifest.pages) {
     const entry = entries.find((candidate) => !candidate.dir && fold(originalEntryName(candidate)) === fold(metadata.path));
     if (!entry) damaged(`${metadata.path} is missing from the backup.`);
-    const bytes = await entry.async("uint8array");
+    const bytes = await readEntryBytes(entry, metadata.byteLength);
     lengths.push(bytes.byteLength);
     validateBackupByteLimits(lengths);
     if (bytes.byteLength !== metadata.byteLength || await sha256(bytes) !== metadata.sha256) {

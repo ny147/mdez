@@ -244,6 +244,7 @@ export function ImportDialog({
     setMessage("");
     try {
       await onRestoreBackup(backupPreview);
+      setBackupPreview(null);
       onClose();
     } catch (error) {
       if (error instanceof WorkspaceBackupError && error.code === "stale_preview") setBackupPreview(null);

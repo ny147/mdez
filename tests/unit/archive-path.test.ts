@@ -11,6 +11,8 @@ describe("safe archive paths", () => {
     "",
     "/absolute.md",
     "C:/drive.md",
+    "C:page.md",
+    "C:folder/page.md",
     "books\\page.md",
     "books/../page.md",
     "books/./page.md",

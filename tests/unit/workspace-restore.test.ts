@@ -132,6 +132,19 @@ describe("workspace restore", () => {
     expect(content.folders.find((book) => book.name === "Research")?.sourceId).toBeDefined();
   });
 
+  it("restores sibling order from metadata when manifest pages are shuffled", async () => {
+    await seedExisting();
+    const parsed = parsedBackup();
+    parsed.pages.reverse();
+    parsed.manifest.pages.reverse();
+    const plan = createWorkspaceRestorePlan(parsed, { folders: [existingBook], sources: [existingSource] });
+    const result = await restoreWorkspaceBackup(plan);
+    const pages = await db.documents.toArray();
+    expect(pages.find((page) => page.title === "Plan")?.order).toBe(0);
+    expect(pages.find((page) => page.title === "Guide")?.order).toBe(1);
+    expect(pages.find((page) => page.id === result.firstDocumentId)?.title).toBe("Plan");
+  });
+
   it("rejects a stale preview with zero writes", async () => {
     await seedExisting();
     const plan = createWorkspaceRestorePlan(parsedBackup(), { folders: [existingBook], sources: [existingSource] });

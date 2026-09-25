@@ -401,7 +401,14 @@ export function MdezWorkspace() {
     }
 
     setActiveGroupId(null);
-    await localLibrary.refreshContent(result.firstDocumentId);
+    let contentRefreshFailed = false;
+    try {
+      await localLibrary.refreshContent(result.firstDocumentId);
+    } catch {
+      // The transaction already committed. Resolve the callback so Import closes
+      // and its successful plan cannot be submitted a second time.
+      contentRefreshFailed = true;
+    }
     let bookmarkRefreshFailed = false;
     if (activeGroupId === null) {
       try {
@@ -412,11 +419,14 @@ export function MdezWorkspace() {
     }
     setLibraryFilter("all");
     setLibraryQuery("");
-    setViewMode(result.firstDocumentId ? "editor" : "shelf");
+    setViewMode(!contentRefreshFailed && result.firstDocumentId ? "editor" : "shelf");
+    const restoredMessage = `Restored ${result.pageCount} ${result.pageCount === 1 ? "page" : "pages"} in ${result.bookCount} ${result.bookCount === 1 ? "book" : "books"}`;
     setOperationStatus({
-      message: bookmarkRefreshFailed
+      message: contentRefreshFailed
+        ? `${restoredMessage}; reload Mdez to see the restored content`
+        : bookmarkRefreshFailed
         ? "Pages restored; bookmarks will appear after reload"
-        : `Restored ${result.pageCount} ${result.pageCount === 1 ? "page" : "pages"} in ${result.bookCount} ${result.bookCount === 1 ? "book" : "books"}`,
+        : restoredMessage,
       state: "saved"
     });
   }

@@ -5,7 +5,7 @@ export function splitSafeArchivePath(path: string): string[] {
     path.length === 0 ||
     path.startsWith("/") ||
     path.startsWith("\\") ||
-    /^[A-Za-z]:\//.test(path) ||
+    /^[A-Za-z]:/.test(path) ||
     path.includes("\\") ||
     CONTROL_CHARACTER.test(path)
   ) {

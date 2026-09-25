@@ -104,6 +104,94 @@ async function malformedArchive(name: string): Promise<Blob> {
 }
 
 describe("workspace backup", () => {
+  it("round-trips flattened books sharing one GitHub source", async () => {
+    const childBook = { ...githubBook, id: "flattened-book", name: "Codex / docs", order: 3 };
+    const childPage = { ...githubPage, id: "nested-page", folderId: childBook.id };
+    const parsed = await parseWorkspaceBackup(await createWorkspaceBackupBlob({
+      ...input, books: [...input.books, childBook], pages: [...input.pages, childPage]
+    }));
+    expect(parsed.manifest.books.filter((book) => book.sourceId === source.id)).toHaveLength(2);
+    expect(parsed.pages.find((page) => page.metadata.id === childPage.id)?.metadata.sourceId).toBe(source.id);
+  });
+
+  it("rejects a source whose root book does not link back", async () => {
+    await expect(createWorkspaceBackupBlob({ ...input, books: input.books.map((book) => ({ ...book, sourceId: undefined })) }))
+      .rejects.toMatchObject({ code: "unsafe_structure" });
+  });
+
+  it.each(["September 22, 2026", "2026-02-30T00:00:00.000Z", "2026-09-22"])("rejects non-ISO or normalized-invalid timestamp %s", async (exportedAt) => {
+    const zip = await generatedZip();
+    const manifest = await readManifest(zip);
+    await expect(writeManifest(zip, { ...manifest, exportedAt }).then(parseWorkspaceBackup)).rejects.toMatchObject({ code: "unsafe_structure" });
+    await expect(createWorkspaceBackupBlob({ ...input, exportedAt })).rejects.toMatchObject({ code: "unsafe_structure" });
+  });
+
+  it.each(["2026-09-22T07:00:00+07:00", "2026-09-22T00:00:00Z"])("accepts valid ISO timestamps %s", async (exportedAt) => {
+    const parsed = await parseWorkspaceBackup(await createWorkspaceBackupBlob({ ...input, exportedAt }));
+    expect(parsed.manifest.exportedAt).toBe(exportedAt);
+  });
+
+  it.each(["", "PK", "not a zip"])("reports truncated or non-ZIP input %j", async (contents) => {
+    await expect(parseWorkspaceBackup(new Blob([contents]))).rejects.toMatchObject({ code: "invalid_zip" });
+  });
+
+  it.each(["manifest.json", "books/notes/plan.md"])("rejects exact duplicate raw ZIP records for %s", async (name) => {
+    const bytes = await (await generatedZip()).generateAsync({ type: "uint8array" });
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const end = bytes.length - 22;
+    const centralStart = view.getUint32(end + 16, true);
+    let offset = centralStart;
+    let record = new Uint8Array();
+    while (offset < end) {
+      const nameLength = view.getUint16(offset + 28, true);
+      const length = 46 + nameLength + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
+      if (new TextDecoder().decode(bytes.slice(offset + 46, offset + 46 + nameLength)) === name) record = bytes.slice(offset, offset + length);
+      offset += length;
+    }
+    expect(record.length).toBeGreaterThan(0);
+    const duplicate = new Uint8Array(bytes.length + record.length);
+    duplicate.set(bytes.slice(0, end));
+    duplicate.set(record, end);
+    duplicate.set(bytes.slice(end), end + record.length);
+    const duplicateView = new DataView(duplicate.buffer);
+    for (const countOffset of [8, 10]) duplicateView.setUint16(end + record.length + countOffset, view.getUint16(end + countOffset, true) + 1, true);
+    duplicateView.setUint32(end + record.length + 12, view.getUint32(end + 12, true) + record.length, true);
+    await expect(parseWorkspaceBackup(new Blob([duplicate]))).rejects.toMatchObject({ code: "unsafe_structure" });
+  });
+
+  it("rejects undeclared compressed data before trying to decompress it", async () => {
+    const zip = await generatedZip();
+    zip.file("undeclared.md", "do not inflate");
+    const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let offset = view.getUint32(bytes.length - 6, true);
+    while (view.getUint32(offset, true) === 0x02014b50) {
+      const nameLength = view.getUint16(offset + 28, true);
+      const name = new TextDecoder().decode(bytes.slice(offset + 46, offset + 46 + nameLength));
+      if (name === "undeclared.md") {
+        const local = view.getUint32(offset + 42, true);
+        const data = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+        bytes[data] = 0xff; // Invalid DEFLATE; eager CRC loading would report invalid_zip.
+      }
+      offset += 46 + nameLength + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
+    }
+    await expect(parseWorkspaceBackup(new Blob([new Uint8Array(bytes)]))).rejects.toMatchObject({ code: "unsafe_structure" });
+  });
+
+  it("rejects an inflated size above the page limit before materializing the entry", async () => {
+    const zip = await generatedZip();
+    const bytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let offset = view.getUint32(bytes.length - 6, true);
+    while (view.getUint32(offset, true) === 0x02014b50) {
+      const nameLength = view.getUint16(offset + 28, true);
+      const name = new TextDecoder().decode(bytes.slice(offset + 46, offset + 46 + nameLength));
+      if (name === "books/notes/plan.md") view.setUint32(offset + 24, WORKSPACE_BACKUP_LIMITS.pageBytes + 1, true);
+      offset += 46 + nameLength + view.getUint16(offset + 30, true) + view.getUint16(offset + 32, true);
+    }
+    await expect(parseWorkspaceBackup(new Blob([new Uint8Array(bytes)]))).rejects.toMatchObject({ code: "limit_exceeded" });
+  });
+
   it("creates a schema-v1 ZIP and round-trips every included record", async () => {
     const blob = await createWorkspaceBackupBlob(input);
     const zip = await JSZip.loadAsync(blob);

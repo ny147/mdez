@@ -439,6 +439,12 @@ export async function restoreWorkspaceBackup(plan: WorkspaceRestorePlan): Promis
       ...existingDocuments.filter((document) => document.folderId === null).map((document) => document.order)
     ) + 1;
     const orderedBooks = [...plan.books].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+    const bookPositions = new Map(orderedBooks.map((book, index) => [book.id, index]));
+    const orderedPages = [...plan.parsed.pages].sort((left, right) => {
+      const leftBook = left.metadata.bookId === null ? orderedBooks.length : bookPositions.get(left.metadata.bookId) ?? orderedBooks.length;
+      const rightBook = right.metadata.bookId === null ? orderedBooks.length : bookPositions.get(right.metadata.bookId) ?? orderedBooks.length;
+      return leftBook - rightBook || left.metadata.order - right.metadata.order;
+    });
     const bookIds = new Map(orderedBooks.map((book) => [book.id, createId("folder")]));
     const retainedSources = plan.sources.filter((source) => source.action === "retain");
     const sourceIds = new Map(retainedSources.map((source) => [source.id, createId("github")]));
@@ -479,7 +485,7 @@ export async function restoreWorkspaceBackup(plan: WorkspaceRestorePlan): Promis
     nextOrders.set("unsorted", firstUnsortedOrder);
     for (const book of orderedBooks) nextOrders.set(book.id, 0);
     const pageIds = new Map<string, string>();
-    for (const page of plan.parsed.pages) {
+    for (const page of orderedPages) {
       const metadata = page.metadata;
       const folderId = metadata.bookId === null ? null : bookIds.get(metadata.bookId) ?? null;
       if (metadata.bookId !== null && !folderId) throw new Error("The restore plan has an invalid page book mapping.");
@@ -512,7 +518,7 @@ export async function restoreWorkspaceBackup(plan: WorkspaceRestorePlan): Promis
       bookCount: orderedBooks.length,
       pageCount: plan.parsed.pages.length,
       bookmarkCount: plan.parsed.manifest.bookmarks.length,
-      firstDocumentId: plan.parsed.pages[0] ? pageIds.get(plan.parsed.pages[0].metadata.id) ?? null : null
+      firstDocumentId: orderedPages[0] ? pageIds.get(orderedPages[0].metadata.id) ?? null : null
     };
   });
 }
