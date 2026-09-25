@@ -2,7 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function mode(page: Page, name: string) {
   const nav = page.locator((page.viewportSize()?.width ?? 1280) <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
-  await nav.getByRole("tab", { name, exact: true }).evaluate((element) => (element as HTMLElement).click());
+  const control = nav.getByRole("tab", { name, exact: true });
+  if ((await control.getAttribute("aria-selected")) !== "true") {
+    await control.evaluate((element) => (element as HTMLElement).click());
+  }
+  await expect(control).toHaveAttribute("aria-selected", "true");
 }
 
 test.beforeEach(async ({ page }) => {
@@ -50,6 +54,7 @@ test("keeps text size across modes and reloads with working limits and reset", a
   await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
   await page.getByLabel("Paste Markdown").fill("# Another page\n\nThe same reading preferences.");
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Another page");
   await mode(page, "Read");
   await expect(page.locator(".markdown-preview")).toHaveCSS("font-size", "12px");
 });
