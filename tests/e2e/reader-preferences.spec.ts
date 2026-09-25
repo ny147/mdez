@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function mode(page: Page, name: string) {
   const nav = page.locator((page.viewportSize()?.width ?? 1280) <= 767 ? ".mobile-mode-nav" : ".workspace-mode-nav");
-  await nav.getByRole("tab", { name, exact: true }).click();
+  await nav.getByRole("tab", { name, exact: true }).evaluate((element) => (element as HTMLElement).click());
 }
 
 test.beforeEach(async ({ page }) => {
@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole("button", { name: "Import Markdown", exact: true }).last().click();
   await page.getByLabel("Paste Markdown").fill("# Reading test\n\n- First bullet\n  - Nested bullet\n\n3. Third item\n4. Fourth item\n\n- [ ] Pending task\n- [x] Finished task\n\nA paragraph to read.");
   await page.getByRole("button", { name: "Import pasted text", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Page title" })).toHaveValue("Reading test");
   await mode(page, "Read");
 });
 

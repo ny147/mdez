@@ -22,7 +22,7 @@ To provide a friction-free markdown experience where users can organize, edit, a
     - **Edit:** Focused writing console with CodeMirror and syntax highlighting.
     - **Read:** High-readability preview with adjustable text size and a draggable reading-width handle on tablet and desktop.
     - **Split:** Simultaneous editing and reading with an adjustable separator and the same preview text-size controls. Text size, Read width, and Split position are saved independently across pages in the current browser, with a Reset action.
-- **Export & Portability:** Export a page as `.md` or an open book as `.zip` while preserving its nested structure and metadata.
+- **Export & Portability:** Export a page as `.md` or an open book as a partial `.zip`, and create a versioned full-library backup for complete Local Library recovery. Restore must validate and preview an archive before an atomic, additive import, preserve bookmarks, and never include or modify Key Groups, Shared Links, management tokens, or other secrets.
 
 ## Brand Personality
 **Playful, Precise, Calm.**
