@@ -817,7 +817,7 @@ export function MdezWorkspace() {
         onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); setActiveGroupId(groupId); }}
       />
       <GroupConflictDialog open={Boolean(persistConflict)} busy={conflictBusy} onReload={() => void reloadConflict()} onCopy={() => void copyConflict()} onClose={() => setPersistConflict(null)} />
-      {groupLibrary.group ? <GroupSettingsDialog open={isGroupSettingsOpen} group={groupLibrary.group} busy={groupSettingsBusy} onClose={() => setIsGroupSettingsOpen(false)} onRename={(name) => void renameActiveGroup(name)} onLeave={() => void leaveGroup()} onDelete={() => void deleteActiveGroup()} onRestore={() => void restoreActiveGroup()} /> : null}
+      {activeGroupId && groupLibrary.group?.id === activeGroupId ? <GroupSettingsDialog key={activeGroupId} open={isGroupSettingsOpen} group={groupLibrary.group} groupKey={rememberedGroups.find((group) => group.groupId === activeGroupId)?.key} busy={groupSettingsBusy} onClose={() => setIsGroupSettingsOpen(false)} onRename={(name) => void renameActiveGroup(name)} onLeave={() => void leaveGroup()} onDelete={() => void deleteActiveGroup()} onRestore={() => void restoreActiveGroup()} /> : null}
     </div>
   );
 

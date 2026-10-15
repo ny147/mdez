@@ -62,6 +62,8 @@ Sharing is optional and uses server storage:
 
 Raw management and group keys stay in the creator's or member's browser and are never stored in the database. Losing a key can permanently remove access or management capability.
 
+After creating or joining a Key Group, open **Group settings** in the Library shelf to reveal or copy this browser's remembered **Group key**. It is hidden by default and hidden again whenever you reopen settings. Anyone with the key can join and manage the group, so share it only with people you trust.
+
 ## Project guides
 
 - [Public GitHub import](docs/github-import.md) — supported repositories, safety limits, refresh behavior, and exclusions.
