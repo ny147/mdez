@@ -43,6 +43,31 @@ async function closeShelfDrawerIfAvailable(page: Page): Promise<void> { const cl
 async function createGroupFromLocalLibrary(page: Page, name: string): Promise<void> { await openShelfDrawerIfAvailable(page); await page.getByRole("button", { name: /Current workspace:/ }).click(); await page.getByRole("button", { name: "Create group" }).click(); await page.getByRole("textbox", { name: "Group name" }).fill(name); await page.getByRole("button", { name: "Create and copy Local Library" }).click(); await expect(page.getByLabel("Group key")).toHaveValue(/^mdez-group-/); }
 async function joinGroup(page: Page, key: string): Promise<void> { await openShelfDrawerIfAvailable(page); await page.getByRole("button", { name: /Current workspace:/ }).click(); await page.getByRole("button", { name: "Join group" }).click(); await page.getByLabel("Group key").fill(key); await page.getByRole("button", { name: "Join group", exact: true }).click(); await expect(page.getByRole("button", { name: "Current workspace: Writers" })).toBeVisible(); await closeShelfDrawerIfAvailable(page); }
 
+test("joined members can reveal their remembered group key after reload", async ({ page, context }, testInfo) => {
+  const model = await installKeyGroupApiModel(context);
+  model.key = "mdez-group-AAAAAAAAAAAAAAAAAAAAAA";
+  await reset(page);
+  await joinGroup(page, model.key);
+  await page.reload();
+  await openShelfDrawerIfAvailable(page);
+  await page.getByRole("button", { name: /Current workspace:/ }).click();
+  await page.getByRole("button", { name: "Writers", exact: true }).click();
+  await page.getByRole("button", { name: "Group settings", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Group settings" });
+  const keyInput = dialog.getByLabel("Group key", { exact: true });
+  await expect(keyInput).toHaveValue(model.key);
+  await expect(keyInput).toHaveAttribute("type", "password");
+  await dialog.getByRole("button", { name: "Show key" }).click();
+  await expect(keyInput).toHaveAttribute("type", "text");
+  await expect(keyInput).toHaveAttribute("readonly", "");
+  await page.screenshot({ path: testInfo.outputPath("group-key-settings.png") });
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await dialog.getByRole("button", { name: "Close group settings" }).click();
+  await page.getByRole("button", { name: "Group settings", exact: true }).click();
+  await expect(keyInput).toHaveAttribute("type", "password");
+  expect(page.url()).not.toContain(model.key);
+});
+
 test("two browsers join one key and share saved Markdown", async ({ browser }) => {
   test.setTimeout(60_000);
   const creatorContext = await browser.newContext(); const joinerContext = await browser.newContext(); const creator = await creatorContext.newPage(); const joiner = await joinerContext.newPage();
