@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 const PREVIEW_UNAVAILABLE_MESSAGE =
   "Sharing is unavailable in this preview. Your local library still works.";
 
-export function middleware() {
+export function proxy() {
   if (process.env.VERCEL_ENV === "preview") {
     return NextResponse.json(
       { error: PREVIEW_UNAVAILABLE_MESSAGE },

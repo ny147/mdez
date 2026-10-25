@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 const PREVIEW_MESSAGE = "Sharing is unavailable in this preview. Your local library still works.";
 
@@ -12,7 +12,7 @@ describe("preview sharing boundary", () => {
   it("rejects sharing requests in Vercel Preview before route handling", async () => {
     vi.stubEnv("VERCEL_ENV", "preview");
 
-    const response = middleware();
+    const response = proxy();
 
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -25,7 +25,7 @@ describe("preview sharing boundary", () => {
       if (environment === undefined) vi.stubEnv("VERCEL_ENV", undefined);
       else vi.stubEnv("VERCEL_ENV", environment);
 
-      const response = middleware();
+      const response = proxy();
 
       expect(response.status).toBe(200);
       expect(response.headers.get("x-middleware-next")).toBe("1");
