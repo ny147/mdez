@@ -16,6 +16,13 @@ Mdez is a local-first Markdown workspace for reading, editing, organizing, and s
 
 Mdez renders GitHub Flavored Markdown, syntax-highlighted code blocks, and KaTeX math.
 
+On desktop, drag the Library sidebar's right edge to widen or narrow it (240–480 px).
+You can also focus the divider and use Left/Right arrows or Home/End. Double-click
+the divider to restore its default width. Mdez remembers the width in this browser,
+including after you collapse and reopen the sidebar. The Library list scrolls
+independently; on short screens the panel also scrolls to keep its controls reachable.
+Tablet and mobile use the Library drawer at its usual width.
+
 Click the sun or moon button in the header to switch directly between **Light** and **Dark**. Mdez follows your device appearance until your first choice, then remembers that choice in this browser across workspaces and Quick Share pages. The icon and tooltip show which theme the next click will select. Dark mode uses a midnight blue palette with muted book covers. If browser storage is unavailable, theme switching still works for the current session.
 
 In Read and Split preview, use **A− / A+** to adjust reading text from 12–28 px.

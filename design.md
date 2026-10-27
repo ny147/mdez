@@ -17,7 +17,7 @@ Mdez opens into a calm, single-page writing library. Books are folders, pages ar
 - JetBrains Mono remains the editor/status/code face.
 - Reader prose uses Georgia for Latin glyphs with the existing Shippori Mincho multilingual fallback.
 - The canvas is near white, the fixed shelf is pale lavender, and semantic violet/teal/berry accents distinguish Edit, Read, and Shelf. Pink, lavender, cyan, and blue cover variants remain stable per book.
-- Desktop uses a 272px shelf, 80px header, 1240px content measure, and four cover columns when space permits.
+- Desktop defaults to a 272px shelf, resizable from 240–480px using its right-edge divider, with an 80px header, 1240px content measure, and four cover columns when space permits. Width is browser-local and survives collapse/reopen and reload; the header and content grid share it. Arrow keys adjust by 16px, Home/End select the bounds, and double-click restores 272px. Tablet/mobile retain the existing drawer width.
 - Tablet keeps the established 1023px drawer boundary. Mobile keeps the 767px bottom-navigation boundary and two cover columns.
 - Rules establish hierarchy; shadows are reserved for overlays and subtle book depth.
 
@@ -63,6 +63,7 @@ Dexie schema version 6 converts legacy nested books to top-level collections in 
 - Every compact mobile control meets the 44px target contract.
 - Expansion and the last non-Shelf mode are remembered separately per workspace. Opening a page from Shelf restores Edit, Read, or Split; page selection closes the mobile drawer while disclosure and menu actions leave it open.
 - Manual Library scrolling is independent of page selection. Explicit opens, creations, imports, and active-page moves issue a one-shot reveal request; passive refresh and typing do not snap the list.
+- The Library list retains at least 8rem of usable height. When fixed controls and the list cannot fit vertically, the sidebar content also scrolls so every control remains reachable.
 - Moving a page uses a searchable, focus-managed destination dialog. The current book is excluded, Unsorted is an explicit destination, and a failed move leaves the dialog and source state intact.
 - Escape dismisses only the innermost active Library menu, inline rename, or dialog before a later Escape may close the mobile drawer; focus returns to the initiating control.
 
