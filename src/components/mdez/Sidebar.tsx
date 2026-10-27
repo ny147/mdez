@@ -79,7 +79,7 @@ export function Sidebar({
       aria-hidden={isHidden}
       inert={isHidden}
     >
-      <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="sidebar-content flex h-full min-h-0 flex-col gap-3">
         <div className="flex items-center justify-between gap-3 lg:hidden">
           <strong className="font-display text-base text-ink">Library shelf</strong>
           <button type="button" onClick={onClose} aria-label="Close library shelf" className="workspace-icon-button">

@@ -17,7 +17,7 @@ export function WorkspaceSwitcher({ activeGroupId, groups, onSelect, onCreate, o
         <Users aria-hidden="true" className="h-4 w-4 shrink-0 text-accent" /><span className="truncate">{current}</span><ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0" />
       </button>
       {open ? (
-        <div className="floating-surface absolute left-0 top-11 z-40 w-64 space-y-1 p-2" aria-label="Workspaces">
+        <div className="floating-surface absolute left-0 top-11 z-40 w-64 max-w-full space-y-1 p-2" aria-label="Workspaces">
           <button type="button" onClick={() => choose(null)} className="w-full rounded px-3 py-2 text-left text-sm font-semibold hover:bg-panel">Local Library</button>
           {groups.map((group) => <button key={group.groupId} type="button" onClick={() => choose(group.groupId)} className="w-full truncate rounded px-3 py-2 text-left text-sm font-semibold hover:bg-panel">{group.name}</button>)}
           <div className="my-2 border-t border-border" />

@@ -194,6 +194,7 @@ a:focus-visible {
 
 .workspace-shell {
   --mode-accent: var(--color-shelf);
+  --sidebar-w: var(--sidebar-preferred-w, 17rem);
   display: grid;
   grid-template-rows: var(--topbar-h) minmax(0, 1fr) var(--status-h);
   width: 100vw;
@@ -364,13 +365,76 @@ a:focus-visible {
   opacity: 0;
 }
 
+.sidebar-content {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.sidebar-content > :not(.sidebar-library-scroll) {
+  flex-shrink: 0;
+}
+
+.sidebar-width-handle {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sidebar-w) - 6px);
+  display: grid;
+  width: 12px;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.sidebar-width-handle::before {
+  position: absolute;
+  inset: 0 5px;
+  content: "";
+  background: var(--color-rule);
+}
+
+.sidebar-width-handle svg {
+  position: relative;
+  width: 12px;
+  height: 28px;
+  border-radius: var(--radius-control);
+  background: var(--color-panel);
+}
+
+.sidebar-width-handle:hover::before,
+.sidebar-width-handle:focus-visible::before,
+.sidebar-width-handle[data-dragging="true"]::before {
+  background: var(--color-edit);
+}
+
+.sidebar-width-handle:focus-visible {
+  outline: 2px solid var(--color-edit);
+  outline-offset: -2px;
+}
+
+.workspace-content:has(.sidebar-width-handle[data-dragging="true"]) {
+  transition: none;
+  user-select: none;
+}
+
+@media (max-width: 1023px) {
+  .sidebar-width-handle { display: none; }
+}
+
 .sidebar-library-scroll {
   width: 100%;
   min-width: 0;
-  min-height: 0;
-  flex: 1;
+  min-height: 8rem;
+  flex: 1 0 8rem;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: var(--space-1);
 }
 

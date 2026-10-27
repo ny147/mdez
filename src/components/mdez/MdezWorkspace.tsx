@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import dynamic from "next/dynamic";
 import { BookOpen, Columns2, Library, Link2, Menu, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Settings } from "lucide-react";
 
@@ -11,6 +11,8 @@ import type { GitHubImportSession, GitHubSource } from "@/types/github";
 import { requestGitHubImportPreview } from "@/lib/github-import";
 import { downloadBlob, ExportControls } from "@/components/mdez/ExportControls";
 import { Sidebar } from "@/components/mdez/Sidebar";
+import { SidebarWidthHandle } from "@/components/mdez/SidebarWidthHandle";
+import { useSidebarWidth } from "@/hooks/useSidebarWidth";
 import { AnimatedBrandLogo } from "@/components/mdez/AnimatedBrandLogo";
 import { ShelfPane } from "@/components/mdez/ShelfPane";
 import { LibrarySearch } from "@/components/mdez/LibrarySearch";
@@ -96,6 +98,7 @@ function modeTabId(location: "desktop" | "mobile", mode: ViewMode) {
 }
 
 export function MdezWorkspace() {
+  const { width: sidebarWidth, updateWidth: updateSidebarWidth } = useSidebarWidth();
   const { preferences, updatePreferences, resetPreferences } = useReaderPreferences();
   const localLibrary = useWorkspaceLibrary();
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
@@ -603,6 +606,7 @@ export function MdezWorkspace() {
       data-testid="workspace-shell"
       data-mode={viewMode}
       data-sidebar={isSidebarVisible ? "visible" : "hidden"}
+      style={{ "--sidebar-preferred-w": `${sidebarWidth}px` } as CSSProperties}
     >
       <header className="workspace-topbar">
         <div className="workspace-brand">
@@ -639,6 +643,7 @@ export function MdezWorkspace() {
       </header>
 
       <section className="workspace-content" aria-label="Mdez workspace">
+        {!isTabletLayout && !sidebarIsHidden ? <SidebarWidthHandle width={sidebarWidth} onChange={updateSidebarWidth} /> : null}
         <Sidebar
           folders={library.folders}
           documents={liveDocuments}
