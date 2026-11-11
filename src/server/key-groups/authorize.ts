@@ -4,6 +4,7 @@ import { isValidGroupKey } from "@/lib/key-group";
 import { consumeRateLimit, type RateLimitDecision, type RateLimitRule } from "@/server/rate-limit";
 import { digestGroupKey } from "./secrets";
 import { KeyGroupError, type KeyGroupStore } from "./store";
+import { measureGroupPhase } from "./performance";
 
 export type GroupRateLimitConsumer = (rule: RateLimitRule) => Promise<RateLimitDecision>;
 
@@ -14,12 +15,12 @@ export type AuthorizeGroupDeps = {
 };
 
 async function rejectInvalid(deps: AuthorizeGroupDeps): Promise<never> {
-  const decision = await (deps.consumeRateLimit ?? consumeRateLimit)({
+  const decision = await measureGroupPhase("rate_limit", () => (deps.consumeRateLimit ?? consumeRateLimit)({
     scope: "key-group-invalid-key",
     identifier: deps.address,
     limit: 20,
     windowSeconds: 60,
-  });
+  }));
   throw new KeyGroupError(
     "INVALID_KEY",
     "Group key is invalid",
@@ -33,10 +34,12 @@ export async function authorizeGroupKey(
   deps: AuthorizeGroupDeps,
   expectedGroupId?: string,
 ): Promise<string> {
+  return measureGroupPhase("authorize", async () => {
   const candidate = key.trim();
   const matchedGroupId = await deps.store.findGroupIdByDigest(digestGroupKey(candidate));
   if (!isValidGroupKey(candidate) || !matchedGroupId || (expectedGroupId && matchedGroupId !== expectedGroupId)) {
     return rejectInvalid(deps);
   }
   return matchedGroupId;
+  });
 }

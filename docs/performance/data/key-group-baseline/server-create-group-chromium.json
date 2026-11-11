@@ -1,0 +1,1040 @@
+{
+  "environment": {
+    "commit": "505048de33c253bf9a344d3a15fcbbe4e8f3a6f8",
+    "browser": "148.0.7778.96",
+    "os": "win32",
+    "release": "10.0.26300",
+    "cpu": "AMD Ryzen 5 7500F 6-Core Processor             ",
+    "logicalCpus": 12,
+    "memoryBytes": 16817844224,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "project": "chromium",
+    "cpuThrottling": 1,
+    "network": {
+      "offline": false,
+      "latency": 0,
+      "downloadThroughput": -1,
+      "uploadThroughput": -1
+    },
+    "observedRttMs": 3.7999999998137355,
+    "seed": 36,
+    "fixture": "small",
+    "books": 3,
+    "pages": 10,
+    "bodyBytes": 20480,
+    "samplesPerRun": 3,
+    "runs": 3,
+    "excludedWarmupsPerRun": 1,
+    "diagnostic": true,
+    "paintBoundary": "two-animation-frame proxy; not validated presented-frame timing",
+    "mode": "server"
+  },
+  "records": [
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.3000000002794,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.09999999962747,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 63.200000000186265,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 77,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 77,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 76.90000000037253,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 60.5,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 77.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 62.799999999813735,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 63.200000000186265,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.8000000002794,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 63,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 79.20000000018626,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 61.8000000002794,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 62.60000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 62.299999999813735,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 61.60000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 1364,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    }
+  ],
+  "timelines": [
+    {
+      "sample": 0,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 24.14,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 234,
+          "decodedResponseBytes": null,
+          "transferBytes": 971,
+          "serverTiming": {
+            "total": {
+              "duration": 20.037,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.159,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 5.874,
+              "count": 1
+            },
+            "store": {
+              "duration": 13.745,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.127,
+              "count": 1
+            }
+          },
+          "requestId": "7ff42b28-7d5a-41aa-b94e-4250e919579b"
+        }
+      ]
+    },
+    {
+      "sample": 1,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 21.392,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 234,
+          "decodedResponseBytes": null,
+          "transferBytes": 971,
+          "serverTiming": {
+            "total": {
+              "duration": 17.357,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.139,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.206,
+              "count": 1
+            },
+            "store": {
+              "duration": 14.617,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.109,
+              "count": 1
+            }
+          },
+          "requestId": "c98f09e6-5052-4d83-96d0-f040d30804b5"
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 19.24,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 234,
+          "decodedResponseBytes": null,
+          "transferBytes": 971,
+          "serverTiming": {
+            "total": {
+              "duration": 15.294,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.01,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.203,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.719,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.106,
+              "count": 1
+            }
+          },
+          "requestId": "dd315af2-5401-4cdc-b475-301b44d81d52"
+        }
+      ]
+    },
+    {
+      "sample": 3,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 27.144,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 235,
+          "decodedResponseBytes": null,
+          "transferBytes": 972,
+          "serverTiming": {
+            "total": {
+              "duration": 22.384,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 3.205,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 3.617,
+              "count": 1
+            },
+            "store": {
+              "duration": 18.397,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.113,
+              "count": 1
+            }
+          },
+          "requestId": "1d44d706-dbfe-4a31-b538-0f247cf403c2"
+        }
+      ]
+    },
+    {
+      "sample": 4,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 26.602,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 235,
+          "decodedResponseBytes": null,
+          "transferBytes": 972,
+          "serverTiming": {
+            "total": {
+              "duration": 21.639,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.346,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 3.503,
+              "count": 1
+            },
+            "store": {
+              "duration": 17.778,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.133,
+              "count": 1
+            }
+          },
+          "requestId": "23420255-939b-438f-b7a0-a66c4554104c"
+        }
+      ]
+    },
+    {
+      "sample": 5,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 26.108,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 235,
+          "decodedResponseBytes": null,
+          "transferBytes": 972,
+          "serverTiming": {
+            "total": {
+              "duration": 21.14,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.393,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 5.742,
+              "count": 1
+            },
+            "store": {
+              "duration": 15.001,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.116,
+              "count": 1
+            }
+          },
+          "requestId": "2238fdec-4bd6-45a7-ad6c-ef1cac803a78"
+        }
+      ]
+    },
+    {
+      "sample": 6,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 18.836,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 235,
+          "decodedResponseBytes": null,
+          "transferBytes": 972,
+          "serverTiming": {
+            "total": {
+              "duration": 15.142,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.477,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.096,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.718,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.118,
+              "count": 1
+            }
+          },
+          "requestId": "5b09f0bd-845f-4f4e-86f6-7315c2b0b3ac"
+        }
+      ]
+    },
+    {
+      "sample": 7,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 19.718,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 235,
+          "decodedResponseBytes": null,
+          "transferBytes": 972,
+          "serverTiming": {
+            "total": {
+              "duration": 15.522,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.103,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.687,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.399,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.13,
+              "count": 1
+            }
+          },
+          "requestId": "54de5e44-ea79-437a-82b1-87abb0bd4f3e"
+        }
+      ]
+    },
+    {
+      "sample": 8,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 18.473,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 235,
+          "decodedResponseBytes": null,
+          "transferBytes": 972,
+          "serverTiming": {
+            "total": {
+              "duration": 15.039,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.242,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.372,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.342,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.106,
+              "count": 1
+            }
+          },
+          "requestId": "44895d4c-bad1-4d8b-a0aa-84aa45365881"
+        }
+      ]
+    },
+    {
+      "sample": 9,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 19.136,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 15.389,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 1.945,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.43,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.618,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.108,
+              "count": 1
+            }
+          },
+          "requestId": "b356abb1-199e-4baf-b339-ffcd3ec18525"
+        }
+      ]
+    },
+    {
+      "sample": 10,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 20.964,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 17.112,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 1.907,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 3.175,
+              "count": 1
+            },
+            "store": {
+              "duration": 13.574,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.127,
+              "count": 1
+            }
+          },
+          "requestId": "16aeb00d-b426-413e-93e8-23ec5c84c147"
+        }
+      ]
+    },
+    {
+      "sample": 11,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 18.464,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 14.815,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 1.948,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.347,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.127,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.098,
+              "count": 1
+            }
+          },
+          "requestId": "a728584e-6186-45d4-8252-cdd33f679f8c"
+        }
+      ]
+    },
+    {
+      "sample": 12,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 22.305,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 17.463,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.485,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 3.777,
+              "count": 1
+            },
+            "store": {
+              "duration": 13.213,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.16,
+              "count": 1
+            }
+          },
+          "requestId": "95448146-6edc-4100-96e5-23a1f3cf25c4"
+        }
+      ]
+    },
+    {
+      "sample": 13,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 19.366,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 15.195,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.192,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.402,
+              "count": 1
+            },
+            "store": {
+              "duration": 12.343,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.189,
+              "count": 1
+            }
+          },
+          "requestId": "f746ed8d-8792-4167-a244-80c606850491"
+        }
+      ]
+    },
+    {
+      "sample": 14,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 18.894,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 14.559,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.084,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.412,
+              "count": 1
+            },
+            "store": {
+              "duration": 11.783,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.109,
+              "count": 1
+            }
+          },
+          "requestId": "783d22e2-caca-4b81-b0a2-ce44f9b63a62"
+        }
+      ]
+    },
+    {
+      "sample": 15,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 18.908,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 14.528,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 1.948,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.469,
+              "count": 1
+            },
+            "store": {
+              "duration": 11.681,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.132,
+              "count": 1
+            }
+          },
+          "requestId": "8bf2e934-74be-4fc5-bd86-150127c7d07d"
+        }
+      ]
+    },
+    {
+      "sample": 16,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 18.844,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 14.687,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.116,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 2.606,
+              "count": 1
+            },
+            "store": {
+              "duration": 11.642,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.111,
+              "count": 1
+            }
+          },
+          "requestId": "ae84222f-7935-4101-b71e-c6adc00e9b68"
+        }
+      ]
+    },
+    {
+      "sample": 17,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 1062.413,
+          "status": 201,
+          "requestBytes": 95,
+          "responseBytes": 270,
+          "decodedResponseBytes": null,
+          "transferBytes": 1007,
+          "serverTiming": {
+            "total": {
+              "duration": 18.227,
+              "count": 1
+            },
+            "authorize": {
+              "duration": 2.328,
+              "count": 1
+            },
+            "rate_limit": {
+              "duration": 3.517,
+              "count": 1
+            },
+            "store": {
+              "duration": 14.288,
+              "count": 2
+            },
+            "serialize": {
+              "duration": 0.098,
+              "count": 1
+            }
+          },
+          "requestId": "6442a8e8-fcbc-4c62-86bf-308a2207009d"
+        }
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "unsorted",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 9,
+      "failures": 0,
+      "p50": 77,
+      "p95": 77.39999999990687
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "book",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 9,
+      "failures": 0,
+      "p50": 62.8000000002794,
+      "p95": 1364
+    }
+  ],
+  "provenance": {
+    "sourceSha256": "febf089296087813de07cb22576288169ab3dc9b8aba2498a25c210f2b79c005",
+    "workingTreeDirty": true,
+    "observedRttKind": "HEAD asset roundtrip including app processing"
+  }
+}

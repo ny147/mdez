@@ -97,6 +97,11 @@ The browser tests use Playwright. Install its Chromium runtime before the first 
 npx playwright install --with-deps chromium
 ```
 
+For opt-in synthetic Local versus Key Group diagnostics, see the
+[performance baseline and harness guide](docs/performance/key-group-baseline.md).
+Real-server profiling requires a disposable local test database and a production
+build; it is separate from the ordinary browser regression tests.
+
 ## Contributing
 
 Issues and pull requests are welcome. Keep changes focused, explain the user-facing behavior, and run the relevant checks above before opening a pull request. Changes to storage, imports, sharing, or deployment should also update the matching guide in `docs/`.

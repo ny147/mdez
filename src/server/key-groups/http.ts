@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { isValidGroupKey } from "@/lib/key-group";
 import { KeyGroupError } from "./store";
+import { measureGroupPhaseSync } from "./performance";
 
 const noStore = { "cache-control": "no-store" };
 
@@ -16,7 +17,7 @@ export function validEntityId(value: string): boolean {
 }
 
 export function groupJson(value: unknown, status = 200): NextResponse {
-  return NextResponse.json(value, { status, headers: noStore });
+  return measureGroupPhaseSync("serialize", () => NextResponse.json(value, { status, headers: noStore }));
 }
 
 export function groupError(error: unknown, fallback: string): NextResponse {

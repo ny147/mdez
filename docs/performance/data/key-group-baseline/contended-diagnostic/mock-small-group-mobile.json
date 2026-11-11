@@ -1,0 +1,655 @@
+{
+  "environment": {
+    "commit": "932a80d24ad757f1f9157366e333f363813d2b12",
+    "browser": "148.0.7778.96",
+    "os": "win32",
+    "release": "10.0.26300",
+    "cpu": "AMD Ryzen 5 7500F 6-Core Processor             ",
+    "logicalCpus": 12,
+    "memoryBytes": 16817844224,
+    "viewport": {
+      "width": 412,
+      "height": 839
+    },
+    "project": "mobile",
+    "cpuThrottling": 1,
+    "network": {
+      "offline": false,
+      "latency": 0,
+      "downloadThroughput": -1,
+      "uploadThroughput": -1
+    },
+    "observedRttMs": null,
+    "seed": 36,
+    "fixture": "small",
+    "books": 3,
+    "pages": 10,
+    "bodyBytes": 20480,
+    "samplesPerRun": 1,
+    "runs": 1,
+    "excludedWarmupsPerRun": 0,
+    "diagnostic": true,
+    "paintBoundary": "two-animation-frame proxy; not validated presented-frame timing",
+    "mode": "mock"
+  },
+  "records": [
+    {
+      "action": "cold-open",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 179.20000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "cached-reopen",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 127.29999999981374,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 92.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 79.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 79.60000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 2441.899999999907,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 94.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 2460,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 78.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.79999999981374,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "delete-active",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-inactive",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 79.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 703.1999999997206,
+      "feedbackMs": 653.5999999996275,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-book",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-book",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 76.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    }
+  ],
+  "timelines": [
+    {
+      "sample": 0,
+      "requests": [
+        {
+          "method": "GET",
+          "route": "/api/key-groups/:groupId",
+          "initiator": "initial-load",
+          "startMs": 0,
+          "endMs": 6.318,
+          "status": 200,
+          "requestBytes": 0,
+          "responseBytes": 23116,
+          "decodedResponseBytes": null,
+          "transferBytes": 23190,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 1,
+      "requests": [
+        {
+          "method": "GET",
+          "route": "/api/key-groups/:groupId",
+          "initiator": "initial-load",
+          "startMs": 0,
+          "endMs": 3.467,
+          "status": 200,
+          "requestBytes": 0,
+          "responseBytes": 23116,
+          "decodedResponseBytes": null,
+          "transferBytes": 23190,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "requests": []
+    },
+    {
+      "sample": 3,
+      "requests": []
+    },
+    {
+      "sample": 4,
+      "requests": []
+    },
+    {
+      "sample": 5,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "autosave",
+          "startMs": 0,
+          "endMs": 6.033,
+          "status": 200,
+          "requestBytes": 2117,
+          "responseBytes": 2256,
+          "decodedResponseBytes": null,
+          "transferBytes": 2329,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 6,
+      "requests": []
+    },
+    {
+      "sample": 7,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "autosave",
+          "startMs": 0,
+          "endMs": 4.309,
+          "status": 200,
+          "requestBytes": 55,
+          "responseBytes": 194,
+          "decodedResponseBytes": null,
+          "transferBytes": 266,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 8,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.471,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 196,
+          "decodedResponseBytes": null,
+          "transferBytes": 273,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 9,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 4.792,
+          "status": 201,
+          "requestBytes": 65,
+          "responseBytes": 200,
+          "decodedResponseBytes": null,
+          "transferBytes": 277,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 10,
+      "requests": [
+        {
+          "method": "DELETE",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 4.703,
+          "status": 200,
+          "requestBytes": 21,
+          "responseBytes": 10,
+          "decodedResponseBytes": null,
+          "transferBytes": 81,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 11,
+      "requests": [
+        {
+          "method": "DELETE",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.932,
+          "status": 200,
+          "requestBytes": 21,
+          "responseBytes": 10,
+          "decodedResponseBytes": null,
+          "transferBytes": 81,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 12,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "unknown",
+          "startMs": 0,
+          "endMs": 4.437,
+          "status": 200,
+          "requestBytes": 41,
+          "responseBytes": 2235,
+          "decodedResponseBytes": null,
+          "transferBytes": 2308,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 13,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/folders/:folderId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.292,
+          "status": 200,
+          "requestBytes": 45,
+          "responseBytes": 167,
+          "decodedResponseBytes": null,
+          "transferBytes": 239,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 14,
+      "requests": [
+        {
+          "method": "DELETE",
+          "route": "/api/key-groups/:groupId/folders/:folderId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 5.657,
+          "status": 200,
+          "requestBytes": 21,
+          "responseBytes": 10,
+          "decodedResponseBytes": null,
+          "transferBytes": 81,
+          "serverTiming": {},
+          "requestId": null
+        },
+        {
+          "method": "GET",
+          "route": "/api/key-groups/:groupId",
+          "initiator": "unknown",
+          "startMs": 0,
+          "endMs": 3.4,
+          "status": 200,
+          "requestBytes": 0,
+          "responseBytes": 22938,
+          "decodedResponseBytes": null,
+          "transferBytes": 23012,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "action": "cold-open",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 179.20000000018626,
+      "p95": 179.20000000018626
+    },
+    {
+      "action": "cached-reopen",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 127.29999999981374,
+      "p95": 127.29999999981374
+    },
+    {
+      "action": "switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 92.10000000009313,
+      "p95": 92.10000000009313
+    },
+    {
+      "action": "switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 79.10000000009313,
+      "p95": 79.10000000009313
+    },
+    {
+      "action": "switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 79.60000000009313,
+      "p95": 79.60000000009313
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 2441.899999999907,
+      "p95": 2441.899999999907
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 94.89999999990687,
+      "p95": 94.89999999990687
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 2460,
+      "p95": 2460
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "unsorted",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 78.89999999990687,
+      "p95": 78.89999999990687
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "book",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 77.79999999981374,
+      "p95": 77.79999999981374
+    },
+    {
+      "action": "delete-active",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 77.39999999990687,
+      "p95": 77.39999999990687
+    },
+    {
+      "action": "delete-inactive",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 79.10000000009313,
+      "p95": 79.10000000009313
+    },
+    {
+      "action": "rename-page",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 703.1999999997206,
+      "p95": 703.1999999997206
+    },
+    {
+      "action": "rename-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 77.89999999990687,
+      "p95": 77.89999999990687
+    },
+    {
+      "action": "delete-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": 3,
+      "count": 1,
+      "failures": 0,
+      "p50": 76.10000000009313,
+      "p95": 76.10000000009313
+    }
+  ]
+}
