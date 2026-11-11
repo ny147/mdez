@@ -1,4 +1,4 @@
-                                                              QUERY PLAN                                                               
+                                                              QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------------------------------
  Index Scan using key_groups_key_digest_key on key_groups  (cost=0.15..8.17 rows=1 width=56) (actual time=0.027..0.027 rows=0 loops=1)
    Index Cond: (key_digest = '\x0000000000000000000000000000000000000000000000000000000000000000'::bytea)
@@ -9,7 +9,7 @@
  Execution Time: 0.064 ms
 (7 rows)
 
-                                                      QUERY PLAN                                                      
+                                                      QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------
  Sort  (cost=1.48..1.51 rows=10 width=31) (actual time=0.099..0.100 rows=10 loops=1)
    Sort Key: group_documents.sort_order, group_documents.id
@@ -31,7 +31,7 @@
 (17 rows)
 
 BEGIN
-                                                                       QUERY PLAN                                                                       
+                                                                       QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------------------------------------------
  Update on group_documents  (cost=1.38..2.65 rows=0 width=0) (actual time=3.251..3.252 rows=0 loops=1)
    Buffers: shared hit=71 dirtied=1
