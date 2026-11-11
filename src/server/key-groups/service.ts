@@ -6,17 +6,18 @@ import type { GroupSnapshot } from "@/types/key-group";
 import { authorizeGroupKey, type AuthorizeGroupDeps } from "./authorize";
 import { digestGroupKey } from "./secrets";
 import { KeyGroupError } from "./store";
+import { measureGroupPhase } from "./performance";
 
 type ServiceDeps = AuthorizeGroupDeps & { groupId?: string };
 
 export async function createGroupService(input: unknown, deps: ServiceDeps): Promise<GroupSnapshot> {
   const valid = validateLocalGroupCreation(input);
-  const decision = await (deps.consumeRateLimit ?? consumeRateLimit)({
+  const decision = await measureGroupPhase("rate_limit", () => (deps.consumeRateLimit ?? consumeRateLimit)({
     scope: "key-group-create",
     identifier: deps.address,
     limit: 5,
     windowSeconds: 60 * 60,
-  });
+  }));
   if (!decision.allowed) {
     throw new KeyGroupError("LIMIT_EXCEEDED", "Too many groups created", undefined, decision.retryAfterSeconds);
   }

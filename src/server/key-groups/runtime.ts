@@ -7,6 +7,7 @@ import { authorizeGroupKey } from "./authorize";
 import { PostgresKeyGroupStore } from "./postgres-store";
 import { createGroupService, getGroupSnapshotService, joinGroupService } from "./service";
 import { KeyGroupError } from "./store";
+import { measureGroupPhase } from "./performance";
 
 function store() { return new PostgresKeyGroupStore(getDatabase()); }
 
@@ -18,7 +19,7 @@ async function authorized(groupId: string, key: string, address: string) {
 
 async function mutationStore(groupId: string, key: string, address: string) {
   const groupStore = await authorized(groupId, key, address);
-  const decision = await consumeRateLimit({ scope: "key-group-mutation", identifier: groupId, limit: 120, windowSeconds: 60 });
+  const decision = await measureGroupPhase("rate_limit", () => consumeRateLimit({ scope: "key-group-mutation", identifier: groupId, limit: 120, windowSeconds: 60 }));
   if (!decision.allowed) throw new KeyGroupError("LIMIT_EXCEEDED", "Too many requests", undefined, decision.retryAfterSeconds);
   return groupStore;
 }
