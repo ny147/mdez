@@ -3,10 +3,22 @@ import { UNSORTED_COLLECTION_ID } from "@/lib/library-tree";
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 const key = (workspaceId: string) => `mdez-library-expanded:${workspaceId}`;
 const modeKey = (workspaceId: string) => `mdez-last-content-mode:${workspaceId}`;
+const activeGroupKey = "mdez-active-group";
 
 function availableStorage(storage?: StorageLike): StorageLike | null {
   if (storage) return storage;
   try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; }
+}
+
+export function loadActiveGroupId(rememberedGroupIds: ReadonlySet<string>, storage?: StorageLike): string | null {
+  try {
+    const value = availableStorage(storage)?.getItem(activeGroupKey) ?? null;
+    return value !== null && rememberedGroupIds.has(value) ? value : null;
+  } catch { return null; }
+}
+
+export function saveActiveGroupId(groupId: string | null, storage?: StorageLike) {
+  try { availableStorage(storage)?.setItem(activeGroupKey, groupId ?? ""); } catch { /* Keep workspace switching available in memory. */ }
 }
 
 export function loadExpandedCollection(workspaceId: string, validBookIds: ReadonlySet<string>, storage?: StorageLike): string | null {

@@ -38,7 +38,7 @@ import { GroupSettingsDialog } from "@/components/mdez/GroupSettingsDialog";
 import { selectLibraryView, type LibraryFilter } from "@/lib/library-view";
 import { usePageBookmarks } from "@/hooks/usePageBookmarks";
 import { useWorkspaceResume } from "@/hooks/useWorkspaceResume";
-import { loadLastContentMode, saveLastContentMode } from "@/lib/workspace-ui-preferences";
+import { loadActiveGroupId, saveActiveGroupId, loadLastContentMode, saveLastContentMode } from "@/lib/workspace-ui-preferences";
 import { listBookmarks } from "@/lib/page-bookmarks";
 import { createWorkspaceBackupBlob, parseWorkspaceBackup } from "@/lib/workspace-backup";
 import { createWorkspaceRestorePlan } from "@/lib/workspace-restore-plan";
@@ -102,6 +102,12 @@ export function MdezWorkspace() {
   const { preferences, updatePreferences, resetPreferences } = useReaderPreferences();
   const localLibrary = useWorkspaceLibrary();
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const workspaceSelectedRef = useRef(false);
+  function selectWorkspace(groupId: string | null) {
+    workspaceSelectedRef.current = true;
+    saveActiveGroupId(groupId);
+    setActiveGroupId(groupId);
+  }
   const groupLibrary = useKeyGroupLibrary(activeGroupId);
   const library = activeGroupId ? groupLibrary : localLibrary;
   const [rememberedGroups, setRememberedGroups] = useState<RememberedGroup[]>([]);
@@ -133,7 +139,20 @@ export function MdezWorkspace() {
   const bookmarkMetadata = usePageBookmarks(workspaceId);
   const resumeMetadata = useWorkspaceResume(workspaceId);
   const reloadRememberedGroups = () => loadRememberedGroups().then(setRememberedGroups);
-  useEffect(() => { void reloadRememberedGroups(); }, []);
+  useEffect(() => {
+    let alive = true;
+    void loadRememberedGroups().then((groups) => {
+      if (!alive) return;
+      setRememberedGroups(groups);
+      // A choice made while IndexedDB loads takes precedence over restoration.
+      if (!workspaceSelectedRef.current) {
+        setActiveGroupId(loadActiveGroupId(new Set(groups.map((group) => group.groupId))));
+      }
+    }).catch(() => {
+      if (alive) setOperationStatus({ message: "Remembered workspaces could not be loaded", state: "error" });
+    });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     setLibraryFilter("all");
     setLibraryQuery("");
@@ -240,7 +259,7 @@ export function MdezWorkspace() {
 
   async function leaveGroup() {
     if (!activeGroupId) return; setGroupSettingsBusy(true);
-    try { await forgetGroup(activeGroupId); setActiveGroupId(null); setIsGroupSettingsOpen(false); await reloadRememberedGroups(); }
+    try { await forgetGroup(activeGroupId); selectWorkspace(null); setIsGroupSettingsOpen(false); await reloadRememberedGroups(); }
     finally { setGroupSettingsBusy(false); }
   }
   async function renameActiveGroup(name: string) { setGroupSettingsBusy(true); try { await groupLibrary.renameGroup?.(name); await reloadRememberedGroups(); } finally { setGroupSettingsBusy(false); } }
@@ -403,7 +422,7 @@ export function MdezWorkspace() {
       throw error;
     }
 
-    setActiveGroupId(null);
+    selectWorkspace(null);
     let contentRefreshFailed = false;
     try {
       await localLibrary.refreshContent(result.firstDocumentId);
@@ -674,7 +693,7 @@ export function MdezWorkspace() {
           onSelectFilter={handleLibraryFilter}
           workspaceControls={(
             <div className="sidebar-workspace-menu">
-              <WorkspaceSwitcher activeGroupId={activeGroupId} groups={rememberedGroups} onSelect={setActiveGroupId} onCreate={() => setIsCreateGroupOpen(true)} onJoin={() => setIsJoinGroupOpen(true)} />
+              <WorkspaceSwitcher activeGroupId={activeGroupId} groups={rememberedGroups} onSelect={selectWorkspace} onCreate={() => setIsCreateGroupOpen(true)} onJoin={() => setIsJoinGroupOpen(true)} />
               <div className="sidebar-workspace-actions">
                 {activeGroupId ? <button type="button" onClick={() => void groupLibrary.refresh?.()} aria-label="Refresh group" title="Refresh group"><RefreshCw aria-hidden="true" /></button> : null}
                 {activeGroupId ? <button type="button" onClick={() => setIsGroupSettingsOpen(true)} aria-label="Group settings" title="Group settings"><Settings aria-hidden="true" /></button> : null}
@@ -814,12 +833,12 @@ export function MdezWorkspace() {
         folders={localLibrary.folders}
         documents={localLibrary.documents}
         onClose={() => setIsCreateGroupOpen(false)}
-        onCreated={(groupId) => { void reloadRememberedGroups(); setActiveGroupId(groupId); }}
+        onCreated={(groupId) => { void reloadRememberedGroups(); selectWorkspace(groupId); }}
       />
       <JoinGroupDialog
         open={isJoinGroupOpen}
         onClose={() => setIsJoinGroupOpen(false)}
-        onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); setActiveGroupId(groupId); }}
+        onJoined={(groupId) => { void reloadRememberedGroups(); setIsJoinGroupOpen(false); selectWorkspace(groupId); }}
       />
       <GroupConflictDialog open={Boolean(persistConflict)} busy={conflictBusy} onReload={() => void reloadConflict()} onCopy={() => void copyConflict()} onClose={() => setPersistConflict(null)} />
       {activeGroupId && groupLibrary.group?.id === activeGroupId ? <GroupSettingsDialog key={activeGroupId} open={isGroupSettingsOpen} group={groupLibrary.group} groupKey={rememberedGroups.find((group) => group.groupId === activeGroupId)?.key} busy={groupSettingsBusy} onClose={() => setIsGroupSettingsOpen(false)} onRename={(name) => void renameActiveGroup(name)} onLeave={() => void leaveGroup()} onDelete={() => void deleteActiveGroup()} onRestore={() => void restoreActiveGroup()} /> : null}

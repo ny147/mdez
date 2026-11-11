@@ -62,8 +62,7 @@ test("joined members can reveal their remembered group key after reload", async 
   await joinGroup(page, model.key);
   await page.reload();
   await openShelfDrawerIfAvailable(page);
-  await page.getByRole("button", { name: /Current workspace:/ }).click();
-  await page.getByRole("button", { name: "Writers", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Current workspace: Writers" })).toBeVisible();
   await page.getByRole("button", { name: "Group settings", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Group settings" });
   const keyInput = dialog.getByLabel("Group key", { exact: true });
@@ -78,6 +77,37 @@ test("joined members can reveal their remembered group key after reload", async 
   await page.getByRole("button", { name: "Group settings", exact: true }).click();
   await expect(keyInput).toHaveAttribute("type", "password");
   expect(page.url()).not.toContain(model.key);
+});
+
+test("refresh preserves an explicit switch back to Local Library", async ({ page, context }) => {
+  const model = await installKeyGroupApiModel(context);
+  model.key = "mdez-group-AAAAAAAAAAAAAAAAAAAAAA";
+  await reset(page);
+  await joinGroup(page, model.key);
+  await openShelfDrawerIfAvailable(page);
+  await page.getByRole("button", { name: "Current workspace: Writers" }).click();
+  await page.getByRole("button", { name: "Local Library", exact: true }).click();
+  await page.reload();
+  await openShelfDrawerIfAvailable(page);
+  await expect(page.getByRole("button", { name: "Current workspace: Local Library" })).toBeVisible();
+  await page.getByRole("button", { name: "Current workspace: Local Library" }).click();
+  await expect(page.getByRole("button", { name: "Writers", exact: true })).toBeVisible();
+});
+
+test("leaving a group keeps Local Library selected after refresh", async ({ page, context }) => {
+  const model = await installKeyGroupApiModel(context);
+  model.key = "mdez-group-AAAAAAAAAAAAAAAAAAAAAA";
+  await reset(page);
+  await joinGroup(page, model.key);
+  await openShelfDrawerIfAvailable(page);
+  await page.getByRole("button", { name: "Group settings", exact: true }).click();
+  await page.getByRole("button", { name: "Leave group on this browser", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Current workspace: Local Library" })).toBeVisible();
+  await page.reload();
+  await openShelfDrawerIfAvailable(page);
+  await expect(page.getByRole("button", { name: "Current workspace: Local Library" })).toBeVisible();
+  await page.getByRole("button", { name: "Current workspace: Local Library" }).click();
+  await expect(page.getByRole("button", { name: "Writers", exact: true })).toHaveCount(0);
 });
 
 test("two browsers join one key and share saved Markdown", async ({ browser }) => {

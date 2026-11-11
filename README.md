@@ -69,6 +69,8 @@ Sharing is optional and uses server storage:
 
 Raw management and group keys stay in the creator's or member's browser and are never stored in the database. Losing a key can permanently remove access or management capability.
 
+Mdez remembers your selected workspace in this browser. Refreshing reopens the selected Key Group; choosing Local Library or leaving the group keeps you in Local Library after refresh. If the selected group is no longer remembered, Mdez opens Local Library.
+
 After creating or joining a Key Group, open **Group settings** in the Library shelf to reveal or copy this browser's remembered **Group key**. It is hidden by default and hidden again whenever you reopen settings. Anyone with the key can join and manage the group, so share it only with people you trust.
 
 ## Project guides
