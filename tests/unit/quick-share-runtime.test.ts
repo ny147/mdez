@@ -13,7 +13,9 @@ const { store } = vi.hoisted(() => ({ store: { name: "postgres-store" } }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/database", () => ({ getDatabase: vi.fn(() => ({ name: "database" })) }));
 vi.mock("@/server/quick-shares/postgres-store", () => ({
-  PostgresQuickShareStore: vi.fn(() => store)
+  PostgresQuickShareStore: vi.fn(function () {
+    return store;
+  })
 }));
 vi.mock("@/server/rate-limit", () => ({
   consumeRateLimit: vi.fn(),
