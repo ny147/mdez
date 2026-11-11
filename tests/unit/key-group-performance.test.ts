@@ -12,6 +12,7 @@ describe("performance fixtures", () => {
       expect(snapshot.documents).toHaveLength(pages);
       expect(new Set(snapshot.documents.map((item) => item.id)).size).toBe(pages);
       expect(snapshot.folders.every((item) => item.parentId === null)).toBe(true);
+      expect(snapshot.folders.every((book) => snapshot.documents.some((page) => page.folderId === book.id))).toBe(size === "single-page-limit" ? false : true);
       const ids = new Set(snapshot.folders.map((item) => item.id));
       let total = 0;
       for (const document of snapshot.documents) {
@@ -24,6 +25,11 @@ describe("performance fixtures", () => {
       expect(total).toBeLessThan(GROUP_LIMITS.totalBytes);
     });
   }
+  it("distinguishes page bodies so selection assertions can catch stale content", () => {
+    const fixture = buildPerformanceFixture("small");
+    expect(fixture.documents[5].body).toContain("# Synthetic page 5\n");
+    expect(fixture.documents[0].body).not.toBe(fixture.documents[5].body);
+  });
 });
 
 it("calculates immutable nearest-rank percentiles and rejects invalid durations", () => {

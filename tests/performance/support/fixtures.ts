@@ -14,11 +14,15 @@ const markdown = "# Synthetic page\n\nDeterministic performance content.\n\n| A 
 export function buildPerformanceFixture(size: FixtureSize): GroupSnapshot {
   const [books, pages, bytes] = fixtureSizes[size];
   const folders = Array.from({ length: books }, (_, index) => ({ id: `book-${index}`, parentId: null, name: `Book ${index}`, order: index, version: 1, groupRevision: 0, createdAt: timestamp, updatedAt: timestamp }));
-  const body = markdown + "x".repeat(bytes - new TextEncoder().encode(markdown).length);
   return {
     group: { id: "g1", name: "Performance library", revision: 0, deletedAt: null, purgeAfter: null, createdAt: timestamp, updatedAt: timestamp },
     folders,
-    documents: Array.from({ length: pages }, (_, index) => ({ id: `page-${index}`, folderId: index % 5 === 0 ? null : folders[index % books].id, title: `Page ${index}`, body, order: index, version: 1, groupRevision: 0, createdAt: timestamp, updatedAt: timestamp })),
+    documents: Array.from({ length: pages }, (_, index) => {
+      const content = markdown.replace("# Synthetic page\n", `# Synthetic page ${index}\n`);
+      const body = content + "x".repeat(bytes - new TextEncoder().encode(content).length);
+      const bookIndex = (index - Math.floor(index / 5) - 1) % books;
+      return { id: `page-${index}`, folderId: index % 5 === 0 ? null : folders[bookIndex].id, title: `Page ${index}`, body, order: index, version: 1, groupRevision: 0, createdAt: timestamp, updatedAt: timestamp };
+    }),
   };
 }
 

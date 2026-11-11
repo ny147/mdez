@@ -11,7 +11,7 @@ export const initiators = ["navigation", "mutation", "autosave", "initial-load",
 export type RequestSample = {
   method: "GET" | "POST" | "PATCH" | "DELETE" | "OTHER";
   route: string; initiator: typeof initiators[number]; startMs: number; endMs: number | null;
-  status: number | null; requestBytes: number | null; responseBytes: number | null; transferBytes: number | null;
+  status: number | null; requestBytes: number | null; responseBytes: number | null; decodedResponseBytes: number | null; transferBytes: number | null;
   serverTiming: Partial<Record<"total" | "authorize" | "rate_limit" | "store" | "serialize", { duration: number; count: number }>>;
   requestId: string | null;
 };

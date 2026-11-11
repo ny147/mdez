@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:performance": "playwright test --config playwright.performance.config.ts",
     "test:postgres": "vitest run --config vitest.postgres.config.ts"
   },
   "dependencies": {

@@ -1,40 +1,52 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import type { GroupChange, GroupSnapshot } from "../../src/types/key-group";
+import { expect, test, type Page } from "@playwright/test";
+import { installKeyGroupApiModel } from "./support/key-group-api-model";
+import { buildPerformanceFixture } from "../performance/support/fixtures";
+import { closeShelf, measureAction, openShelf, seedLibrary, selectGroup, visibleTab } from "../performance/support/browser";
 
-type KeyGroupApiModel = { revision: number; snapshot: GroupSnapshot; key: string; deletedAt: string | null };
-const logs = new WeakMap<KeyGroupApiModel, GroupChange[]>();
-const timestamp = "2026-08-09T00:00:00.000Z";
+test("loaded page selection and confirmed page mutations avoid snapshot requests", async ({ page, context }) => {
+  const snapshot = buildPerformanceFixture("small");
+  const model = await installKeyGroupApiModel(context);
+  model.snapshot = snapshot; model.key = "mdez-group-AAAAAAAAAAAAAAAAAAAAAA";
+  await seedLibrary(page, snapshot, "group"); await selectGroup(page);
+  await openShelf(page);
+  await page.getByRole("button", { name: "Expand Unsorted pages", exact: true }).click();
+  await page.getByRole("button", { name: "Open Page 0", exact: true }).first().click();
+  await closeShelf(page); await visibleTab(page, "Edit"); await openShelf(page);
+  const switched = await measureAction(page, { action: "switch", initiator: "navigation" },
+    () => page.getByRole("button", { name: "Open Page 5", exact: true }).first().click(),
+    async () => { await closeShelf(page); await expect(page.getByRole("textbox", { name: "Page title", exact: true })).toHaveValue("Page 5"); });
+  expect(switched.requests).toHaveLength(0);
+  await openShelf(page);
+  const created = await measureAction(page, { action: "create-page", initiator: "mutation" },
+    () => page.getByRole("button", { name: "Add page to Unsorted", exact: true }).click(),
+    async () => { await closeShelf(page); await expect(page.getByRole("textbox", { name: "Page title", exact: true })).toHaveValue("untitled.md"); });
+  expect(created.requests.filter((item) => item.method === "POST")).toHaveLength(1);
+  expect(created.requests.filter((item) => item.method === "GET")).toHaveLength(0);
+  await openShelf(page);
+  await page.getByRole("button", { name: "Manage untitled.md", exact: true }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  const deleted = await measureAction(page, { action: "delete-active", initiator: "mutation" },
+    () => page.getByRole("menuitem", { name: "Delete page", exact: true }).click(),
+    () => expect(page.getByRole("button", { name: "Manage untitled.md", exact: true })).toHaveCount(0));
+  expect(deleted.requests.filter((item) => item.method === "DELETE")).toHaveLength(1);
+  expect(deleted.requests.filter((item) => item.method === "GET")).toHaveLength(0);
+  expect(model.snapshot.documents).toHaveLength(10);
+});
 
-async function installKeyGroupApiModel(context: BrowserContext, model?: KeyGroupApiModel): Promise<KeyGroupApiModel> {
-  const shared = model ?? { revision: 0, key: "", deletedAt: null, snapshot: { group: { id: "g1", name: "Writers", revision: 0, deletedAt: null, purgeAfter: null, createdAt: timestamp, updatedAt: timestamp }, folders: [], documents: [] } };
-  if (!logs.has(shared)) logs.set(shared, []);
-  await context.route("**/api/key-groups**", async (route) => {
-    const request = route.request(); const url = new URL(request.url()); const path = url.pathname; const key = request.headers()["x-mdez-group-key"] ?? "";
-    if (path === "/api/key-groups" && request.method() === "POST") {
-      shared.key = key; const input = request.postDataJSON() as { name: string; folders: Array<{ clientId: string; parentClientId: string | null; name: string; order: number; createdAt: string; updatedAt: string }>; documents: Array<{ clientId: string; folderClientId: string | null; title: string; body: string; order: number; createdAt: string; updatedAt: string }> };
-      shared.snapshot = { group: { ...shared.snapshot.group, name: input.name }, folders: input.folders.map((item) => ({ id: item.clientId, parentId: item.parentClientId, name: item.name, order: item.order, version: 1, groupRevision: 0, createdAt: item.createdAt, updatedAt: item.updatedAt })), documents: input.documents.map((item) => ({ id: item.clientId, folderId: item.folderClientId, title: item.title, body: item.body, order: item.order, version: 1, groupRevision: 0, createdAt: item.createdAt, updatedAt: item.updatedAt })) };
-      return route.fulfill({ status: 201, json: shared.snapshot });
-    }
-    if (!shared.key || key !== shared.key) return route.fulfill({ status: 401, json: { error: "Group key is invalid" } });
-    if (path === "/api/key-groups/join" && request.method() === "POST") return route.fulfill({ status: 200, json: shared.snapshot });
-    if (path.endsWith("/changes") && request.method() === "GET") {
-      const after = Number(url.searchParams.get("after") ?? 0); const changes = (logs.get(shared) ?? []).filter((entry) => entry.revision > after); const changedIds = new Set(changes.filter((entry) => entry.entityType === "document" && entry.operation !== "delete").map((entry) => entry.entityId));
-      return route.fulfill({ status: 200, json: { status: "changes", revision: shared.revision, changes, records: { group: null, folders: [], documents: shared.snapshot.documents.filter((item) => changedIds.has(item.id)) } } });
-    }
-    const documentMatch = path.match(/\/documents\/([^/]+)$/);
-    if (documentMatch && request.method() === "PATCH") {
-      const id = decodeURIComponent(documentMatch[1]); const input = request.postDataJSON() as { body?: string; title?: string; expectedVersion: number }; const current = shared.snapshot.documents.find((item) => item.id === id);
-      if (!current) return route.fulfill({ status: 404, json: { error: "Not found" } });
-      if (current.version !== input.expectedVersion) return route.fulfill({ status: 409, json: { error: "VERSION_CONFLICT", conflict: { entityType: "document", entityId: id, expectedVersion: input.expectedVersion, currentVersion: current.version } } });
-      shared.revision += 1; Object.assign(current, { body: input.body ?? current.body, title: input.title ?? current.title, version: current.version + 1, groupRevision: shared.revision, updatedAt: timestamp }); shared.snapshot.group.revision = shared.revision;
-      logs.get(shared)!.push({ revision: shared.revision, entityType: "document", entityId: id, operation: "update", changedAt: timestamp });
-      return route.fulfill({ status: 200, json: current });
-    }
-    if (path === "/api/key-groups/g1" && request.method() === "GET") return route.fulfill({ status: 200, json: shared.snapshot });
-    return route.fulfill({ status: 404, json: { error: "Not found" } });
-  });
-  return shared;
-}
+test("book deletion refreshes authoritative moved page versions", async ({ page, context }) => {
+  const snapshot = buildPerformanceFixture("small");
+  const model = await installKeyGroupApiModel(context);
+  model.snapshot = snapshot; model.key = "mdez-group-AAAAAAAAAAAAAAAAAAAAAA";
+  await seedLibrary(page, snapshot, "group"); await selectGroup(page); await openShelf(page);
+  await page.getByRole("button", { name: "Manage Book 0", exact: true }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  const result = await measureAction(page, { action: "delete-book", initiator: "mutation" },
+    () => page.getByRole("menuitem", { name: "Delete book", exact: true }).click(),
+    () => expect(page.getByRole("button", { name: "Open Book 0 book", exact: true })).toHaveCount(0));
+  expect(result.requests.filter((item) => item.method === "GET" && item.route === "/api/key-groups/:groupId")).toHaveLength(1);
+  expect(model.snapshot.documents).toHaveLength(10);
+  expect(model.snapshot.documents.filter((item) => item.version === 2).every((item) => item.folderId === null)).toBe(true);
+});
 
 async function reset(page: Page) { await page.goto("/icon.svg"); await page.evaluate(() => new Promise<void>((resolve, reject) => { const request = indexedDB.deleteDatabase("mdez"); request.onsuccess = () => resolve(); request.onerror = () => reject(request.error); })); await page.goto("/"); await expect(page.getByRole("heading", { name: "A little space for big ideas." })).toBeVisible(); }
 async function clickVisibleTab(page: Page, name: string) { const tabs = page.getByRole("tab", { name, exact: true }); for (let index = 0; index < await tabs.count(); index += 1) { if (await tabs.nth(index).isVisible()) { await tabs.nth(index).click(); return; } } }
