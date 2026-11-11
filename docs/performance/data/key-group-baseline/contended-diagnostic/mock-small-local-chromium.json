@@ -1,0 +1,435 @@
+{
+  "environment": {
+    "commit": "932a80d24ad757f1f9157366e333f363813d2b12",
+    "browser": "148.0.7778.96",
+    "os": "win32",
+    "release": "10.0.26300",
+    "cpu": "AMD Ryzen 5 7500F 6-Core Processor             ",
+    "logicalCpus": 12,
+    "memoryBytes": 16817844224,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "project": "chromium",
+    "cpuThrottling": 1,
+    "network": {
+      "offline": false,
+      "latency": 0,
+      "downloadThroughput": -1,
+      "uploadThroughput": -1
+    },
+    "observedRttMs": null,
+    "seed": 36,
+    "fixture": "small",
+    "books": 3,
+    "pages": 10,
+    "bodyBytes": 20480,
+    "samplesPerRun": 1,
+    "runs": 1,
+    "excludedWarmupsPerRun": 0,
+    "diagnostic": true,
+    "paintBoundary": "two-animation-frame proxy; not validated presented-frame timing",
+    "mode": "mock"
+  },
+  "records": [
+    {
+      "action": "switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "failed",
+      "paintMs": null,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 162.59999999962747,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 136.59999999962747,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 2492.399999999907,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 139.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 107.6999999997206,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 94.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 102.29999999981374,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "delete-active",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 91.60000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-inactive",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 66.79999999981374,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 935.6000000000931,
+      "feedbackMs": 671.8999999999069,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-book",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-book",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 70.70000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    }
+  ],
+  "timelines": [
+    {
+      "sample": 0,
+      "requests": []
+    },
+    {
+      "sample": 1,
+      "requests": []
+    },
+    {
+      "sample": 2,
+      "requests": []
+    },
+    {
+      "sample": 3,
+      "requests": []
+    },
+    {
+      "sample": 4,
+      "requests": []
+    },
+    {
+      "sample": 5,
+      "requests": []
+    },
+    {
+      "sample": 6,
+      "requests": []
+    },
+    {
+      "sample": 7,
+      "requests": []
+    },
+    {
+      "sample": 8,
+      "requests": []
+    },
+    {
+      "sample": 9,
+      "requests": []
+    },
+    {
+      "sample": 10,
+      "requests": []
+    },
+    {
+      "sample": 11,
+      "requests": []
+    },
+    {
+      "sample": 12,
+      "requests": []
+    }
+  ],
+  "summaries": [
+    {
+      "action": "cold-open",
+      "contentMode": "Edit",
+      "skipped": "Group open action"
+    },
+    {
+      "action": "cached-reopen",
+      "contentMode": "Edit",
+      "skipped": "Group open action"
+    },
+    {
+      "action": "switch",
+      "contentMode": "Edit",
+      "run": 1,
+      "sample": 0,
+      "failure": "Action or request contract failed"
+    },
+    {
+      "action": "switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 1,
+      "p50": null,
+      "p95": null
+    },
+    {
+      "action": "switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 162.59999999962747,
+      "p95": 162.59999999962747
+    },
+    {
+      "action": "switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 136.59999999962747,
+      "p95": 136.59999999962747
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 2492.399999999907,
+      "p95": 2492.399999999907
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 139.39999999990687,
+      "p95": 139.39999999990687
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 107.6999999997206,
+      "p95": 107.6999999997206
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "unsorted",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 94.89999999990687,
+      "p95": 94.89999999990687
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "book",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 102.29999999981374,
+      "p95": 102.29999999981374
+    },
+    {
+      "action": "delete-active",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 91.60000000009313,
+      "p95": 91.60000000009313
+    },
+    {
+      "action": "delete-inactive",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 66.79999999981374,
+      "p95": 66.79999999981374
+    },
+    {
+      "action": "rename-page",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 935.6000000000931,
+      "p95": 935.6000000000931
+    },
+    {
+      "action": "rename-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 77.89999999990687,
+      "p95": 77.89999999990687
+    },
+    {
+      "action": "delete-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": 3,
+      "count": 1,
+      "failures": 0,
+      "p50": 70.70000000018626,
+      "p95": 70.70000000018626
+    }
+  ]
+}

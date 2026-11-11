@@ -1,0 +1,433 @@
+{
+  "environment": {
+    "commit": "932a80d24ad757f1f9157366e333f363813d2b12",
+    "browser": "148.0.7778.96",
+    "os": "win32",
+    "release": "10.0.26300",
+    "cpu": "AMD Ryzen 5 7500F 6-Core Processor             ",
+    "logicalCpus": 12,
+    "memoryBytes": 16817844224,
+    "viewport": {
+      "width": 412,
+      "height": 839
+    },
+    "project": "mobile",
+    "cpuThrottling": 1,
+    "network": {
+      "offline": false,
+      "latency": 0,
+      "downloadThroughput": -1,
+      "uploadThroughput": -1
+    },
+    "observedRttMs": 5.899999999906868,
+    "seed": 36,
+    "fixture": "small",
+    "books": 3,
+    "pages": 10,
+    "bodyBytes": 20480,
+    "samplesPerRun": 1,
+    "runs": 1,
+    "excludedWarmupsPerRun": 0,
+    "diagnostic": true,
+    "paintBoundary": "two-animation-frame proxy; not validated presented-frame timing",
+    "mode": "mock"
+  },
+  "records": [
+    {
+      "action": "switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 78.40000000037253,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.6999999997206,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 112.29999999981374,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 1893.9000000003725,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 61.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 1912.3999999999069,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "delete-active",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 59.299999999813735,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-inactive",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 61.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 850.2000000001863,
+      "feedbackMs": 662.3000000002794,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-book",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 76.20000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-book",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 63.299999999813735,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    }
+  ],
+  "timelines": [
+    {
+      "sample": 0,
+      "requests": []
+    },
+    {
+      "sample": 1,
+      "requests": []
+    },
+    {
+      "sample": 2,
+      "requests": []
+    },
+    {
+      "sample": 3,
+      "requests": []
+    },
+    {
+      "sample": 4,
+      "requests": []
+    },
+    {
+      "sample": 5,
+      "requests": []
+    },
+    {
+      "sample": 6,
+      "requests": []
+    },
+    {
+      "sample": 7,
+      "requests": []
+    },
+    {
+      "sample": 8,
+      "requests": []
+    },
+    {
+      "sample": 9,
+      "requests": []
+    },
+    {
+      "sample": 10,
+      "requests": []
+    },
+    {
+      "sample": 11,
+      "requests": []
+    },
+    {
+      "sample": 12,
+      "requests": []
+    }
+  ],
+  "summaries": [
+    {
+      "action": "cold-open",
+      "contentMode": "Edit",
+      "skipped": "Group open action"
+    },
+    {
+      "action": "cached-reopen",
+      "contentMode": "Edit",
+      "skipped": "Group open action"
+    },
+    {
+      "action": "switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 78.40000000037253,
+      "p95": 78.40000000037253
+    },
+    {
+      "action": "switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.6999999997206,
+      "p95": 62.6999999997206
+    },
+    {
+      "action": "switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 112.29999999981374,
+      "p95": 112.29999999981374
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 1893.9000000003725,
+      "p95": 1893.9000000003725
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 61.39999999990687,
+      "p95": 61.39999999990687
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 1912.3999999999069,
+      "p95": 1912.3999999999069
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "unsorted",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.39999999990687,
+      "p95": 62.39999999990687
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "book",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.89999999990687,
+      "p95": 62.89999999990687
+    },
+    {
+      "action": "delete-active",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 59.299999999813735,
+      "p95": 59.299999999813735
+    },
+    {
+      "action": "delete-inactive",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 61.89999999990687,
+      "p95": 61.89999999990687
+    },
+    {
+      "action": "rename-page",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 850.2000000001863,
+      "p95": 850.2000000001863
+    },
+    {
+      "action": "rename-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 76.20000000018626,
+      "p95": 76.20000000018626
+    },
+    {
+      "action": "delete-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": 3,
+      "count": 1,
+      "failures": 0,
+      "p50": 63.299999999813735,
+      "p95": 63.299999999813735
+    }
+  ],
+  "provenance": {
+    "sourceSha256": "febf089296087813de07cb22576288169ab3dc9b8aba2498a25c210f2b79c005",
+    "workingTreeDirty": true,
+    "observedRttKind": "HEAD asset roundtrip including app processing"
+  }
+}

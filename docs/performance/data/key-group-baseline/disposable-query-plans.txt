@@ -1,0 +1,64 @@
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Index Scan using key_groups_key_digest_key on key_groups  (cost=0.15..8.17 rows=1 width=56) (actual time=0.027..0.027 rows=0 loops=1)
+   Index Cond: (key_digest = '\x0000000000000000000000000000000000000000000000000000000000000000'::bytea)
+   Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=121
+ Planning Time: 1.346 ms
+ Execution Time: 0.064 ms
+(7 rows)
+
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=1.48..1.51 rows=10 width=31) (actual time=0.099..0.100 rows=10 loops=1)
+   Sort Key: group_documents.sort_order, group_documents.id
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=8 dirtied=1
+   InitPlan 1
+     ->  Limit  (cost=0.00..0.03 rows=1 width=16) (actual time=0.011..0.012 rows=1 loops=1)
+           Buffers: shared hit=1 dirtied=1
+           ->  Seq Scan on key_groups  (cost=0.00..15.30 rows=530 width=16) (actual time=0.011..0.011 rows=1 loops=1)
+                 Buffers: shared hit=1 dirtied=1
+   ->  Seq Scan on group_documents  (cost=0.00..1.29 rows=10 width=31) (actual time=0.022..0.025 rows=10 loops=1)
+         Filter: (group_id = (InitPlan 1).col1)
+         Rows Removed by Filter: 11
+         Buffers: shared hit=2 dirtied=1
+ Planning:
+   Buffers: shared hit=86 dirtied=1
+ Planning Time: 0.962 ms
+ Execution Time: 0.182 ms
+(17 rows)
+
+BEGIN
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update on group_documents  (cost=1.38..2.65 rows=0 width=0) (actual time=3.251..3.252 rows=0 loops=1)
+   Buffers: shared hit=71 dirtied=1
+   InitPlan 1
+     ->  Limit  (cost=1.38..1.38 rows=1 width=24) (actual time=0.121..0.122 rows=1 loops=1)
+           Buffers: shared hit=4
+           ->  Sort  (cost=1.38..1.40 rows=6 width=24) (actual time=0.120..0.121 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=4
+                 ->  HashAggregate  (cost=1.29..1.35 rows=6 width=24) (actual time=0.013..0.014 rows=6 loops=1)
+                       Group Key: group_documents_1.folder_id
+                       Batches: 1  Memory Usage: 24kB
+                       Buffers: shared hit=1
+                       ->  Seq Scan on group_documents group_documents_1  (cost=0.00..1.21 rows=16 width=16) (actual time=0.004..0.006 rows=16 loops=1)
+                             Filter: (folder_id IS NOT NULL)
+                             Rows Removed by Filter: 5
+                             Buffers: shared hit=1
+   ->  Seq Scan on group_documents  (cost=0.00..1.27 rows=3 width=26) (actual time=0.126..0.129 rows=3 loops=1)
+         Filter: (folder_id = (InitPlan 1).col1)
+         Rows Removed by Filter: 18
+         Buffers: shared hit=5
+ Planning:
+   Buffers: shared hit=22
+ Planning Time: 0.477 ms
+ Trigger group_documents_active_guard: time=2.546 calls=3
+ Execution Time: 3.430 ms
+(26 rows)
+
+ROLLBACK

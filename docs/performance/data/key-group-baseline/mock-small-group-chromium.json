@@ -1,0 +1,645 @@
+{
+  "environment": {
+    "commit": "932a80d24ad757f1f9157366e333f363813d2b12",
+    "browser": "148.0.7778.96",
+    "os": "win32",
+    "release": "10.0.26300",
+    "cpu": "AMD Ryzen 5 7500F 6-Core Processor             ",
+    "logicalCpus": 12,
+    "memoryBytes": 16817844224,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "project": "chromium",
+    "cpuThrottling": 1,
+    "network": {
+      "offline": false,
+      "latency": 0,
+      "downloadThroughput": -1,
+      "uploadThroughput": -1
+    },
+    "observedRttMs": 3.8000000002793968,
+    "seed": 36,
+    "fixture": "small",
+    "books": 3,
+    "pages": 10,
+    "bodyBytes": 20480,
+    "samplesPerRun": 1,
+    "runs": 1,
+    "excludedWarmupsPerRun": 0,
+    "diagnostic": true,
+    "paintBoundary": "two-animation-frame proxy; not validated presented-frame timing",
+    "mode": "mock"
+  },
+  "records": [
+    {
+      "action": "cold-open",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 80.20000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "cached-reopen",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 81.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 47.5,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 47.200000000186265,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.90000000037253,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 2880.100000000093,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 63.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Read",
+      "collection": "n/a"
+    },
+    {
+      "action": "dirty-switch",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 79.5,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Split",
+      "collection": "n/a"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.60000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 63.3000000002794,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "delete-active",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.299999999813735,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-inactive",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-page",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 708,
+      "feedbackMs": 654.3999999999069,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "rename-book",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 35.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    },
+    {
+      "action": "delete-book",
+      "workspaceKind": "group",
+      "fixture": "small",
+      "mode": "mock",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.6999999997206,
+      "feedbackMs": null,
+      "confirmedMs": 0,
+      "viewMode": "Edit",
+      "collection": "n/a"
+    }
+  ],
+  "timelines": [
+    {
+      "sample": 0,
+      "requests": [
+        {
+          "method": "GET",
+          "route": "/api/key-groups/:groupId",
+          "initiator": "initial-load",
+          "startMs": 0,
+          "endMs": 2.414,
+          "status": 200,
+          "requestBytes": 0,
+          "responseBytes": 23116,
+          "decodedResponseBytes": null,
+          "transferBytes": 23190,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 1,
+      "requests": [
+        {
+          "method": "GET",
+          "route": "/api/key-groups/:groupId",
+          "initiator": "initial-load",
+          "startMs": 0,
+          "endMs": 3.263,
+          "status": 200,
+          "requestBytes": 0,
+          "responseBytes": 23116,
+          "decodedResponseBytes": null,
+          "transferBytes": 23190,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 2,
+      "requests": []
+    },
+    {
+      "sample": 3,
+      "requests": []
+    },
+    {
+      "sample": 4,
+      "requests": []
+    },
+    {
+      "sample": 5,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "autosave",
+          "startMs": 0,
+          "endMs": 3.443,
+          "status": 200,
+          "requestBytes": 55,
+          "responseBytes": 194,
+          "decodedResponseBytes": null,
+          "transferBytes": 266,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 6,
+      "requests": []
+    },
+    {
+      "sample": 7,
+      "requests": []
+    },
+    {
+      "sample": 8,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 2.641,
+          "status": 201,
+          "requestBytes": 61,
+          "responseBytes": 196,
+          "decodedResponseBytes": null,
+          "transferBytes": 273,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 9,
+      "requests": [
+        {
+          "method": "POST",
+          "route": "/api/key-groups/:groupId/documents",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 2.95,
+          "status": 201,
+          "requestBytes": 65,
+          "responseBytes": 200,
+          "decodedResponseBytes": null,
+          "transferBytes": 277,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 10,
+      "requests": [
+        {
+          "method": "DELETE",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.196,
+          "status": 200,
+          "requestBytes": 21,
+          "responseBytes": 10,
+          "decodedResponseBytes": null,
+          "transferBytes": 81,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 11,
+      "requests": [
+        {
+          "method": "DELETE",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.443,
+          "status": 200,
+          "requestBytes": 21,
+          "responseBytes": 10,
+          "decodedResponseBytes": null,
+          "transferBytes": 81,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 12,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/documents/:documentId",
+          "initiator": "unknown",
+          "startMs": 0,
+          "endMs": 3.056,
+          "status": 200,
+          "requestBytes": 41,
+          "responseBytes": 2235,
+          "decodedResponseBytes": null,
+          "transferBytes": 2308,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 13,
+      "requests": [
+        {
+          "method": "PATCH",
+          "route": "/api/key-groups/:groupId/folders/:folderId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.755,
+          "status": 200,
+          "requestBytes": 45,
+          "responseBytes": 167,
+          "decodedResponseBytes": null,
+          "transferBytes": 239,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    },
+    {
+      "sample": 14,
+      "requests": [
+        {
+          "method": "DELETE",
+          "route": "/api/key-groups/:groupId/folders/:folderId",
+          "initiator": "mutation",
+          "startMs": 0,
+          "endMs": 3.427,
+          "status": 200,
+          "requestBytes": 21,
+          "responseBytes": 10,
+          "decodedResponseBytes": null,
+          "transferBytes": 81,
+          "serverTiming": {},
+          "requestId": null
+        },
+        {
+          "method": "GET",
+          "route": "/api/key-groups/:groupId",
+          "initiator": "unknown",
+          "startMs": 0,
+          "endMs": 2.895,
+          "status": 200,
+          "requestBytes": 0,
+          "responseBytes": 22938,
+          "decodedResponseBytes": null,
+          "transferBytes": 23012,
+          "serverTiming": {},
+          "requestId": null
+        }
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "action": "cold-open",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 80.20000000018626,
+      "p95": 80.20000000018626
+    },
+    {
+      "action": "cached-reopen",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 81.10000000009313,
+      "p95": 81.10000000009313
+    },
+    {
+      "action": "switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 47.5,
+      "p95": 47.5
+    },
+    {
+      "action": "switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 47.200000000186265,
+      "p95": 47.200000000186265
+    },
+    {
+      "action": "switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.90000000037253,
+      "p95": 62.90000000037253
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 2880.100000000093,
+      "p95": 2880.100000000093
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Read",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 63.89999999990687,
+      "p95": 63.89999999990687
+    },
+    {
+      "action": "dirty-switch",
+      "contentMode": "Split",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 79.5,
+      "p95": 79.5
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "unsorted",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.60000000009313,
+      "p95": 62.60000000009313
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "book",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 63.3000000002794,
+      "p95": 63.3000000002794
+    },
+    {
+      "action": "delete-active",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.299999999813735,
+      "p95": 62.299999999813735
+    },
+    {
+      "action": "delete-inactive",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.10000000009313,
+      "p95": 62.10000000009313
+    },
+    {
+      "action": "rename-page",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 708,
+      "p95": 708
+    },
+    {
+      "action": "rename-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 1,
+      "failures": 0,
+      "p50": 35.10000000009313,
+      "p95": 35.10000000009313
+    },
+    {
+      "action": "delete-book",
+      "contentMode": "Edit",
+      "collection": "n/a",
+      "preparedPageCount": 10,
+      "movedPageCount": 3,
+      "count": 1,
+      "failures": 0,
+      "p50": 62.6999999997206,
+      "p95": 62.6999999997206
+    }
+  ],
+  "provenance": {
+    "sourceSha256": "febf089296087813de07cb22576288169ab3dc9b8aba2498a25c210f2b79c005",
+    "workingTreeDirty": true,
+    "observedRttKind": "HEAD asset roundtrip including app processing"
+  }
+}

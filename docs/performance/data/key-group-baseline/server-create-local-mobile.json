@@ -1,0 +1,392 @@
+{
+  "environment": {
+    "commit": "505048de33c253bf9a344d3a15fcbbe4e8f3a6f8",
+    "browser": "148.0.7778.96",
+    "os": "win32",
+    "release": "10.0.26300",
+    "cpu": "AMD Ryzen 5 7500F 6-Core Processor             ",
+    "logicalCpus": 12,
+    "memoryBytes": 16817844224,
+    "viewport": {
+      "width": 412,
+      "height": 839
+    },
+    "project": "mobile",
+    "cpuThrottling": 1,
+    "network": {
+      "offline": false,
+      "latency": 0,
+      "downloadThroughput": -1,
+      "uploadThroughput": -1
+    },
+    "observedRttMs": 3.2000000001862645,
+    "seed": 36,
+    "fixture": "small",
+    "books": 3,
+    "pages": 10,
+    "bodyBytes": 20480,
+    "samplesPerRun": 3,
+    "runs": 3,
+    "excludedWarmupsPerRun": 1,
+    "diagnostic": true,
+    "paintBoundary": "two-animation-frame proxy; not validated presented-frame timing",
+    "mode": "server"
+  },
+  "records": [
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.3000000002794,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 62.89999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 79.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 78.20000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 61.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 61.299999999813735,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 76.8000000002794,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 79.70000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 95,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "unsorted"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 78.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 77.70000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 1,
+      "outcome": "success",
+      "paintMs": 78.79999999981374,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 78.5,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 79.39999999990687,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 2,
+      "outcome": "success",
+      "paintMs": 78.20000000018626,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 79.10000000009313,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 91.5,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    },
+    {
+      "action": "create-page",
+      "workspaceKind": "local",
+      "fixture": "small",
+      "mode": "server",
+      "profile": "unthrottled",
+      "run": 3,
+      "outcome": "success",
+      "paintMs": 79.09999999962747,
+      "feedbackMs": null,
+      "confirmedMs": null,
+      "viewMode": "Edit",
+      "collection": "book"
+    }
+  ],
+  "timelines": [
+    {
+      "sample": 0,
+      "requests": []
+    },
+    {
+      "sample": 1,
+      "requests": []
+    },
+    {
+      "sample": 2,
+      "requests": []
+    },
+    {
+      "sample": 3,
+      "requests": []
+    },
+    {
+      "sample": 4,
+      "requests": []
+    },
+    {
+      "sample": 5,
+      "requests": []
+    },
+    {
+      "sample": 6,
+      "requests": []
+    },
+    {
+      "sample": 7,
+      "requests": []
+    },
+    {
+      "sample": 8,
+      "requests": []
+    },
+    {
+      "sample": 9,
+      "requests": []
+    },
+    {
+      "sample": 10,
+      "requests": []
+    },
+    {
+      "sample": 11,
+      "requests": []
+    },
+    {
+      "sample": 12,
+      "requests": []
+    },
+    {
+      "sample": 13,
+      "requests": []
+    },
+    {
+      "sample": 14,
+      "requests": []
+    },
+    {
+      "sample": 15,
+      "requests": []
+    },
+    {
+      "sample": 16,
+      "requests": []
+    },
+    {
+      "sample": 17,
+      "requests": []
+    }
+  ],
+  "summaries": [
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "unsorted",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 9,
+      "failures": 0,
+      "p50": 76.8000000002794,
+      "p95": 95
+    },
+    {
+      "action": "create-page",
+      "contentMode": "Edit",
+      "collection": "book",
+      "preparedPageCount": 10,
+      "movedPageCount": null,
+      "count": 9,
+      "failures": 0,
+      "p50": 78.79999999981374,
+      "p95": 91.5
+    }
+  ],
+  "provenance": {
+    "sourceSha256": "febf089296087813de07cb22576288169ab3dc9b8aba2498a25c210f2b79c005",
+    "workingTreeDirty": true,
+    "observedRttKind": "HEAD asset roundtrip including app processing"
+  }
+}
